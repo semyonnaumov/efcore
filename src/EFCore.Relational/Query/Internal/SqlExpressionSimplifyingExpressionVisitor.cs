@@ -39,7 +39,11 @@ public class SqlExpressionSimplifyingExpressionVisitor : ExpressionVisitor
     {
         if (extensionExpression is ShapedQueryExpression shapedQueryExpression)
         {
-            return shapedQueryExpression.UpdateQueryExpression(Visit(shapedQueryExpression.QueryExpression));
+            var newQueryExpression = Visit(shapedQueryExpression.QueryExpression);
+            var newShaperExpression = Visit(shapedQueryExpression.ShaperExpression);
+
+            return shapedQueryExpression.Update(newQueryExpression, newShaperExpression);
+            //return shapedQueryExpression.UpdateQueryExpression(Visit(shapedQueryExpression.QueryExpression));
         }
 
         // Only applies to 'CASE WHEN condition...' not 'CASE operand WHEN...'

@@ -650,6 +650,73 @@ WHERE [o].[CustomerID] = N'ALFKI'
 """);
     }
 
+
+
+    [ConditionalTheory]
+    [MemberData(nameof(IsAsyncData))]
+    public virtual async Task Kupson2(bool isAsync)
+    {
+        await AssertQuery(
+            isAsync,
+            os => (from c in os.Set<Microsoft.EntityFrameworkCore.TestModels.Northwind.Customer>().AsSplitQuery()
+                  select new
+                  {
+                      Foo = c.Orders.Select(x => x.CustomerID).ToList(),
+                      Bar =
+                      c.CustomerID == "1"
+                          ? "01"
+                          : c.CustomerID == "2"
+                              ? "02"
+                              : c.CustomerID == "3"
+                                  ? "03"
+                                  : null
+                                  //: c.CustomerID == "4"
+                                  //    ? "04"
+                                  //    : c.CustomerID == "5"
+                                  //        ? "05"
+                                  //        : c.CustomerID == "6"
+                                  //            ? "06"
+                                  //            : null
+
+
+                                              //: c.CustomerID == "7"
+                                              //    ? "07"
+                                              //    : c.CustomerID == "8"
+                                              //        ? "08"
+                                              //        : c.CustomerID == "9"
+                                              //            ? "09"
+                                              //            : c.CustomerID == "10"
+                                              //                ? "10"
+                                              //                : c.CustomerID == "11"
+                                              //                    ? "11"
+                                              //                    : null
+                  })
+                  .Where(x => x.Bar != "Fubar"),//.AsSingleQuery(),
+            assertOrder: true,
+            elementAsserter: (e, a) =>
+            {
+                Assert.Equal(e.Foo, a.Foo);
+                Assert.Equal(e.Bar, a.Bar);
+            });
+
+        AssertSql(
+            """
+SELECT CASE
+    WHEN [c].[CustomerID] = N'1' THEN N'01'
+    WHEN [c].[CustomerID] = N'2' THEN N'02'
+    WHEN [c].[CustomerID] = N'3' THEN N'03'
+   
+    WHEN [c].[CustomerID] = N'7' THEN N'07'
+    WHEN [c].[CustomerID] = N'8' THEN N'08'
+    WHEN [c].[CustomerID] = N'9' THEN N'09'
+    WHEN [c].[CustomerID] = N'10' THEN N'10'
+    WHEN [c].[CustomerID] = N'11' THEN N'11'
+    ELSE NULL
+END
+FROM [Customers] AS [c]
+""");
+    }
+
     public override async Task Select_over_10_nested_ternary_condition(bool isAsync)
     {
         await base.Select_over_10_nested_ternary_condition(isAsync);

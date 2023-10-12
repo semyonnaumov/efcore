@@ -43,6 +43,11 @@ public class CaseExpression : SqlExpression
         SqlExpression? elseResult = null)
         : base(whenClauses[0].Result.Type, whenClauses[0].Result.TypeMapping)
     {
+        if (_whenClauses.Count > 0 || whenClauses.Count > 1)
+        {
+            Console.WriteLine(  "kupson");
+        }
+
         _whenClauses.AddRange(whenClauses);
         ElseResult = elseResult;
     }

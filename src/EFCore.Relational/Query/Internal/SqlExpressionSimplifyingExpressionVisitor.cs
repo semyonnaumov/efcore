@@ -29,6 +29,23 @@ public class SqlExpressionSimplifyingExpressionVisitor : ExpressionVisitor
         _useRelationalNulls = useRelationalNulls;
     }
 
+
+    private class KupaVisitor : ExpressionVisitor
+    {
+        [return: NotNullIfNotNull("node")]
+        public override Expression? Visit(Expression? node)
+        {
+            if (node is ColumnExpression || node is SqlConstantExpression || node is SqlBinaryExpression) return node;
+
+            if (node is SqlExpression)
+            {
+                throw new InvalidOperationException(ExpressionPrinter.Print(node));
+            }
+
+            return base.Visit(node);
+        }
+    }
+
     /// <summary>
     ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
     ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
@@ -40,6 +57,9 @@ public class SqlExpressionSimplifyingExpressionVisitor : ExpressionVisitor
         if (extensionExpression is ShapedQueryExpression shapedQueryExpression)
         {
             var newQueryExpression = Visit(shapedQueryExpression.QueryExpression);
+
+            new KupaVisitor().Visit(shapedQueryExpression.ShaperExpression);
+
             var newShaperExpression = Visit(shapedQueryExpression.ShaperExpression);
 
             return shapedQueryExpression.Update(newQueryExpression, newShaperExpression);

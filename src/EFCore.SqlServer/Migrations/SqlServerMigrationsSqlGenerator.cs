@@ -2473,6 +2473,17 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                         // if only difference is in temporal annotations being removed or history table changed etc - we can ignore this operation
                         if (!CanSkipAlterColumnOperation(alterColumnOperation.OldColumn, alterColumnOperation))
                         {
+                            // for some alter column operations in the temporal table (e.g. converting from nullable to non-nullable column)
+                            // we must disable versioning in order to properly handle it
+                            // specifically, for null -> non-null, switching values in history table from
+                            // null to the default value for the non-nullable column
+                            if ((alterColumnOperation.OldColumn.IsNullable && !alterColumnOperation.IsNullable)
+                                || (alterColumnOperation.OldColumn[SqlServerAnnotationNames.Sparse] as bool? != true
+                                    && alterColumnOperation[SqlServerAnnotationNames.Sparse] as bool? == true))
+                            {
+                                DisableVersioning(table!, schema, historyTableName!, historyTableSchema, suppressTransaction);
+                            }
+
                             operations.Add(operation);
 
                             // when modifying a period column, we need to perform the operations as a normal column first, and only later enable period

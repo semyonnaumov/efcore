@@ -272,6 +272,49 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                 Comment = operation.Comment,
                 Collation = operation.Collation
             };
+
+            if (operation[SqlServerAnnotationNames.IsTemporal] as bool? == true)
+            {
+                var historyTableName = operation[SqlServerAnnotationNames.TemporalHistoryTableName] as string;
+                var historyTableSchema = operation[SqlServerAnnotationNames.TemporalHistoryTableSchema] as string
+                    ?? operation.Schema ?? model?.GetDefaultSchema();
+
+                //// when dropping column, we only need to drop the column from history table as well if that column is not part of the period
+                //// for columns that are part of the period - if we are removing them from the temporal table, it means
+                //// that we are converting back to a regular table, and the history table will be removed anyway
+                //// so we don't need to keep it in sync
+                //if (operation.Name != periodStartColumnName
+                //    && operation.Name != periodEndColumnName)
+                //{
+                //    Generate(
+                //        new DropColumnOperation
+                //        {
+                //            Name = operation.Name,
+                //            Table = historyTableName!,
+                //            Schema = historyTableSchema
+                //        }, model, builder, terminate);
+                //}
+            }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
             addColumnOperation.AddAnnotations(operation.GetAnnotations());
 
             // TODO: Use a column rebuild instead
@@ -1355,21 +1398,21 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
             var periodStartColumnName = operation[SqlServerAnnotationNames.TemporalPeriodStartColumnName] as string;
             var periodEndColumnName = operation[SqlServerAnnotationNames.TemporalPeriodEndColumnName] as string;
 
-            // when dropping column, we only need to drop the column from history table as well if that column is not part of the period
-            // for columns that are part of the period - if we are removing them from the temporal table, it means
-            // that we are converting back to a regular table, and the history table will be removed anyway
-            // so we don't need to keep it in sync
-            if (operation.Name != periodStartColumnName
-                && operation.Name != periodEndColumnName)
-            {
-                Generate(
-                    new DropColumnOperation
-                    {
-                        Name = operation.Name,
-                        Table = historyTableName!,
-                        Schema = historyTableSchema
-                    }, model, builder, terminate);
-            }
+            //// when dropping column, we only need to drop the column from history table as well if that column is not part of the period
+            //// for columns that are part of the period - if we are removing them from the temporal table, it means
+            //// that we are converting back to a regular table, and the history table will be removed anyway
+            //// so we don't need to keep it in sync
+            //if (operation.Name != periodStartColumnName
+            //    && operation.Name != periodEndColumnName)
+            //{
+            //    Generate(
+            //        new DropColumnOperation
+            //        {
+            //            Name = operation.Name,
+            //            Table = historyTableName!,
+            //            Schema = historyTableSchema
+            //        }, model, builder, terminate);
+            //}
         }
     }
 
@@ -2477,7 +2520,13 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                             // we must disable versioning in order to properly handle it
                             // specifically, for null -> non-null, switching values in history table from
                             // null to the default value for the non-nullable column
-                            if (alterColumnOperation.OldColumn.IsNullable && !alterColumnOperation.IsNullable)
+                            var nullableToNonNullableChange = alterColumnOperation.OldColumn.IsNullable && !alterColumnOperation.IsNullable;
+
+                            // when we change computed column sql, we actually drop the column and then rebuild it.
+                            // Dropping column from temporal table requires disabling of versioning, so that's what we do here
+                            var computedSqlChange = alterColumnOperation.OldColumn.ComputedColumnSql != alterColumnOperation.ComputedColumnSql;
+
+                            if (nullableToNonNullableChange || computedSqlChange)
                             {
                                 DisableVersioning(table!, schema, historyTableName!, historyTableSchema, suppressTransaction);
                             }
@@ -2547,9 +2596,29 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
 
                         operations.Add(operation);
 
+                        // when dropping column, we need to drop the column from history table as well, but only if that column is not part of the period
+                        // for columns that are part of the period - if we are removing them from the temporal table, it means
+                        // that we are converting back to a regular table, and the history table will be removed anyway
+                        // so we don't need to keep it in sync
+                        if (dropColumnOperation.Name != periodStartColumnName
+                            && dropColumnOperation.Name != periodEndColumnName)
+                        {
+                            operations.Add(new DropColumnOperation
+                            {
+                                Name = dropColumnOperation.Name,
+                                Table = historyTableName!,
+                                Schema = historyTableSchema
+                            });
+                        }
+
                         break;
 
                     case AddColumnOperation addColumnOperation:
+                        if (addColumnOperation.ComputedColumnSql != null)
+                        {
+                            DisableVersioning(table!, schema, historyTableName!, historyTableSchema, suppressTransaction);
+                        }
+
                         operations.Add(addColumnOperation);
 
                         // when adding a period column, we need to add it as a normal column first, and only later enable period
@@ -2582,6 +2651,13 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                                     var addHistoryTableColumnOperation = CopyColumnOperation<AddColumnOperation>(addColumnOperation);
                                     addHistoryTableColumnOperation.Table = historyTableName!;
                                     addHistoryTableColumnOperation.Schema = historyTableSchema;
+
+                                    if (addHistoryTableColumnOperation.ComputedColumnSql != null)
+                                    {
+                                        // we are stripping computed column sql from HistoryTable - computed columns are not allowed inside HistoryTables, but the historical computed value will be copied over
+                                        // to the non-computed counterpart, as long as their names and types (including nullability) match
+                                        addHistoryTableColumnOperation.ComputedColumnSql = null;
+                                    }
 
                                     operations.Add(addHistoryTableColumnOperation);
                                 }

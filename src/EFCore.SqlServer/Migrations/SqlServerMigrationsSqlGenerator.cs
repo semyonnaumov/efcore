@@ -2411,6 +2411,19 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
             : null;
     }
 
+    //private class TemporalInformation
+    //{
+    //    public bool IsTemporal { get; set; }
+    //    public string TableName { get; set; }
+    //    public string? TableSchema { get; set; }
+    //    public string? HistoryTableName { get; set; }
+    //    public string? HistoryTableSchema { get; set; }
+    //    public string? PeriodStartColumnName { get; set; }
+    //    public string? PeriodEndColumnName { get; set; }
+    //}
+
+
+
     private IReadOnlyList<MigrationOperation> RewriteOperations(
         IReadOnlyList<MigrationOperation> migrationOperations,
         IModel? model,
@@ -2421,6 +2434,9 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
         var versioningMap = new Dictionary<(string?, string?), (string, string?, bool)>();
         var periodMap = new Dictionary<(string?, string?), (string, string, bool)>();
         var availableSchemas = new List<string>();
+
+        // whether table switched from temporal to non-temporal or vice versa
+        var switchingTableTemporalStateMap = new Dictionary<(string, string?), bool>();
 
         foreach (var operation in migrationOperations)
         {
@@ -2524,6 +2540,8 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                                 (periodStartColumnName!, periodEndColumnName!, suppressTransaction);
                             versioningMap[(alterTableOperation.Name, alterTableOperation.Schema)] =
                                 (historyTableName!, historyTableSchema, suppressTransaction);
+
+                            switchingTableTemporalStateMap[(alterTableOperation.Name, alterTableOperation.Schema)] = true;
                         }
                         else
                         {
@@ -2586,23 +2604,55 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                             //
                             // if the column is not period we just remove temporal information - it's no longer needed and could affect the generated sql
                             // we will generate all the necessary operations involved with temporal tables here
-                            alterColumnOperation.RemoveAnnotation(SqlServerAnnotationNames.IsTemporal);
-                            alterColumnOperation.RemoveAnnotation(SqlServerAnnotationNames.TemporalPeriodStartColumnName);
-                            alterColumnOperation.RemoveAnnotation(SqlServerAnnotationNames.TemporalPeriodEndColumnName);
-                            alterColumnOperation.RemoveAnnotation(SqlServerAnnotationNames.TemporalHistoryTableName);
-                            alterColumnOperation.RemoveAnnotation(SqlServerAnnotationNames.TemporalHistoryTableSchema);
+
+                            //alterColumnOperation.RemoveAnnotation(SqlServerAnnotationNames.IsTemporal);
+                            //alterColumnOperation.RemoveAnnotation(SqlServerAnnotationNames.TemporalPeriodStartColumnName);
+                            //alterColumnOperation.RemoveAnnotation(SqlServerAnnotationNames.TemporalPeriodEndColumnName);
+                            //alterColumnOperation.RemoveAnnotation(SqlServerAnnotationNames.TemporalHistoryTableName);
+                            //alterColumnOperation.RemoveAnnotation(SqlServerAnnotationNames.TemporalHistoryTableSchema);
+
+                            alterColumnOperation.RemoveAnnotation(SqlServerAnnotationNames.TemporalIsPeriodStartColumn);
+                            alterColumnOperation.RemoveAnnotation(SqlServerAnnotationNames.TemporalIsPeriodEndColumn);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                            // maumar - this is probably wrong, we shouldn't need to look at old table (if its temporal or not), only the current table temporal state matters
+                            // because all the alter columns happen after the alter table
+                            // brice pointed out that this could become an issue if users manually re-arrange the order of migration operations
+                            // but if that's the case, they should maybe be responsible for potential break here? and also seems like a very unlikely scenario
+
+
+
+
+
+
 
                             // this is the case where we are not converting from normal table to temporal
                             // just a normal modification to a column on a temporal table
                             // in that case we need to double check if we need have disabled versioning earlier in this migration
                             // if so, we need to mirror the operation to the history table
-                            if (alterColumnOperation.OldColumn[SqlServerAnnotationNames.IsTemporal] as bool? == true)
+                            //if (alterColumnOperation.OldColumn[SqlServerAnnotationNames.IsTemporal] as bool? == true)
+                            if (!switchingTableTemporalStateMap.TryGetValue((alterColumnOperation.Table, alterColumnOperation.Schema), out var switched) || !switched)
                             {
-                                alterColumnOperation.OldColumn.RemoveAnnotation(SqlServerAnnotationNames.IsTemporal);
-                                alterColumnOperation.OldColumn.RemoveAnnotation(SqlServerAnnotationNames.TemporalPeriodStartColumnName);
-                                alterColumnOperation.OldColumn.RemoveAnnotation(SqlServerAnnotationNames.TemporalPeriodEndColumnName);
-                                alterColumnOperation.OldColumn.RemoveAnnotation(SqlServerAnnotationNames.TemporalHistoryTableName);
-                                alterColumnOperation.OldColumn.RemoveAnnotation(SqlServerAnnotationNames.TemporalHistoryTableSchema);
+                                //alterColumnOperation.OldColumn.RemoveAnnotation(SqlServerAnnotationNames.IsTemporal);
+                                //alterColumnOperation.OldColumn.RemoveAnnotation(SqlServerAnnotationNames.TemporalPeriodStartColumnName);
+                                //alterColumnOperation.OldColumn.RemoveAnnotation(SqlServerAnnotationNames.TemporalPeriodEndColumnName);
+                                //alterColumnOperation.OldColumn.RemoveAnnotation(SqlServerAnnotationNames.TemporalHistoryTableName);
+                                //alterColumnOperation.OldColumn.RemoveAnnotation(SqlServerAnnotationNames.TemporalHistoryTableSchema);
+
+                                alterColumnOperation.OldColumn.RemoveAnnotation(SqlServerAnnotationNames.TemporalIsPeriodStartColumn);
+                                alterColumnOperation.OldColumn.RemoveAnnotation(SqlServerAnnotationNames.TemporalIsPeriodEndColumn);
 
                                 if (versioningMap.ContainsKey((tableName, schema)))
                                 {
@@ -2723,6 +2773,14 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                 if (operation is AlterTableOperation alterTableOperation
                     && alterTableOperation.OldTable[SqlServerAnnotationNames.IsTemporal] as bool? == true)
                 {
+                    switchingTableTemporalStateMap[(alterTableOperation.Name, alterTableOperation.Schema)] = true;
+
+
+
+
+
+
+
                     var historyTableName = alterTableOperation.OldTable[SqlServerAnnotationNames.TemporalHistoryTableName] as string;
                     var historyTableSchema = alterTableOperation.OldTable[SqlServerAnnotationNames.TemporalHistoryTableSchema] as string
                         ?? alterTableOperation.OldTable.Schema
@@ -2756,8 +2814,8 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                 else if (operation is AlterColumnOperation alterColumnOperation)
                 {
                     // if only difference is in temporal annotations being removed or history table changed etc - we can ignore this operation
-                    if (alterColumnOperation.OldColumn?[SqlServerAnnotationNames.IsTemporal] as bool? != true
-                        || !CanSkipAlterColumnOperation(alterColumnOperation.OldColumn, alterColumnOperation))
+                    if (/*alterColumnOperation.OldColumn?[SqlServerAnnotationNames.IsTemporal] as bool? != true
+                        ||*/ !CanSkipAlterColumnOperation(alterColumnOperation.OldColumn, alterColumnOperation))
                     {
                         operations.Add(operation);
                     }
@@ -2951,7 +3009,9 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                     or SqlServerAnnotationNames.TemporalPeriodStartPropertyName
                     or SqlServerAnnotationNames.TemporalPeriodEndPropertyName
                     or SqlServerAnnotationNames.TemporalPeriodStartColumnName
-                    or SqlServerAnnotationNames.TemporalPeriodEndColumnName);
+                    or SqlServerAnnotationNames.TemporalPeriodEndColumnName
+                    or SqlServerAnnotationNames.TemporalIsPeriodStartColumn
+                    or SqlServerAnnotationNames.TemporalIsPeriodEndColumn);
         }
 
         static TOperation CopyColumnOperation<TOperation>(ColumnOperation source)

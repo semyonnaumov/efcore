@@ -1613,16 +1613,27 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
             builder.Append(" SPARSE");
         }
 
-        var periodStartColumnName = operation[SqlServerAnnotationNames.TemporalPeriodStartColumnName] as string;
-        var periodEndColumnName = operation[SqlServerAnnotationNames.TemporalPeriodEndColumnName] as string;
+        var isPeriodStartColumn = operation[SqlServerAnnotationNames.TemporalIsPeriodStartColumn] as bool? == true;
+        var isPeriodEndColumn = operation[SqlServerAnnotationNames.TemporalIsPeriodEndColumn] as bool? == true;
 
-        if (name == periodStartColumnName
-            || name == periodEndColumnName)
+
+        //var periodStartColumnName = operation[SqlServerAnnotationNames.TemporalPeriodStartColumnName] as string;
+        //var periodEndColumnName = operation[SqlServerAnnotationNames.TemporalPeriodEndColumnName] as string;
+
+        if (isPeriodStartColumn || isPeriodEndColumn)
         {
             builder.Append(" GENERATED ALWAYS AS ROW ");
-            builder.Append(name == periodStartColumnName ? "START" : "END");
+            builder.Append(isPeriodStartColumn ? "START" : "END");
             builder.Append(" HIDDEN");
         }
+
+        //if (name == periodStartColumnName
+        //    || name == periodEndColumnName)
+        //{
+        //    builder.Append(" GENERATED ALWAYS AS ROW ");
+        //    builder.Append(name == periodStartColumnName ? "START" : "END");
+        //    builder.Append(" HIDDEN");
+        //}
 
         builder.Append(operation.IsNullable ? " NULL" : " NOT NULL");
 
@@ -2640,13 +2651,20 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                         // removing the period information now, so that when we generate SQL that adds the column we won't be making them
                         // auto generated as period it won't work, unless period is enabled but we can't enable period without adding the
                         // columns first - chicken and egg
-                        if (addColumnOperation[SqlServerAnnotationNames.IsTemporal] as bool? == true)
+
+
+                        if (IsTemporal(addColumnOperation, model))
+                        //if (addColumnOperation[SqlServerAnnotationNames.IsTemporal] as bool? == true)
                         {
-                            addColumnOperation.RemoveAnnotation(SqlServerAnnotationNames.IsTemporal);
-                            addColumnOperation.RemoveAnnotation(SqlServerAnnotationNames.TemporalHistoryTableName);
-                            addColumnOperation.RemoveAnnotation(SqlServerAnnotationNames.TemporalHistoryTableSchema);
-                            addColumnOperation.RemoveAnnotation(SqlServerAnnotationNames.TemporalPeriodStartColumnName);
-                            addColumnOperation.RemoveAnnotation(SqlServerAnnotationNames.TemporalPeriodEndColumnName);
+                            //addColumnOperation.RemoveAnnotation(SqlServerAnnotationNames.IsTemporal);
+                            //addColumnOperation.RemoveAnnotation(SqlServerAnnotationNames.TemporalHistoryTableName);
+                            //addColumnOperation.RemoveAnnotation(SqlServerAnnotationNames.TemporalHistoryTableSchema);
+                            //addColumnOperation.RemoveAnnotation(SqlServerAnnotationNames.TemporalPeriodStartColumnName);
+                            //addColumnOperation.RemoveAnnotation(SqlServerAnnotationNames.TemporalPeriodEndColumnName);
+
+                            addColumnOperation.RemoveAnnotation(SqlServerAnnotationNames.TemporalIsPeriodStartColumn);
+                            addColumnOperation.RemoveAnnotation(SqlServerAnnotationNames.TemporalIsPeriodEndColumn);
+
 
                             // model differ adds default value, but for period end we need to replace it with the correct one -
                             // DateTime.MaxValue

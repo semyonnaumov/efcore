@@ -13,6 +13,14 @@ namespace Microsoft.EntityFrameworkCore.Migrations.Operations;
 public class AlterColumnOperation : ColumnOperation, IAlterMigrationOperation
 {
     /// <summary>
+    /// seekee
+    /// </summary>
+    public AlterColumnOperation()
+    {
+        Console.WriteLine("qpa");
+    }
+
+    /// <summary>
     ///     An operation representing the column as it was before being altered.
     /// </summary>
     public virtual ColumnOperation OldColumn { get; set; } = new AddColumnOperation();

@@ -2425,7 +2425,8 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
 
     private struct TemporalOperationInformation
     {
-        public bool TemporalTableModeSwitch { get; set; }
+        public bool IsTemporalTable { get; set; }
+        public bool WasTemporalTable { get; set; }
         public string? HistoryTableName { get; set; }
         public string? HistoryTableSchema { get; set; }
         public string? PeriodStartColumnName { get; set; }
@@ -2446,43 +2447,87 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
 
         // whether table switched from temporal to non-temporal or vice versa
         var temporalTableInformationMap = new Dictionary<(string, string?), TemporalOperationInformation>();
+
+
         foreach (var operation in migrationOperations.OfType<AlterTableOperation>())
         {
             var tableName = operation.Name;
             var schema = operation.Schema;
 
+            var isTemporal = operation[SqlServerAnnotationNames.IsTemporal] as bool? == true;
+            var oldIsTemporal = operation.OldTable[SqlServerAnnotationNames.IsTemporal] as bool? == true;
+
+            var historyTableName = operation[SqlServerAnnotationNames.TemporalHistoryTableName] as string
+                ?? operation.OldTable[SqlServerAnnotationNames.TemporalHistoryTableName] as string;
+
+            var historyTableSchema = operation[SqlServerAnnotationNames.TemporalHistoryTableSchema] as string
+                ?? operation.OldTable[SqlServerAnnotationNames.TemporalHistoryTableSchema] as string;
+
+            var periodStartColumnName = operation[SqlServerAnnotationNames.TemporalPeriodStartColumnName] as string
+                ?? operation.OldTable[SqlServerAnnotationNames.TemporalPeriodStartColumnName] as string;
+
+            var periodEndColumnName = operation[SqlServerAnnotationNames.TemporalPeriodEndColumnName] as string
+                ?? operation.OldTable[SqlServerAnnotationNames.TemporalPeriodEndColumnName] as string;
+
+
             if (!temporalTableInformationMap.TryGetValue((tableName, schema), out var _))
             {
-                var isTemporal = operation[SqlServerAnnotationNames.IsTemporal] as bool? == true;
-                var oldIsTemporal = operation.OldTable[SqlServerAnnotationNames.IsTemporal] as bool? == true;
-
-                var historyTableName = operation[SqlServerAnnotationNames.TemporalHistoryTableName] as string
-                    ?? operation.OldTable[SqlServerAnnotationNames.TemporalHistoryTableName] as string;
-
-                var historyTableSchema = operation[SqlServerAnnotationNames.TemporalHistoryTableSchema] as string
-                    ?? operation.OldTable[SqlServerAnnotationNames.TemporalHistoryTableSchema] as string;
-
-                var periodStartColumnName = operation[SqlServerAnnotationNames.TemporalPeriodStartColumnName] as string
-                    ?? operation.OldTable[SqlServerAnnotationNames.TemporalPeriodStartColumnName] as string;
-
-                var periodEndColumnName = operation[SqlServerAnnotationNames.TemporalPeriodEndColumnName] as string
-                    ?? operation.OldTable[SqlServerAnnotationNames.TemporalPeriodEndColumnName] as string;
-
                 temporalTableInformationMap[(tableName, schema)] = new TemporalOperationInformation
                 {
-                    TemporalTableModeSwitch = isTemporal != oldIsTemporal,
+                    IsTemporalTable = isTemporal,
+                    WasTemporalTable = oldIsTemporal,
                     HistoryTableName = historyTableName,
                     HistoryTableSchema = historyTableSchema,
                     PeriodStartColumnName = periodStartColumnName,
                     PeriodEndColumnName = periodEndColumnName
                 };
             }
+            else
+            {
+                throw new InvalidOperationException("already found this");
+            }
         }
+
+
+
+        //foreach (var operation in migrationOperations.OfType<AlterTableOperation>())
+        //{
+        //    var tableName = operation.Name;
+        //    var schema = operation.Schema;
+
+        //    if (!temporalTableInformationMap.TryGetValue((tableName, schema), out var _))
+        //    {
+        //        var isTemporal = operation[SqlServerAnnotationNames.IsTemporal] as bool? == true;
+        //        var oldIsTemporal = operation.OldTable[SqlServerAnnotationNames.IsTemporal] as bool? == true;
+
+        //        var historyTableName = operation[SqlServerAnnotationNames.TemporalHistoryTableName] as string
+        //            ?? operation.OldTable[SqlServerAnnotationNames.TemporalHistoryTableName] as string;
+
+        //        var historyTableSchema = operation[SqlServerAnnotationNames.TemporalHistoryTableSchema] as string
+        //            ?? operation.OldTable[SqlServerAnnotationNames.TemporalHistoryTableSchema] as string;
+
+        //        var periodStartColumnName = operation[SqlServerAnnotationNames.TemporalPeriodStartColumnName] as string
+        //            ?? operation.OldTable[SqlServerAnnotationNames.TemporalPeriodStartColumnName] as string;
+
+        //        var periodEndColumnName = operation[SqlServerAnnotationNames.TemporalPeriodEndColumnName] as string
+        //            ?? operation.OldTable[SqlServerAnnotationNames.TemporalPeriodEndColumnName] as string;
+
+        //        temporalTableInformationMap[(tableName, schema)] = new TemporalOperationInformation
+        //        {
+        //            TemporalTableModeSwitch = isTemporal != oldIsTemporal,
+        //            HistoryTableName = historyTableName,
+        //            HistoryTableSchema = historyTableSchema,
+        //            PeriodStartColumnName = periodStartColumnName,
+        //            PeriodEndColumnName = periodEndColumnName
+        //        };
+        //    }
+        //}
 
         foreach (var operation in migrationOperations)
         {
             if (migrationOperations.Count > 0 && migrationOperations[0] is not CreateTableOperation && migrationOperations[0] is not DropTableOperation)
             {
+                //throw new InvalidOperationException("fgf");
                 Console.WriteLine("debug");
             }
 
@@ -2685,7 +2730,7 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                             // if so, we need to mirror the operation to the history table
                             //if (alterColumnOperation.OldColumn[SqlServerAnnotationNames.IsTemporal] as bool? == true)
                             if (!temporalTableInformationMap.TryGetValue((alterColumnOperation.Table, alterColumnOperation.Schema), out var temporalInfo)
-                                || !temporalInfo.TemporalTableModeSwitch)
+                                || !temporalInfo.WasTemporalTable)
                             {
                                 //alterColumnOperation.OldColumn.RemoveAnnotation(SqlServerAnnotationNames.IsTemporal);
                                 //alterColumnOperation.OldColumn.RemoveAnnotation(SqlServerAnnotationNames.TemporalPeriodStartColumnName);
@@ -2724,35 +2769,68 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                     case DropColumnOperation dropColumnOperation:
                         DisableVersioning(tableName!, schema, historyTableName!, historyTableSchema, suppressTransaction);
 
-
-                        if (temporalTableInformationMap.TryGetValue((dropColumnOperation.Table, dropColumnOperation.Schema), out var dropColumnTemporalInfo)
-                            && (dropColumnOperation.Name == dropColumnTemporalInfo.PeriodStartColumnName
-                                || dropColumnOperation.Name == dropColumnTemporalInfo.PeriodEndColumnName))
-
-                        //if (dropColumnOperation.Name == periodStartColumnName
-                        //    || dropColumnOperation.Name == periodEndColumnName)
+                        if (temporalTableInformationMap.TryGetValue((dropColumnOperation.Table, dropColumnOperation.Schema), out var dropColumnTemporalInfo))
                         {
-                            // period columns can be null here - it doesn't really matter since we are never enabling the period back
-                            // if we remove the period columns, it means we will be dropping the table also or at least convert it back to
-                            // regular which will clear the entry in the periodMap for this table
-                            DisablePeriod(tableName!, schema, periodStartColumnName!, periodEndColumnName!, suppressTransaction);
-                        }
-
-                        operations.Add(operation);
-
-                        // when dropping column, we only need to drop the column from history table as well if that column is not part of the period
-                        // for columns that are part of the period - if we are removing them from the temporal table, it means
-                        // that we are converting back to a regular table, and the history table will be removed anyway
-                        // so we don't need to keep it in sync
-                        if (dropColumnOperation.Name != periodStartColumnName && dropColumnOperation.Name != periodEndColumnName)
-                        {
-                            operations.Add(new DropColumnOperation
+                            if (dropColumnOperation.Name == dropColumnTemporalInfo.PeriodStartColumnName
+                                || dropColumnOperation.Name == dropColumnTemporalInfo.PeriodEndColumnName)
                             {
-                                Name = dropColumnOperation.Name,
-                                Table = historyTableName!,
-                                Schema = historyTableSchema
-                            });
+                                // period columns can be null here - it doesn't really matter since we are never enabling the period back
+                                // if we remove the period columns, it means we will be dropping the table also or at least convert it back to
+                                // regular which will clear the entry in the periodMap for this table
+                                DisablePeriod(tableName!, schema, periodStartColumnName!, periodEndColumnName!, suppressTransaction);
+                            }
+
+                            operations.Add(operation);
+
+                            if (dropColumnOperation.Name != dropColumnTemporalInfo.PeriodStartColumnName
+                                && dropColumnOperation.Name != dropColumnTemporalInfo.PeriodEndColumnName)
+                            {
+                                operations.Add(new DropColumnOperation
+                                {
+                                    Name = dropColumnOperation.Name,
+                                    Table = historyTableName!,
+                                    Schema = historyTableSchema
+                                });
+                            }
                         }
+                        else
+                        {
+                            operations.Add(operation);
+                        }
+
+
+
+
+                        //if (temporalTableInformationMap.TryGetValue((dropColumnOperation.Table, dropColumnOperation.Schema), out var dropColumnTemporalInfo)
+                        //    && (dropColumnOperation.Name == dropColumnTemporalInfo.PeriodStartColumnName
+                        //        || dropColumnOperation.Name == dropColumnTemporalInfo.PeriodEndColumnName))
+
+                        ////if (dropColumnOperation.Name == periodStartColumnName
+                        ////    || dropColumnOperation.Name == periodEndColumnName)
+                        //{
+                        //    // period columns can be null here - it doesn't really matter since we are never enabling the period back
+                        //    // if we remove the period columns, it means we will be dropping the table also or at least convert it back to
+                        //    // regular which will clear the entry in the periodMap for this table
+                        //    DisablePeriod(tableName!, schema, periodStartColumnName!, periodEndColumnName!, suppressTransaction);
+                        //}
+
+                        //operations.Add(operation);
+
+                        //// when dropping column, we only need to drop the column from history table as well if that column is not part of the period
+                        //// for columns that are part of the period - if we are removing them from the temporal table, it means
+                        //// that we are converting back to a regular table, and the history table will be removed anyway
+                        //// so we don't need to keep it in sync
+
+
+                        //if (dropColumnOperation.Name != periodStartColumnName && dropColumnOperation.Name != periodEndColumnName)
+                        //{
+                        //    operations.Add(new DropColumnOperation
+                        //    {
+                        //        Name = dropColumnOperation.Name,
+                        //        Table = historyTableName!,
+                        //        Schema = historyTableSchema
+                        //    });
+                        //}
 
                         break;
 

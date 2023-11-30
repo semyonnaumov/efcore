@@ -4717,6 +4717,20 @@ INNER JOIN (
 """);
     }
 
+    public override async Task Multiple_optional_navs_should_not_deadlock(bool async)
+    {
+        await base.Multiple_optional_navs_should_not_deadlock(async);
+
+        AssertSql(
+"""
+SELECT COUNT(*)
+FROM [LevelTwo] AS [l]
+LEFT JOIN [LevelOne] AS [l0] ON [l].[OneToMany_Optional_Inverse2Id] = [l0].[Id]
+LEFT JOIN [LevelOne] AS [l1] ON [l].[Level1_Optional_Id] = [l1].[Id]
+WHERE ([l0].[Id] IS NOT NULL AND [l0].[Name] LIKE N'%L1 01%') OR ([l1].[Id] IS NOT NULL AND [l1].[Name] LIKE N'%L1 01%')
+""");
+    }
+
     private void AssertSql(params string[] expected)
         => Fixture.TestSqlLoggerFactory.AssertBaseline(expected);
 }

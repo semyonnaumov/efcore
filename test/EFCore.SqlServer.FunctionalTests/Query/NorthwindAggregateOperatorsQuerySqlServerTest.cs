@@ -2902,6 +2902,50 @@ FROM [Customers] AS [c]
 """);
     }
 
+    public override async Task Return_type_of_singular_operator_is_preserved(bool async)
+    {
+        await base.Return_type_of_singular_operator_is_preserved(async);
+
+        AssertSql(
+"""
+SELECT TOP(1) [c].[CustomerID], [c].[City]
+FROM [Customers] AS [c]
+WHERE [c].[CustomerID] = N'ALFKI'
+""",
+                //
+                """
+SELECT TOP(1) [c].[CustomerID], [c].[City]
+FROM [Customers] AS [c]
+WHERE [c].[CustomerID] = N'ALFKI'
+""",
+                //
+                """
+SELECT TOP(2) [c].[CustomerID], [c].[City]
+FROM [Customers] AS [c]
+WHERE [c].[CustomerID] = N'ALFKI'
+""",
+                //
+                """
+SELECT TOP(2) [c].[CustomerID], [c].[City]
+FROM [Customers] AS [c]
+WHERE [c].[CustomerID] = N'ALFKI'
+""",
+                //
+                """
+SELECT TOP(1) [c].[CustomerID], [c].[City]
+FROM [Customers] AS [c]
+WHERE [c].[CustomerID] LIKE N'A%'
+ORDER BY [c].[CustomerID] DESC
+""",
+                //
+                """
+SELECT TOP(1) [c].[CustomerID], [c].[City]
+FROM [Customers] AS [c]
+WHERE [c].[CustomerID] LIKE N'A%'
+ORDER BY [c].[CustomerID] DESC
+""");
+    }
+
     private void AssertSql(params string[] expected)
         => Fixture.TestSqlLoggerFactory.AssertBaseline(expected);
 

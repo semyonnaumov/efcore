@@ -2,6 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.ComponentModel.DataAnnotations;
+using Microsoft.EntityFrameworkCore.Query.Internal;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace Microsoft.EntityFrameworkCore;
 
@@ -10,134 +12,1443 @@ public abstract class SimpleQueryTestBase : NonSharedModelTestBase
     protected override string StoreName
         => "SimpleQueryTests";
 
-    #region 24368
+    #region 603
 
-    [ConditionalTheory]
-    [MemberData(nameof(IsAsyncData))]
-    public virtual async Task Multiple_nested_reference_navigations(bool async)
+    [ConditionalFact]
+    public virtual async Task First_FirstOrDefault_ix_async()
     {
-        var contextFactory = await InitializeAsync<Context24368>();
-        using var context = contextFactory.CreateContext();
-        var id = 1;
-        var staff = await context.Staff.FindAsync(3);
+        var contextFactory = await InitializeAsync<Context603>();
+        using (var context = contextFactory.CreateContext())
+        {
+            var product = await context.Products.OrderBy(p => p.Id).FirstAsync();
+            context.Products.Remove(product);
+            await context.SaveChangesAsync();
+        }
 
-        Assert.Equal(1, staff.ManagerId);
+        using (var context = contextFactory.CreateContext())
+        {
+            context.Products.Add(new Context603.Product603 { Name = "Product 1" });
+            context.SaveChanges();
+        }
 
-        var query = context.Appraisals
-            .Include(ap => ap.Staff).ThenInclude(s => s.Manager)
-            .Include(ap => ap.Staff).ThenInclude(s => s.SecondaryManager)
-            .Where(ap => ap.Id == id);
-
-        var appraisal = async
-            ? await query.SingleOrDefaultAsync()
-            : query.SingleOrDefault();
-
-        Assert.Null(staff.ManagerId); // Overridden due to bad data, see #24368
-
-        Assert.NotNull(appraisal);
-        Assert.Same(staff, appraisal.Staff);
-        Assert.NotNull(appraisal.Staff.SecondaryManager);
-        Assert.Equal(2, appraisal.Staff.SecondaryManagerId);
+        using (var context = contextFactory.CreateContext())
+        {
+            var product = await context.Products.OrderBy(p => p.Id).FirstOrDefaultAsync();
+            context.Products.Remove(product);
+            await context.SaveChangesAsync();
+        }
     }
 
-    protected class Context24368 : DbContext
+    protected class Context603 : DbContext
     {
-        public Context24368(DbContextOptions options)
+        public Context603(DbContextOptions options)
             : base(options)
         {
         }
 
-        public DbSet<Appraisal> Appraisals { get; set; }
-        public DbSet<Staff> Staff { get; set; }
+        public DbSet<Product603> Products { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
+            => modelBuilder.Entity<Product603>()
+                .HasData(new Product603 { Id = 1, Name = "Product 1" });
+
+        public class Product603
         {
-            modelBuilder.Entity<Staff>().HasIndex(e => e.ManagerId).IsUnique(false);
-            modelBuilder.Entity<Staff>()
-                .HasOne(a => a.Manager)
-                .WithOne()
-                .HasForeignKey<Staff>(s => s.ManagerId)
-                .IsRequired(false)
-                .OnDelete(DeleteBehavior.NoAction);
+            public int Id { get; set; }
 
-            modelBuilder.Entity<Staff>().HasIndex(e => e.SecondaryManagerId).IsUnique(false);
-            modelBuilder.Entity<Staff>()
-                .HasOne(a => a.SecondaryManager)
-                .WithOne()
-                .HasForeignKey<Staff>(s => s.SecondaryManagerId)
-                .IsRequired(false)
-                .OnDelete(DeleteBehavior.NoAction);
-
-            modelBuilder.Entity<Staff>().HasData(
-                new Staff
-                {
-                    Id = 1,
-                    Email = "mgr1@company.com",
-                    Logon = "mgr1",
-                    Name = "Manager 1"
-                },
-                new Staff
-                {
-                    Id = 2,
-                    Email = "mgr2@company.com",
-                    Logon = "mgr2",
-                    Name = "Manager 2",
-                    ManagerId = 1
-                },
-                new Staff
-                {
-                    Id = 3,
-                    Email = "emp@company.com",
-                    Logon = "emp",
-                    Name = "Employee",
-                    ManagerId = 1,
-                    SecondaryManagerId = 2
-                }
-            );
-
-            modelBuilder.Entity<Appraisal>().HasData(
-                new Appraisal
-                {
-                    Id = 1,
-                    PeriodStart = new DateTimeOffset(new DateTime(2020, 1, 1).ToUniversalTime()),
-                    PeriodEnd = new DateTimeOffset(new DateTime(2020, 12, 31).ToUniversalTime()),
-                    StaffId = 3
-                });
+            public string Name { get; set; }
         }
     }
 
-    protected class Appraisal
+    #endregion
+
+    #region 3409
+
+    [ConditionalFact]
+    public virtual async Task ThenInclude_with_interface_navigations()
     {
-        public int Id { get; set; }
+        var contextFactory = await InitializeAsync<Context3409>(seed: c => c.Seed());
 
-        public int StaffId { get; set; }
-        public Staff Staff { get; set; }
+        using (var context = contextFactory.CreateContext())
+        {
+            var results = context.Parents
+                .Include(p => p.ChildCollection)
+                .ThenInclude(c => c.SelfReferenceCollection)
+                .ToList();
 
-        public DateTimeOffset PeriodStart { get; set; }
-        public DateTimeOffset PeriodEnd { get; set; }
+            Assert.Single(results);
+            Assert.Equal(1, results[0].ChildCollection.Count);
+            Assert.Equal(2, results[0].ChildCollection.Single().SelfReferenceCollection.Count);
+        }
 
-        public bool Complete { get; set; }
-        public bool Deleted { get; set; }
+        using (var context = contextFactory.CreateContext())
+        {
+            var results = context.Children
+                .Select(
+                    c => new { c.SelfReferenceBackNavigation, c.SelfReferenceBackNavigation.ParentBackNavigation })
+                .ToList();
+
+            Assert.Equal(3, results.Count);
+            Assert.Equal(2, results.Count(c => c.SelfReferenceBackNavigation != null));
+            Assert.Equal(2, results.Count(c => c.ParentBackNavigation != null));
+        }
+
+        using (var context = contextFactory.CreateContext())
+        {
+            var results = context.Children
+                .Select(
+                    c => new
+                    {
+                        SelfReferenceBackNavigation
+                            = EF.Property<Context3409.IChild3409>(c, "SelfReferenceBackNavigation"),
+                        ParentBackNavigationB
+                            = EF.Property<Context3409.IParent3409>(
+                                EF.Property<Context3409.IChild3409>(c, "SelfReferenceBackNavigation"),
+                                "ParentBackNavigation")
+                    })
+                .ToList();
+
+            Assert.Equal(3, results.Count);
+            Assert.Equal(2, results.Count(c => c.SelfReferenceBackNavigation != null));
+            Assert.Equal(2, results.Count(c => c.ParentBackNavigationB != null));
+        }
+
+        using (var context = contextFactory.CreateContext())
+        {
+            var results = context.Children
+                .Include(c => c.SelfReferenceBackNavigation)
+                .ThenInclude(c => c.ParentBackNavigation)
+                .ToList();
+
+            Assert.Equal(3, results.Count);
+            Assert.Equal(2, results.Count(c => c.SelfReferenceBackNavigation != null));
+            Assert.Equal(1, results.Count(c => c.ParentBackNavigation != null));
+        }
     }
 
-    protected class Staff
+    private class Context3409 : DbContext
     {
-        public int Id { get; set; }
+        public DbSet<Parent3409> Parents { get; set; }
+        public DbSet<Child3409> Children { get; set; }
 
-        [MaxLength(100)]
-        public string Logon { get; set; }
+        public Context3409(DbContextOptions options)
+            : base(options)
+        {
+        }
 
-        [MaxLength(150)]
-        public string Email { get; set; }
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Parent3409>()
+                .HasMany(p => (ICollection<Child3409>)p.ChildCollection)
+                .WithOne(c => (Parent3409)c.ParentBackNavigation);
 
-        [MaxLength(100)]
-        public string Name { get; set; }
+            modelBuilder.Entity<Child3409>()
+                .HasMany(c => (ICollection<Child3409>)c.SelfReferenceCollection)
+                .WithOne(c => (Child3409)c.SelfReferenceBackNavigation);
+        }
 
-        public int? ManagerId { get; set; }
-        public Staff Manager { get; set; }
+        public void Seed()
+        {
+            var parent1 = new Parent3409();
 
-        public int? SecondaryManagerId { get; set; }
-        public Staff SecondaryManager { get; set; }
+            var child1 = new Child3409();
+            var child2 = new Child3409();
+            var child3 = new Child3409();
+
+            parent1.ChildCollection = new List<IChild3409> { child1 };
+            child1.SelfReferenceCollection = new List<IChild3409> { child2, child3 };
+
+            Parents.AddRange(parent1);
+            Children.AddRange(child1, child2, child3);
+
+            SaveChanges();
+        }
+
+        public interface IParent3409
+        {
+            int Id { get; set; }
+
+            ICollection<IChild3409> ChildCollection { get; set; }
+        }
+
+        public interface IChild3409
+        {
+            int Id { get; set; }
+
+            int? ParentBackNavigationId { get; set; }
+            IParent3409 ParentBackNavigation { get; set; }
+
+            ICollection<IChild3409> SelfReferenceCollection { get; set; }
+            int? SelfReferenceBackNavigationId { get; set; }
+            IChild3409 SelfReferenceBackNavigation { get; set; }
+        }
+
+        public class Parent3409 : IParent3409
+        {
+            public int Id { get; set; }
+
+            public ICollection<IChild3409> ChildCollection { get; set; }
+        }
+
+        public class Child3409 : IChild3409
+        {
+            public int Id { get; set; }
+
+            public int? ParentBackNavigationId { get; set; }
+            public IParent3409 ParentBackNavigation { get; set; }
+
+            public ICollection<IChild3409> SelfReferenceCollection { get; set; }
+            public int? SelfReferenceBackNavigationId { get; set; }
+            public IChild3409 SelfReferenceBackNavigation { get; set; }
+        }
+    }
+
+    #endregion
+
+    #region 3758
+
+    [ConditionalFact]
+    public async Task Customer_collections_materialize_properly()
+    {
+        var contextFactory = await InitializeAsync<Context3758>(seed: c => c.Seed());
+
+        using var ctx = contextFactory.CreateContext();
+
+        var query1 = ctx.Customers.Select(c => c.Orders1);
+        var result1 = query1.ToList();
+
+        Assert.Equal(2, result1.Count);
+        Assert.IsType<HashSet<Context3758.Order3758>>(result1[0]);
+        Assert.Equal(2, result1[0].Count);
+        Assert.Equal(2, result1[1].Count);
+
+        var query2 = ctx.Customers.Select(c => c.Orders2);
+        var result2 = query2.ToList();
+
+        Assert.Equal(2, result2.Count);
+        Assert.IsType<Context3758.MyGenericCollection3758<Context3758.Order3758>>(result2[0]);
+        Assert.Equal(2, result2[0].Count);
+        Assert.Equal(2, result2[1].Count);
+
+        var query3 = ctx.Customers.Select(c => c.Orders3);
+        var result3 = query3.ToList();
+
+        Assert.Equal(2, result3.Count);
+        Assert.IsType<Context3758.MyNonGenericCollection3758>(result3[0]);
+        Assert.Equal(2, result3[0].Count);
+        Assert.Equal(2, result3[1].Count);
+
+        var query4 = ctx.Customers.Select(c => c.Orders4);
+
+        Assert.Equal(
+            CoreStrings.NavigationCannotCreateType(
+                "Orders4", typeof(Context3758.Customer3758).Name,
+                typeof(Context3758.MyInvalidCollection3758<Context3758.Order3758>).ShortDisplayName()),
+            Assert.Throws<InvalidOperationException>(() => query4.ToList()).Message);
+    }
+
+    protected class Context3758 : DbContext
+    {
+        public Context3758(DbContextOptions options)
+            : base(options)
+        {
+        }
+
+        public DbSet<Customer3758> Customers { get; set; }
+        public DbSet<Order3758> Orders { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Customer3758>(
+                b =>
+                {
+                    //b.ToTable("Customer3758");
+
+                    b.HasMany(e => e.Orders1).WithOne().HasForeignKey("CustomerId1");
+                    b.HasMany(e => e.Orders2).WithOne().HasForeignKey("CustomerId2");
+                    b.HasMany(e => e.Orders3).WithOne().HasForeignKey("CustomerId3");
+                    b.HasMany(e => e.Orders4).WithOne().HasForeignKey("CustomerId4");
+                });
+
+            //modelBuilder.Entity<Order3758>().ToTable("Order3758");
+        }
+
+        public void Seed()
+        {
+            var o111 = new Order3758 { Name = "O111" };
+            var o112 = new Order3758 { Name = "O112" };
+            var o121 = new Order3758 { Name = "O121" };
+            var o122 = new Order3758 { Name = "O122" };
+            var o131 = new Order3758 { Name = "O131" };
+            var o132 = new Order3758 { Name = "O132" };
+            var o141 = new Order3758 { Name = "O141" };
+
+            var o211 = new Order3758 { Name = "O211" };
+            var o212 = new Order3758 { Name = "O212" };
+            var o221 = new Order3758 { Name = "O221" };
+            var o222 = new Order3758 { Name = "O222" };
+            var o231 = new Order3758 { Name = "O231" };
+            var o232 = new Order3758 { Name = "O232" };
+            var o241 = new Order3758 { Name = "O241" };
+
+            var c1 = new Customer3758
+            {
+                Name = "C1",
+                Orders1 = new List<Order3758> { o111, o112 },
+                Orders2 = new MyGenericCollection3758<Order3758>(),
+                Orders3 = new MyNonGenericCollection3758(),
+                Orders4 = new MyInvalidCollection3758<Order3758>(42)
+            };
+
+            c1.Orders2.AddRange(new[] { o121, o122 });
+            c1.Orders3.AddRange(new[] { o131, o132 });
+            c1.Orders4.Add(o141);
+
+            var c2 = new Customer3758
+            {
+                Name = "C2",
+                Orders1 = new List<Order3758> { o211, o212 },
+                Orders2 = new MyGenericCollection3758<Order3758>(),
+                Orders3 = new MyNonGenericCollection3758(),
+                Orders4 = new MyInvalidCollection3758<Order3758>(42)
+            };
+
+            c2.Orders2.AddRange(new[] { o221, o222 });
+            c2.Orders3.AddRange(new[] { o231, o232 });
+            c2.Orders4.Add(o241);
+
+            Customers.AddRange(c1, c2);
+            Orders.AddRange(
+                o111, o112, o121, o122,
+                o131, o132, o141, o211,
+                o212, o221, o222, o231,
+                o232, o241);
+
+            SaveChanges();
+        }
+
+        public class Customer3758
+        {
+            public int Id { get; set; }
+            public string Name { get; set; }
+
+            public ICollection<Order3758> Orders1 { get; set; }
+            public MyGenericCollection3758<Order3758> Orders2 { get; set; }
+            public MyNonGenericCollection3758 Orders3 { get; set; }
+            public MyInvalidCollection3758<Order3758> Orders4 { get; set; }
+        }
+
+        public class Order3758
+        {
+            public int Id { get; set; }
+            public string Name { get; set; }
+        }
+
+        public class MyGenericCollection3758<TElement> : List<TElement>
+        {
+        }
+
+        public class MyNonGenericCollection3758 : List<Order3758>
+        {
+        }
+
+        public class MyInvalidCollection3758<TElement> : List<TElement>
+        {
+            public MyInvalidCollection3758(int argument)
+            {
+                var _ = argument;
+            }
+        }
+    }
+
+    #endregion
+
+    #region 6901
+
+    [ConditionalTheory]
+    [MemberData(nameof(IsAsyncData))]
+    public virtual async Task Left_join_with_missing_key_values_on_both_sides(bool async)
+    {
+        var contextFactory = await InitializeAsync<Context6901>();
+        using var context = contextFactory.CreateContext();
+
+        var customers
+            = from customer in context.Customers
+              join postcode in context.Postcodes
+                  on customer.PostcodeID equals postcode.PostcodeID into custPCTmp
+              from custPC in custPCTmp.DefaultIfEmpty()
+              select new
+              {
+                  customer.CustomerID,
+                  customer.CustomerName,
+                  TownName = custPC == null ? string.Empty : custPC.TownName,
+                  PostcodeValue = custPC == null ? string.Empty : custPC.PostcodeValue
+              };
+
+        var results = customers.ToList();
+
+        Assert.Equal(5, results.Count);
+        Assert.True(results[3].CustomerName != results[4].CustomerName);
+    }
+
+    public class Context6901 : DbContext
+    {
+        public Context6901(DbContextOptions options)
+            : base(options)
+        {
+        }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Customer6901>(
+                c =>
+                {
+                    c.HasKey(x => x.CustomerID);
+                    c.Property(c => c.CustomerID).ValueGeneratedNever();
+                    c.Property(c => c.CustomerName).HasMaxLength(120).IsUnicode(false);
+                    c.HasData(
+                        new Customer6901
+                        {
+                            CustomerID = 1,
+                            CustomerName = "Sam Tippet",
+                            PostcodeID = 5
+                        },
+                        new Customer6901
+                        {
+                            CustomerID = 2,
+                            CustomerName = "William Greig",
+                            PostcodeID = 2
+                        },
+                        new Customer6901
+                        {
+                            CustomerID = 3,
+                            CustomerName = "Steve Jones",
+                            PostcodeID = 3
+                        },
+                        new Customer6901 { CustomerID = 4, CustomerName = "Jim Warren" },
+                        new Customer6901
+                        {
+                            CustomerID = 5,
+                            CustomerName = "Andrew Smith",
+                            PostcodeID = 5
+                        });
+                });
+
+            modelBuilder.Entity<Postcode6901>(
+                p =>
+                {
+                    p.HasKey(x => x.PostcodeID);
+                    p.Property(c => c.PostcodeID).ValueGeneratedNever();
+                    p.Property(c => c.PostcodeValue).HasMaxLength(100).IsUnicode(false);
+                    p.Property(c => c.TownName).HasMaxLength(255).IsUnicode(false);
+                    p.HasData(
+                        new Postcode6901
+                        {
+                            PostcodeID = 2,
+                            PostcodeValue = "1000",
+                            TownName = "Town 1"
+                        },
+                        new Postcode6901
+                        {
+                            PostcodeID = 3,
+                            PostcodeValue = "2000",
+                            TownName = "Town 2"
+                        },
+                        new Postcode6901
+                        {
+                            PostcodeID = 4,
+                            PostcodeValue = "3000",
+                            TownName = "Town 3"
+                        },
+                        new Postcode6901
+                        {
+                            PostcodeID = 5,
+                            PostcodeValue = "4000",
+                            TownName = "Town 4"
+                        });
+                });
+        }
+
+        public DbSet<Customer6901> Customers { get; set; }
+        public DbSet<Postcode6901> Postcodes { get; set; }
+    }
+
+    public class Customer6901
+    {
+        public int CustomerID { get; set; }
+        public string CustomerName { get; set; }
+        public int? PostcodeID { get; set; }
+    }
+
+    public class Postcode6901
+    {
+        public int PostcodeID { get; set; }
+        public string PostcodeValue { get; set; }
+        public string TownName { get; set; }
+    }
+
+    #endregion
+
+    #region 6986
+
+    [ConditionalFact]
+    public virtual async Task Shadow_property_with_inheritance()
+    {
+        var contextFactory = await InitializeAsync<Context6986>(seed: c => c.Seed());
+
+        using (var context = contextFactory.CreateContext())
+        {
+            // can_query_base_type_when_derived_types_contain_shadow_properties
+            var query = context.Contacts.ToList();
+
+            Assert.Equal(4, query.Count);
+            Assert.Equal(2, query.OfType<Context6986.EmployerContact6986>().Count());
+            Assert.Single(query.OfType<Context6986.ServiceOperatorContact6986>());
+        }
+
+        using (var context = contextFactory.CreateContext())
+        {
+            // can_include_dependent_to_principal_navigation_of_derived_type_with_shadow_fk
+            var query = context.Contacts.OfType<Context6986.ServiceOperatorContact6986>().Include(e => e.ServiceOperator6986)
+                .ToList();
+
+            Assert.Single(query);
+            Assert.NotNull(query[0].ServiceOperator6986);
+        }
+
+        using (var context = contextFactory.CreateContext())
+        {
+            // can_project_shadow_property_using_ef_property
+            var query = context.Contacts.OfType<Context6986.ServiceOperatorContact6986>().Select(
+                c => new { c, Prop = EF.Property<int>(c, "ServiceOperator6986Id") }).ToList();
+
+            Assert.Single(query);
+            Assert.Equal(1, query[0].Prop);
+        }
+    }
+
+    private class Context6986 : DbContext
+    {
+        public Context6986(DbContextOptions options)
+            : base(options)
+        {
+        }
+
+        public DbSet<Contact6986> Contacts { get; set; }
+        public DbSet<EmployerContact6986> EmployerContacts { get; set; }
+        public DbSet<Employer6986> Employers { get; set; }
+        public DbSet<ServiceOperatorContact6986> ServiceOperatorContacts { get; set; }
+        public DbSet<ServiceOperator6986> ServiceOperators { get; set; }
+
+        public void Seed()
+        {
+            ServiceOperators.Add(new ServiceOperator6986());
+            Employers.AddRange(
+                new Employer6986 { Name = "UWE" },
+                new Employer6986 { Name = "Hewlett Packard" });
+
+            SaveChanges();
+
+            Contacts.AddRange(
+                new ServiceOperatorContact6986
+                {
+                    UserName = "service.operator@esoterix.co.uk",
+                    ServiceOperator6986 = ServiceOperators.OrderBy(o => o.Id).First()
+                },
+                new EmployerContact6986
+                {
+                    UserName = "uwe@esoterix.co.uk",
+                    Employer6986 = Employers.OrderBy(e => e.Id).First(e => e.Name == "UWE")
+                },
+                new EmployerContact6986
+                {
+                    UserName = "hp@esoterix.co.uk",
+                    Employer6986 = Employers.OrderBy(e => e.Id).First(e => e.Name == "Hewlett Packard")
+                },
+                new Contact6986 { UserName = "noroles@esoterix.co.uk" });
+            SaveChanges();
+        }
+
+        public class EmployerContact6986 : Contact6986
+        {
+            [Required]
+            public Employer6986 Employer6986 { get; set; }
+        }
+
+        public class ServiceOperatorContact6986 : Contact6986
+        {
+            [Required]
+            public ServiceOperator6986 ServiceOperator6986 { get; set; }
+        }
+
+        public class Contact6986
+        {
+            public int Id { get; set; }
+            public string UserName { get; set; }
+            public bool IsPrimary { get; set; }
+        }
+
+        public class Employer6986
+        {
+            public int Id { get; set; }
+            public string Name { get; set; }
+            public List<EmployerContact6986> Contacts { get; set; }
+        }
+
+        public class ServiceOperator6986
+        {
+            public int Id { get; set; }
+            public List<ServiceOperatorContact6986> Contacts { get; set; }
+        }
+    }
+
+    #endregion
+
+    #region 7312
+
+    [ConditionalFact]
+    public virtual async Task Reference_include_on_derived_type_with_sibling_works()
+    {
+        var contextFactory = await InitializeAsync<Context7312>(seed: c => c.Seed());
+
+        using (var context = contextFactory.CreateContext())
+        {
+            var query = context.Proposal.OfType<Context7312.ProposalLeave7312>().Include(l => l.LeaveType).ToList();
+
+            Assert.Single(query);
+        }
+    }
+
+    private class Context7312 : DbContext
+    {
+        public Context7312(DbContextOptions options)
+            : base(options)
+        {
+        }
+
+        public DbSet<Proposal7312> Proposal { get; set; }
+        public DbSet<ProposalCustom7312> ProposalCustoms { get; set; }
+        public DbSet<ProposalLeave7312> ProposalLeaves { get; set; }
+
+        public void Seed()
+        {
+            AddRange(
+                new Proposal7312(),
+                new ProposalCustom7312 { Name = "CustomProposal" },
+                new ProposalLeave7312 { LeaveStart = DateTime.Now, LeaveType = new ProposalLeaveType7312() }
+            );
+            SaveChanges();
+        }
+
+        public class Proposal7312
+        {
+            public int Id { get; set; }
+        }
+
+        public class ProposalCustom7312 : Proposal7312
+        {
+            public string Name { get; set; }
+        }
+
+        public class ProposalLeave7312 : Proposal7312
+        {
+            public DateTime LeaveStart { get; set; }
+            public virtual ProposalLeaveType7312 LeaveType { get; set; }
+        }
+
+        public class ProposalLeaveType7312
+        {
+            public int Id { get; set; }
+            public ICollection<ProposalLeave7312> ProposalLeaves { get; set; }
+        }
+    }
+
+    #endregion
+
+    #region 7359
+
+    [ConditionalFact]
+    public virtual async Task Discriminator_type_is_handled_correctly()
+    {
+        var contextFactory = await InitializeAsync<Context7359>(seed: c => c.Seed());
+
+        using (var ctx = contextFactory.CreateContext())
+        {
+            var query = ctx.Products.OfType<Context7359.SpecialProduct7359>().ToList();
+
+            Assert.Single(query);
+        }
+
+        using (var ctx = contextFactory.CreateContext())
+        {
+            var query = ctx.Products.Where(p => p is Context7359.SpecialProduct7359).ToList();
+
+            Assert.Single(query);
+        }
+    }
+
+    protected class Context7359 : DbContext
+    {
+        public Context7359(DbContextOptions options)
+            : base(options)
+        {
+        }
+
+        public DbSet<Product7359> Products { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<SpecialProduct7359>();
+            modelBuilder.Entity<Product7359>()
+                .HasDiscriminator<int?>("Discriminator")
+                .HasValue(0)
+                .HasValue<SpecialProduct7359>(1);
+        }
+
+        public void Seed()
+        {
+            Add(new Product7359 { Name = "Product1" });
+            Add(new SpecialProduct7359 { Name = "SpecialProduct" });
+            SaveChanges();
+        }
+
+        public class Product7359
+        {
+            public int Id { get; set; }
+
+            public string Name { get; set; }
+        }
+
+        public class SpecialProduct7359 : Product7359
+        {
+        }
+    }
+
+    #endregion
+
+    #region 8909
+
+    [ConditionalFact]
+    public virtual async Task Variable_from_closure_is_parametrized()
+    {
+        var contextFactory = await InitializeAsync<Context8909>();
+        using (var context = contextFactory.CreateContext())
+        {
+            context.Cache.Compact(1);
+
+            var id = 1;
+            context.Entities.Where(c => c.Id == id).ToList();
+            Assert.Equal(2, context.Cache.Count);
+
+            id = 2;
+            context.Entities.Where(c => c.Id == id).ToList();
+            Assert.Equal(2, context.Cache.Count);
+        }
+
+        using (var context = contextFactory.CreateContext())
+        {
+            context.Cache.Compact(1);
+
+            var id = 0;
+            // ReSharper disable once AccessToModifiedClosure
+            Expression<Func<Context8909.Entity8909, bool>> whereExpression = c => c.Id == id;
+
+            id = 1;
+            context.Entities.Where(whereExpression).ToList();
+            Assert.Equal(2, context.Cache.Count);
+
+            id = 2;
+            context.Entities.Where(whereExpression).ToList();
+            Assert.Equal(2, context.Cache.Count);
+        }
+
+        using (var context = contextFactory.CreateContext())
+        {
+            context.Cache.Compact(1);
+
+            var id = 0;
+            // ReSharper disable once AccessToModifiedClosure
+            Expression<Func<Context8909.Entity8909, bool>> whereExpression = c => c.Id == id;
+            Expression<Func<Context8909.Entity8909, bool>> containsExpression =
+                c => context.Entities.Where(whereExpression).Select(e => e.Id).Contains(c.Id);
+
+            id = 1;
+            context.Entities.Where(containsExpression).ToList();
+            Assert.Equal(2, context.Cache.Count);
+
+            id = 2;
+            context.Entities.Where(containsExpression).ToList();
+            Assert.Equal(2, context.Cache.Count);
+        }
+    }
+
+    [ConditionalFact]
+    public virtual async Task Relational_command_cache_creates_new_entry_when_parameter_nullability_changes()
+    {
+        var contextFactory = await InitializeAsync<Context8909>();
+        using var context = contextFactory.CreateContext();
+        context.Cache.Compact(1);
+
+        var name = "A";
+
+        context.Entities.Where(e => e.Name == name).ToList();
+        Assert.Equal(2, context.Cache.Count);
+
+        name = null;
+        context.Entities.Where(e => e.Name == name).ToList();
+        Assert.Equal(3, context.Cache.Count);
+    }
+
+    [ConditionalFact]
+    public virtual async Task Query_cache_entries_are_evicted_as_necessary()
+    {
+        var contextFactory = await InitializeAsync<Context8909>();
+        using var context = contextFactory.CreateContext();
+        context.Cache.Compact(1);
+        Assert.Equal(0, context.Cache.Count);
+
+        var entityParam = Expression.Parameter(typeof(Context8909.Entity8909), "e");
+        var idPropertyInfo = context.Model.FindEntityType((typeof(Context8909.Entity8909)))
+            .FindProperty(nameof(Context8909.Entity8909.Id))
+            .PropertyInfo;
+        for (var i = 0; i < 1100; i++)
+        {
+            var conditionBody = Expression.Equal(
+                Expression.MakeMemberAccess(entityParam, idPropertyInfo),
+                Expression.Constant(i));
+            var whereExpression = Expression.Lambda<Func<Context8909.Entity8909, bool>>(conditionBody, entityParam);
+            context.Entities.Where(whereExpression).GetEnumerator();
+        }
+
+        Assert.True(context.Cache.Count <= 1024);
+    }
+
+    [ConditionalFact]
+    public virtual async Task Explicitly_compiled_query_does_not_add_cache_entry()
+    {
+        var parameter = Expression.Parameter(typeof(Context8909.Entity8909));
+        var predicate = Expression.Lambda<Func<Context8909.Entity8909, bool>>(
+            Expression.MakeBinary(
+                ExpressionType.Equal,
+                Expression.PropertyOrField(parameter, "Id"),
+                Expression.Constant(1)),
+            parameter);
+        var query = EF.CompileQuery((Context8909 context) => context.Set<Context8909.Entity8909>().SingleOrDefault(predicate));
+
+        var contextFactory = await InitializeAsync<Context8909>();
+
+        using (var context = contextFactory.CreateContext())
+        {
+            context.Cache.Compact(1);
+            Assert.Equal(0, context.Cache.Count);
+
+            query(context);
+
+            // 1 entry for RelationalCommandCache
+            Assert.Equal(1, context.Cache.Count);
+        }
+    }
+
+    protected class Context8909 : DbContext
+    {
+        public Context8909(DbContextOptions options)
+            : base(options)
+        {
+        }
+
+        public DbSet<Entity8909> Entities { get; set; }
+
+        public MemoryCache Cache
+        {
+            get
+            {
+                var compiledQueryCache = this.GetService<ICompiledQueryCache>();
+
+                return (MemoryCache)typeof(CompiledQueryCache)
+                    .GetField("_memoryCache", BindingFlags.Instance | BindingFlags.NonPublic)
+                    ?.GetValue(compiledQueryCache);
+            }
+        }
+
+        public class Entity8909
+        {
+            public int Id { get; set; }
+            public string Name { get; set; }
+        }
+    }
+
+    #endregion
+
+    #region 9038
+
+    [ConditionalFact]
+    public virtual async Task Include_collection_optional_reference_collection()
+    {
+        var contextFactory = await InitializeAsync<Context9038>(seed: c => c.Seed());
+
+        using (var context = contextFactory.CreateContext())
+        {
+            var result = await context.People.OfType<Context9038.PersonTeacher9038>()
+                .Include(m => m.Students)
+                .ThenInclude(m => m.Family)
+                .ThenInclude(m => m.Members)
+                .ToListAsync();
+
+            Assert.Equal(2, result.Count);
+            Assert.True(result.All(r => r.Students.Count > 0));
+        }
+
+        using (var context = contextFactory.CreateContext())
+        {
+            var result = await context.Set<Context9038.PersonTeacher9038>()
+                .Include(m => m.Family.Members)
+                .Include(m => m.Students)
+                .ToListAsync();
+
+            Assert.Equal(2, result.Count);
+            Assert.True(result.All(r => r.Students.Count > 0));
+            Assert.Null(result.Single(t => t.Name == "Ms. Frizzle").Family);
+            Assert.NotNull(result.Single(t => t.Name == "Mr. Garrison").Family);
+        }
+    }
+
+    protected class Context9038 : DbContext
+    {
+        public Context9038(DbContextOptions options)
+            : base(options)
+        {
+        }
+
+        public DbSet<Person9038> People { get; set; }
+
+        public DbSet<PersonFamily9038> Families { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<PersonTeacher9038>().HasBaseType<Person9038>();
+            modelBuilder.Entity<PersonKid9038>().HasBaseType<Person9038>();
+            modelBuilder.Entity<PersonFamily9038>();
+
+            modelBuilder.Entity<PersonKid9038>(
+                entity =>
+                {
+                    entity.Property("Discriminator").HasMaxLength(63);
+                    entity.HasIndex("Discriminator");
+                    entity.HasOne(m => m.Teacher)
+                        .WithMany(m => m.Students)
+                        .HasForeignKey(m => m.TeacherId)
+                        .HasPrincipalKey(m => m.Id)
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+        }
+
+        public void Seed()
+        {
+            var famalies = new List<PersonFamily9038> { new() { LastName = "Garrison" }, new() { LastName = "Cartman" } };
+            var teachers = new List<PersonTeacher9038>
+            {
+                new() { Name = "Ms. Frizzle" }, new() { Name = "Mr. Garrison", Family = famalies[0] }
+            };
+            var students = new List<PersonKid9038>
+            {
+                new()
+                {
+                    Name = "Arnold",
+                    Grade = 2,
+                    Teacher = teachers[0]
+                },
+                new()
+                {
+                    Name = "Eric",
+                    Grade = 4,
+                    Teacher = teachers[1],
+                    Family = famalies[1]
+                }
+            };
+
+            People.AddRange(teachers);
+            People.AddRange(students);
+            SaveChanges();
+        }
+
+        public abstract class Person9038
+        {
+            public int Id { get; set; }
+
+            public string Name { get; set; }
+
+            public int? TeacherId { get; set; }
+
+            public PersonFamily9038 Family { get; set; }
+        }
+
+        public class PersonKid9038 : Person9038
+        {
+            public int Grade { get; set; }
+
+            public PersonTeacher9038 Teacher { get; set; }
+        }
+
+        public class PersonTeacher9038 : Person9038
+        {
+            public ICollection<PersonKid9038> Students { get; set; }
+        }
+
+        public class PersonFamily9038
+        {
+            public int Id { get; set; }
+
+            public string LastName { get; set; }
+
+            public ICollection<Person9038> Members { get; set; }
+        }
+    }
+
+    #endregion
+
+    #region 9468
+
+    [ConditionalFact]
+    public virtual async Task Conditional_expression_with_conditions_does_not_collapse_if_nullable_bool()
+    {
+        var contextFactory = await InitializeAsync<Context9468>(seed: c => c.Seed());
+        using var context = contextFactory.CreateContext();
+        var query = context.Carts.Select(
+            t => new { Processing = t.Configuration != null ? !t.Configuration.Processed : (bool?)null }).ToList();
+
+        Assert.Single(query.Where(t => t.Processing == null));
+        Assert.Single(query.Where(t => t.Processing == true));
+        Assert.Single(query.Where(t => t.Processing == false));
+    }
+
+    protected class Context9468 : DbContext
+    {
+        public Context9468(DbContextOptions options)
+            : base(options)
+        {
+        }
+
+        public DbSet<Cart9468> Carts { get; set; }
+
+        public void Seed()
+        {
+            AddRange(
+                new Cart9468(),
+                new Cart9468 { Configuration = new Configuration9468 { Processed = true } },
+                new Cart9468 { Configuration = new Configuration9468() }
+            );
+
+            SaveChanges();
+        }
+
+        public class Cart9468
+        {
+            public int Id { get; set; }
+            public int? ConfigurationId { get; set; }
+            public Configuration9468 Configuration { get; set; }
+        }
+
+        public class Configuration9468
+        {
+            public int Id { get; set; }
+            public bool Processed { get; set; }
+        }
+    }
+
+    #endregion
+
+    #region 10635
+
+    [ConditionalFact]
+    public virtual async Task Include_with_order_by_on_interface_key()
+    {
+        var contextFactory = await InitializeAsync<Context10635>(seed: c => c.Seed());
+        using (var context = contextFactory.CreateContext())
+        {
+            var query = context.Parents.Include(p => p.Children).OrderBy(p => p.Id).ToList();
+        }
+
+        using (var context = contextFactory.CreateContext())
+        {
+            var query = context.Parents.OrderBy(p => p.Id).Select(p => p.Children.ToList()).ToList();
+        }
+    }
+
+    private class Context10635 : DbContext
+    {
+        public Context10635(DbContextOptions options)
+            : base(options)
+        {
+        }
+
+        public DbSet<Parent10635> Parents { get; set; }
+        public DbSet<Child10635> Children { get; set; }
+
+        public void Seed()
+        {
+            var c11 = new Child10635 { Name = "Child111" };
+            var c12 = new Child10635 { Name = "Child112" };
+            var c13 = new Child10635 { Name = "Child113" };
+            var c21 = new Child10635 { Name = "Child121" };
+
+            var p1 = new Parent10635 { Name = "Parent1", Children = new[] { c11, c12, c13 } };
+            var p2 = new Parent10635 { Name = "Parent2", Children = new[] { c21 } };
+            Parents.AddRange(p1, p2);
+            Children.AddRange(c11, c12, c13, c21);
+            SaveChanges();
+        }
+
+        public interface IEntity10635
+        {
+            int Id { get; set; }
+        }
+
+        public class Parent10635 : IEntity10635
+        {
+            public int Id { get; set; }
+            public string Name { get; set; }
+            public virtual ICollection<Child10635> Children { get; set; }
+        }
+
+        public class Child10635 : IEntity10635
+        {
+            public int Id { get; set; }
+            public string Name { get; set; }
+            public int ParentId { get; set; }
+        }
+    }
+
+    #endregion
+
+    #region 11104
+
+    [ConditionalFact]
+    public virtual async Task QueryBuffer_requirement_is_computed_when_querying_base_type_while_derived_type_has_shadow_prop()
+    {
+        var contextFactory = await InitializeAsync<Context11104>(seed: c => c.Seed());
+
+        using (var context = contextFactory.CreateContext())
+        {
+            var query = context.Bases.ToList();
+
+            var derived1 = Assert.Single(query);
+            Assert.Equal(typeof(Context11104.Derived11104_1), derived1.GetType());
+        }
+    }
+
+    protected class Context11104 : DbContext
+    {
+        public DbSet<Base11104> Bases { get; set; }
+
+        public Context11104(DbContextOptions options)
+            : base(options)
+        {
+        }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+            => modelBuilder.Entity<Base11104>()
+                .HasDiscriminator(x => x.IsTwo)
+                .HasValue<Derived11104_1>(false)
+                .HasValue<Derived11104_2>(true);
+
+        public void Seed()
+        {
+            AddRange(
+                new Derived11104_1 { IsTwo = false }
+            );
+
+            SaveChanges();
+        }
+
+        public abstract class Base11104
+        {
+            public int Id { get; set; }
+            public bool IsTwo { get; set; }
+        }
+
+        public class Derived11104_1 : Base11104
+        {
+            public Stuff11104 MoreStuff { get; set; }
+        }
+
+        public class Derived11104_2 : Base11104
+        {
+        }
+
+        public class Stuff11104
+        {
+            public int Id { get; set; }
+        }
+    }
+
+    #endregion
+
+    #region 11923
+
+    [ConditionalFact]
+    public virtual async Task Collection_without_setter_materialized_correctly()
+    {
+        var contextFactory = await InitializeAsync<Context11923>(seed: c => c.Seed());
+        using var context = contextFactory.CreateContext();
+        var query1 = context.Blogs
+            .Select(
+                b => new
+                {
+                    Collection1 = b.Posts1,
+                    Collection2 = b.Posts2,
+                    Collection3 = b.Posts3
+                }).ToList();
+
+        var query2 = context.Blogs
+            .Select(
+                b => new
+                {
+                    Collection1 = b.Posts1.OrderBy(p => p.Id).First().Comments.Count,
+                    Collection2 = b.Posts2.OrderBy(p => p.Id).First().Comments.Count,
+                    Collection3 = b.Posts3.OrderBy(p => p.Id).First().Comments.Count
+                }).ToList();
+
+        Assert.Throws<InvalidOperationException>(
+            () => context.Blogs
+                .Select(
+                    b => new
+                    {
+                        Collection1 = b.Posts1.OrderBy(p => p.Id),
+                        Collection2 = b.Posts2.OrderBy(p => p.Id),
+                        Collection3 = b.Posts3.OrderBy(p => p.Id)
+                    }).ToList());
+    }
+
+    protected class Context11923 : DbContext
+    {
+        public DbSet<Blog11923> Blogs { get; set; }
+        public DbSet<Post11923> Posts { get; set; }
+        public DbSet<Comment11923> Comments { get; set; }
+
+        public Context11923(DbContextOptions options)
+            : base(options)
+        {
+        }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Blog11923>(
+                b =>
+                {
+                    b.HasMany(e => e.Posts1).WithOne().HasForeignKey("BlogId1");
+                    b.HasMany(e => e.Posts2).WithOne().HasForeignKey("BlogId2");
+                    b.HasMany(e => e.Posts3).WithOne().HasForeignKey("BlogId3");
+                });
+
+            modelBuilder.Entity<Post11923>();
+        }
+
+        public void Seed()
+        {
+            var p111 = new Post11923 { Name = "P111" };
+            var p112 = new Post11923 { Name = "P112" };
+            var p121 = new Post11923 { Name = "P121" };
+            var p122 = new Post11923 { Name = "P122" };
+            var p123 = new Post11923 { Name = "P123" };
+            var p131 = new Post11923 { Name = "P131" };
+
+            var p211 = new Post11923 { Name = "P211" };
+            var p212 = new Post11923 { Name = "P212" };
+            var p221 = new Post11923 { Name = "P221" };
+            var p222 = new Post11923 { Name = "P222" };
+            var p223 = new Post11923 { Name = "P223" };
+            var p231 = new Post11923 { Name = "P231" };
+
+            var b1 = new Blog11923 { Name = "B1" };
+            var b2 = new Blog11923 { Name = "B2" };
+
+            b1.Posts1.AddRange(new[] { p111, p112 });
+            b1.Posts2.AddRange(new[] { p121, p122, p123 });
+            b1.Posts3.Add(p131);
+
+            b2.Posts1.AddRange(new[] { p211, p212 });
+            b2.Posts2.AddRange(new[] { p221, p222, p223 });
+            b2.Posts3.Add(p231);
+
+            Blogs.AddRange(b1, b2);
+            Posts.AddRange(p111, p112, p121, p122, p123, p131, p211, p212, p221, p222, p223, p231);
+            SaveChanges();
+        }
+
+        public class Blog11923
+        {
+            public Blog11923()
+            {
+                Posts1 = new List<Post11923>();
+                Posts2 = new CustomCollection11923();
+                Posts3 = new HashSet<Post11923>();
+            }
+
+            public Blog11923(List<Post11923> posts1, CustomCollection11923 posts2, HashSet<Post11923> posts3)
+            {
+                Posts1 = posts1;
+                Posts2 = posts2;
+                Posts3 = posts3;
+            }
+
+            public int Id { get; set; }
+            public string Name { get; set; }
+
+            public List<Post11923> Posts1 { get; }
+            public CustomCollection11923 Posts2 { get; }
+            public HashSet<Post11923> Posts3 { get; }
+        }
+
+        public class Post11923
+        {
+            public int Id { get; set; }
+            public string Name { get; set; }
+
+            public List<Comment11923> Comments { get; set; }
+        }
+
+        public class Comment11923
+        {
+            public int Id { get; set; }
+        }
+
+        public class CustomCollection11923 : List<Post11923>
+        {
+        }
+    }
+
+    #endregion
+
+    #region 12582
+
+    [ConditionalFact]
+    public virtual async Task Include_collection_with_OfType_base()
+    {
+        var contextFactory = await InitializeAsync<Context12582>(seed: c => c.Seed());
+
+        using (var context = contextFactory.CreateContext())
+        {
+            var query = context.Employees
+                .Include(i => i.Devices)
+                .OfType<Context12582.IEmployee12582>()
+                .ToList();
+
+            Assert.Single(query);
+
+            var employee = (Context12582.Employee12582)query[0];
+            Assert.Equal(2, employee.Devices.Count);
+        }
+
+        using (var context = contextFactory.CreateContext())
+        {
+            var query = context.Employees
+                .Select(e => e.Devices.Where(d => d.Device != "foo").Cast<Context12582.IEmployeeDevice12582>())
+                .ToList();
+
+            Assert.Single(query);
+            var result = query[0];
+            Assert.Equal(2, result.Count());
+        }
+    }
+
+    private class Context12582 : DbContext
+    {
+        public DbSet<Employee12582> Employees { get; set; }
+        public DbSet<EmployeeDevice12582> Devices { get; set; }
+
+        public Context12582(DbContextOptions options)
+            : base(options)
+        {
+        }
+
+        public void Seed()
+        {
+            var d1 = new EmployeeDevice12582 { Device = "d1" };
+            var d2 = new EmployeeDevice12582 { Device = "d2" };
+            var e = new Employee12582 { Devices = new List<EmployeeDevice12582> { d1, d2 }, Name = "e" };
+
+            Devices.AddRange(d1, d2);
+            Employees.Add(e);
+            SaveChanges();
+        }
+
+        public interface IEmployee12582
+        {
+            string Name { get; set; }
+        }
+
+        public class Employee12582 : IEmployee12582
+        {
+            public int Id { get; set; }
+            public string Name { get; set; }
+            public ICollection<EmployeeDevice12582> Devices { get; set; }
+        }
+
+        public interface IEmployeeDevice12582
+        {
+            string Device { get; set; }
+        }
+
+        public class EmployeeDevice12582 : IEmployeeDevice12582
+        {
+            public int Id { get; set; }
+            public int EmployeeId { get; set; }
+            public string Device { get; set; }
+            public Employee12582 Employee { get; set; }
+        }
+    }
+
+    #endregion
+
+    #region 12748
+
+    [ConditionalFact]
+    public virtual async Task Correlated_collection_correctly_associates_entities_with_byte_array_keys()
+    {
+        var contextFactory = await InitializeAsync<Context12748>(seed: c => c.Seed());
+        using var context = contextFactory.CreateContext();
+        var query = from blog in context.Blogs
+                    select new
+                    {
+                        blog.Name,
+                        Comments = blog.Comments.Select(
+                            u => new { u.Id }).ToArray()
+                    };
+        var result = query.ToList();
+        Assert.Single(result[0].Comments);
+    }
+
+    protected class Context12748 : DbContext
+    {
+        public DbSet<Blog12748> Blogs { get; set; }
+        public DbSet<Comment12748> Comments { get; set; }
+
+        public Context12748(DbContextOptions options)
+            : base(options)
+        {
+        }
+
+        public void Seed()
+        {
+            Blogs.Add(new Blog12748 { Name = Encoding.UTF8.GetBytes("Awesome Blog") });
+            Comments.Add(new Comment12748 { BlogName = Encoding.UTF8.GetBytes("Awesome Blog") });
+            SaveChanges();
+        }
+
+        public class Blog12748
+        {
+            [Key]
+            public byte[] Name { get; set; }
+
+            public List<Comment12748> Comments { get; set; }
+        }
+
+        public class Comment12748
+        {
+            public int Id { get; set; }
+            public byte[] BlogName { get; set; }
+            public Blog12748 Blog { get; set; }
+        }
     }
 
     #endregion
@@ -418,95 +1729,6 @@ public abstract class SimpleQueryTestBase : NonSharedModelTestBase
         public int AuthorId { get; set; }
         public Author26433 Author { get; set; }
     }
-
-    #endregion
-
-    #region 26428
-
-#nullable enable
-
-    [ConditionalTheory]
-    [MemberData(nameof(IsAsyncData))]
-    public virtual async Task IsDeleted_query_filter_with_conversion_to_int_works(bool async)
-    {
-        var contextFactory = await InitializeAsync<Context26428>(seed: c => c.Seed());
-        using var context = contextFactory.CreateContext();
-
-        var query = context.Suppliers.Include(s => s.Location).OrderBy(s => s.Name);
-
-        var suppliers = async
-            ? await query.ToListAsync()
-            : query.ToList();
-
-        Assert.Equal(4, suppliers.Count);
-        Assert.Single(suppliers.Where(e => e.Location != null));
-    }
-
-    protected class Context26428 : DbContext
-    {
-        public Context26428(DbContextOptions options)
-            : base(options)
-        {
-        }
-
-        public DbSet<Supplier> Suppliers
-            => Set<Supplier>();
-
-        public DbSet<Location> Locations
-            => Set<Location>();
-
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
-        {
-            modelBuilder.Entity<Supplier>().Property(s => s.IsDeleted).HasConversion<int>();
-            modelBuilder.Entity<Supplier>().HasQueryFilter(s => !s.IsDeleted);
-
-            modelBuilder.Entity<Location>().Property(l => l.IsDeleted).HasConversion<int>();
-            modelBuilder.Entity<Location>().HasQueryFilter(l => !l.IsDeleted);
-        }
-
-        public void Seed()
-        {
-            var activeAddress = new Location { Address = "Active address", IsDeleted = false };
-            var deletedAddress = new Location { Address = "Deleted address", IsDeleted = true };
-
-            var activeSupplier1 = new Supplier
-            {
-                Name = "Active supplier 1",
-                IsDeleted = false,
-                Location = activeAddress
-            };
-            var activeSupplier2 = new Supplier
-            {
-                Name = "Active supplier 2",
-                IsDeleted = false,
-                Location = deletedAddress
-            };
-            var activeSupplier3 = new Supplier { Name = "Active supplier 3", IsDeleted = false };
-            var deletedSupplier = new Supplier { Name = "Deleted supplier", IsDeleted = false };
-
-            AddRange(activeAddress, deletedAddress);
-            AddRange(activeSupplier1, activeSupplier2, activeSupplier3, deletedSupplier);
-
-            SaveChanges();
-        }
-    }
-
-    protected class Supplier
-    {
-        public Guid SupplierId { get; set; }
-        public string Name { get; set; } = null!;
-        public Location? Location { get; set; }
-        public bool IsDeleted { get; set; }
-    }
-
-    protected class Location
-    {
-        public Guid LocationId { get; set; }
-        public string Address { get; set; } = null!;
-        public bool IsDeleted { get; set; }
-    }
-
-#nullable disable
 
     #endregion
 
@@ -972,115 +2194,6 @@ public abstract class SimpleQueryTestBase : NonSharedModelTestBase
     {
         public int Id { get; set; }
         public int? Value { get; set; }
-    }
-
-    #endregion
-
-    #region 27163
-
-    [ConditionalTheory]
-    [MemberData(nameof(IsAsyncData))]
-    public virtual async Task Group_by_multiple_aggregate_joining_different_tables(bool async)
-    {
-        var contextFactory = await InitializeAsync<Context27163>();
-        using var context = contextFactory.CreateContext();
-
-        var query = context.Parents
-            .GroupBy(x => new { })
-            .Select(
-                g => new
-                {
-                    Test1 = g
-                        .Select(x => x.Child1.Value1)
-                        .Distinct()
-                        .Count(),
-                    Test2 = g
-                        .Select(x => x.Child2.Value2)
-                        .Distinct()
-                        .Count()
-                });
-
-        var orders = async
-            ? await query.ToListAsync()
-            : query.ToList();
-    }
-
-    [ConditionalTheory]
-    [MemberData(nameof(IsAsyncData))]
-    public virtual async Task Group_by_multiple_aggregate_joining_different_tables_with_query_filter(bool async)
-    {
-        var contextFactory = await InitializeAsync<Context27163>();
-        using var context = contextFactory.CreateContext();
-
-        var query = context.Parents
-            .GroupBy(x => new { })
-            .Select(
-                g => new
-                {
-                    Test1 = g
-                        .Select(x => x.ChildFilter1.Value1)
-                        .Distinct()
-                        .Count(),
-                    Test2 = g
-                        .Select(x => x.ChildFilter2.Value2)
-                        .Distinct()
-                        .Count()
-                });
-
-        var orders = async
-            ? await query.ToListAsync()
-            : query.ToList();
-    }
-
-    protected class Context27163 : DbContext
-    {
-        public Context27163(DbContextOptions options)
-            : base(options)
-        {
-        }
-
-        public DbSet<Parent> Parents { get; set; }
-
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
-        {
-            modelBuilder.Entity<ChildFilter1>().HasQueryFilter(e => e.Filter1 == "Filter1");
-            modelBuilder.Entity<ChildFilter2>().HasQueryFilter(e => e.Filter2 == "Filter2");
-        }
-    }
-
-    public class Parent
-    {
-        public int Id { get; set; }
-        public Child1 Child1 { get; set; }
-        public Child2 Child2 { get; set; }
-        public ChildFilter1 ChildFilter1 { get; set; }
-        public ChildFilter2 ChildFilter2 { get; set; }
-    }
-
-    public class Child1
-    {
-        public int Id { get; set; }
-        public string Value1 { get; set; }
-    }
-
-    public class Child2
-    {
-        public int Id { get; set; }
-        public string Value2 { get; set; }
-    }
-
-    public class ChildFilter1
-    {
-        public int Id { get; set; }
-        public string Filter1 { get; set; }
-        public string Value1 { get; set; }
-    }
-
-    public class ChildFilter2
-    {
-        public int Id { get; set; }
-        public string Filter2 { get; set; }
-        public string Value2 { get; set; }
     }
 
     #endregion

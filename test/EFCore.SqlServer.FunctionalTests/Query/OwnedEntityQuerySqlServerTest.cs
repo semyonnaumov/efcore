@@ -3,12 +3,467 @@
 
 // ReSharper disable InconsistentNaming
 
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace Microsoft.EntityFrameworkCore.Query;
 
 public class OwnedEntityQuerySqlServerTest : OwnedEntityQueryRelationalTestBase
 {
     protected override ITestStoreFactory TestStoreFactory
         => SqlServerTestStoreFactory.Instance;
+
+    #region 22054
+
+    [ConditionalFact]
+    public virtual async Task Optional_dependent_is_null_when_sharing_required_column_with_principal()
+    {
+        var contextFactory = await InitializeAsync<Context22054>(seed: c => c.Seed());
+        using var context = contextFactory.CreateContext();
+        var query = context.Set<Context22054.User22054>().OrderByDescending(e => e.Id).ToList();
+        Assert.Equal(3, query.Count);
+        Assert.Null(query[0].Contact);
+        Assert.Null(query[0].Data);
+        Assert.NotNull(query[1].Data);
+        Assert.NotNull(query[1].Contact);
+        Assert.Null(query[1].Contact.Address);
+        Assert.NotNull(query[2].Data);
+        Assert.NotNull(query[2].Contact);
+        Assert.NotNull(query[2].Contact.Address);
+
+        AssertSql(
+            """
+SELECT [u].[Id], [u].[RowVersion], [u].[Contact_MobileNumber], [u].[SharedProperty], [u].[Contact_Address_City], [u].[Contact_Address_Zip], [u].[Data_Data], [u].[Data_Exists], [u].[RowVersion]
+FROM [User22054] AS [u]
+ORDER BY [u].[Id] DESC
+""");
+    }
+
+    protected class Context22054 : DbContext
+    {
+        public Context22054(DbContextOptions options)
+            : base(options)
+        {
+        }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+            => modelBuilder.Entity<User22054>(
+                builder =>
+                {
+                    builder.HasKey(x => x.Id);
+
+                    builder.OwnsOne(
+                        x => x.Contact, contact =>
+                        {
+                            contact.Property(e => e.SharedProperty).IsRequired().HasColumnName("SharedProperty");
+
+                            contact.OwnsOne(
+                                c => c.Address, address =>
+                                {
+                                    address.Property<string>("SharedProperty").IsRequired().HasColumnName("SharedProperty");
+                                });
+                        });
+
+                    builder.OwnsOne(e => e.Data)
+                        .Property<byte[]>("RowVersion")
+                        .IsRowVersion()
+                        .IsRequired()
+                        .HasColumnType("TIMESTAMP")
+                        .HasColumnName("RowVersion");
+
+                    builder.Property(x => x.RowVersion)
+                        .HasColumnType("TIMESTAMP")
+                        .IsRowVersion()
+                        .IsRequired()
+                        .HasColumnName("RowVersion");
+                });
+
+        public void Seed()
+        {
+            AddRange(
+                new User22054
+                {
+                    Data = new Data22054 { Data = "Data1" },
+                    Contact = new Contact22054
+                    {
+                        MobileNumber = "123456",
+                        SharedProperty = "Value1",
+                        Address = new Address22054
+                        {
+                            City = "Seattle",
+                            Zip = 12345,
+                            SharedProperty = "Value1"
+                        }
+                    }
+                },
+                new User22054
+                {
+                    Data = new Data22054 { Data = "Data2" },
+                    Contact = new Contact22054
+                    {
+                        MobileNumber = "654321",
+                        SharedProperty = "Value2",
+                        Address = null
+                    }
+                },
+                new User22054 { Contact = null, Data = null });
+
+            SaveChanges();
+        }
+
+        public class User22054
+        {
+            public int Id { get; set; }
+            public Data22054 Data { get; set; }
+            public Contact22054 Contact { get; set; }
+            public byte[] RowVersion { get; set; }
+        }
+
+        public class Data22054
+        {
+            public string Data { get; set; }
+            public bool Exists { get; set; }
+        }
+
+        public class Contact22054
+        {
+            public string MobileNumber { get; set; }
+            public string SharedProperty { get; set; }
+            public Address22054 Address { get; set; }
+        }
+
+        public class Address22054
+        {
+            public string City { get; set; }
+            public string SharedProperty { get; set; }
+            public int Zip { get; set; }
+        }
+    }
+
+    #endregion
+
+    #region 22340
+
+    [ConditionalFact]
+    public virtual async Task Owned_entity_mapped_to_separate_table()
+    {
+        var contextFactory = await InitializeAsync<Context22340>(seed: c => c.Seed());
+        using var context = contextFactory.CreateContext();
+        var masterTrunk = context.MasterTrunk.OrderBy(e => EF.Property<string>(e, "Id")).FirstOrDefault(); 
+
+        Assert.NotNull(masterTrunk);
+
+        AssertSql(
+            """
+SELECT [t].[Id], [t].[MasterTrunk22340Id], [t].[MasterTrunk22340Id0], [f0].[CurrencyBag22340MasterTrunk22340Id], [f0].[Id], [f0].[Amount], [f0].[Code], [s0].[CurrencyBag22340MasterTrunk22340Id], [s0].[Id], [s0].[Amount], [s0].[Code]
+FROM (
+    SELECT TOP(1) [m].[Id], [f].[MasterTrunk22340Id], [s].[MasterTrunk22340Id] AS [MasterTrunk22340Id0]
+    FROM [MasterTrunk] AS [m]
+    LEFT JOIN [FungibleBag] AS [f] ON [m].[Id] = [f].[MasterTrunk22340Id]
+    LEFT JOIN [StaticBag] AS [s] ON [m].[Id] = [s].[MasterTrunk22340Id]
+    ORDER BY [m].[Id]
+) AS [t]
+LEFT JOIN [FungibleBag_Currencies] AS [f0] ON [t].[MasterTrunk22340Id] = [f0].[CurrencyBag22340MasterTrunk22340Id]
+LEFT JOIN [StaticBag_Currencies] AS [s0] ON [t].[MasterTrunk22340Id0] = [s0].[CurrencyBag22340MasterTrunk22340Id]
+ORDER BY [t].[Id], [t].[MasterTrunk22340Id], [t].[MasterTrunk22340Id0], [f0].[CurrencyBag22340MasterTrunk22340Id], [f0].[Id], [s0].[CurrencyBag22340MasterTrunk22340Id]
+""");
+    }
+
+    protected class Context22340 : DbContext
+    {
+        public Context22340(DbContextOptions options)
+            : base(options)
+        {
+        }
+
+        public DbSet<MasterTrunk22340> MasterTrunk { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            var builder = modelBuilder.Entity<MasterTrunk22340>();
+            builder.Property<string>("Id").ValueGeneratedOnAdd();
+            builder.HasKey("Id");
+
+            builder.OwnsOne(
+                p => p.FungibleBag, p =>
+                {
+                    p.OwnsMany(
+                        p => p.Currencies, p =>
+                        {
+                            p.Property(p => p.Amount).IsConcurrencyToken();
+                        });
+
+                    p.ToTable("FungibleBag");
+                });
+
+            builder.OwnsOne(
+                p => p.StaticBag, p =>
+                {
+                    p.OwnsMany(
+                        p => p.Currencies, p =>
+                        {
+                            p.Property(p => p.Amount).IsConcurrencyToken();
+                        });
+                    p.ToTable("StaticBag");
+                });
+        }
+
+        public void Seed()
+        {
+            var masterTrunk = new MasterTrunk22340
+            {
+                FungibleBag = new CurrencyBag22340 { Currencies = new[] { new Currency22340 { Amount = 10, Code = 999 } } },
+                StaticBag = new CurrencyBag22340 { Currencies = new[] { new Currency22340 { Amount = 555, Code = 111 } } }
+            };
+            Add(masterTrunk);
+
+            SaveChanges();
+        }
+
+        public class MasterTrunk22340
+        {
+            public CurrencyBag22340 FungibleBag { get; set; }
+            public CurrencyBag22340 StaticBag { get; set; }
+        }
+
+        public class CurrencyBag22340
+        {
+            public IEnumerable<Currency22340> Currencies { get; set; }
+        }
+
+        public class Currency22340
+        {
+            [Column(TypeName = "decimal(18,2)")]
+            public decimal Amount { get; set; }
+
+            [Column(TypeName = "decimal(18,2)")]
+            public decimal Code { get; set; }
+        }
+    }
+
+    #endregion
+
+    #region 23211
+
+    [ConditionalFact]
+    public virtual async Task Collection_include_on_owner_with_owned_type_mapped_to_different_table()
+    {
+        var contextFactory = await InitializeAsync<Context23211>(seed: c => c.Seed());
+        using (var context = contextFactory.CreateContext())
+        {
+            var owner = context.Set<Context23211.Owner23211>().Include(e => e.Dependents).AsSplitQuery().OrderBy(e => e.Id).Single();
+            Assert.NotNull(owner.Dependents);
+            Assert.Equal(2, owner.Dependents.Count);
+            Assert.NotNull(owner.Owned1);
+            Assert.Equal("A", owner.Owned1.Value);
+            Assert.NotNull(owner.Owned2);
+            Assert.Equal("B", owner.Owned2.Value);
+
+            AssertSql(
+"""
+SELECT TOP(2) [o].[Id], [o0].[Owner23211Id], [o0].[Value], [o1].[Owner23211Id], [o1].[Value]
+FROM [Owner23211] AS [o]
+LEFT JOIN [Owned1_23211] AS [o0] ON [o].[Id] = [o0].[Owner23211Id]
+LEFT JOIN [Owned2_23211] AS [o1] ON [o].[Id] = [o1].[Owner23211Id]
+ORDER BY [o].[Id], [o0].[Owner23211Id], [o1].[Owner23211Id]
+""",
+                    //
+                    """
+SELECT [d].[Id], [d].[Owner23211Id], [t].[Id], [t].[Owner23211Id], [t].[Owner23211Id0]
+FROM (
+    SELECT TOP(1) [o].[Id], [o0].[Owner23211Id], [o1].[Owner23211Id] AS [Owner23211Id0]
+    FROM [Owner23211] AS [o]
+    LEFT JOIN [Owned1_23211] AS [o0] ON [o].[Id] = [o0].[Owner23211Id]
+    LEFT JOIN [Owned2_23211] AS [o1] ON [o].[Id] = [o1].[Owner23211Id]
+    ORDER BY [o].[Id]
+) AS [t]
+INNER JOIN [Dependent23211] AS [d] ON [t].[Id] = [d].[Owner23211Id]
+ORDER BY [t].[Id], [t].[Owner23211Id], [t].[Owner23211Id0]
+""");
+        }
+
+        using (var context = contextFactory.CreateContext())
+        {
+            ClearLog();
+            var owner = context.Set<Context23211.SecondOwner23211>().Include(e => e.Dependents).AsSplitQuery().OrderBy(e => e.Id)
+                .Single();
+            Assert.NotNull(owner.Dependents);
+            Assert.Equal(2, owner.Dependents.Count);
+            Assert.NotNull(owner.Owned);
+            Assert.Equal("A", owner.Owned.Value);
+
+            AssertSql(
+"""
+SELECT TOP(2) [s].[Id], [o].[SecondOwner23211Id], [o].[Value]
+FROM [SecondOwner23211] AS [s]
+LEFT JOIN [Owned23211] AS [o] ON [s].[Id] = [o].[SecondOwner23211Id]
+ORDER BY [s].[Id], [o].[SecondOwner23211Id]
+""",
+                //
+                """
+SELECT [s0].[Id], [s0].[SecondOwner23211Id], [t].[Id], [t].[SecondOwner23211Id]
+FROM (
+    SELECT TOP(1) [s].[Id], [o].[SecondOwner23211Id]
+    FROM [SecondOwner23211] AS [s]
+    LEFT JOIN [Owned23211] AS [o] ON [s].[Id] = [o].[SecondOwner23211Id]
+    ORDER BY [s].[Id]
+) AS [t]
+INNER JOIN [SecondDependent23211] AS [s0] ON [t].[Id] = [s0].[SecondOwner23211Id]
+ORDER BY [t].[Id], [t].[SecondOwner23211Id]
+""");
+        }
+    }
+
+    protected class Context23211 : DbContext
+    {
+        public Context23211(DbContextOptions options)
+            : base(options)
+        {
+        }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Owner23211>().OwnsOne(e => e.Owned1, b => b.ToTable("Owned1_23211"));
+            modelBuilder.Entity<Owner23211>().OwnsOne(e => e.Owned2, b => b.ToTable("Owned2_23211"));
+            modelBuilder.Entity<SecondOwner23211>().OwnsOne(e => e.Owned, b => b.ToTable("Owned23211"));
+        }
+
+        public void Seed()
+        {
+            Add(
+                new Owner23211
+                {
+                    Dependents = new List<Dependent23211> { new(), new() },
+                    Owned1 = new OwnedType23211 { Value = "A" },
+                    Owned2 = new OwnedType23211 { Value = "B" }
+                });
+
+            Add(
+                new SecondOwner23211
+                {
+                    Dependents = new List<SecondDependent23211> { new(), new() },
+                    Owned = new OwnedType23211 { Value = "A" }
+                });
+
+            SaveChanges();
+        }
+
+        public class Owner23211
+        {
+            public int Id { get; set; }
+            public List<Dependent23211> Dependents { get; set; }
+            public OwnedType23211 Owned1 { get; set; }
+            public OwnedType23211 Owned2 { get; set; }
+        }
+
+        public class OwnedType23211
+        {
+            public string Value { get; set; }
+        }
+
+        public class Dependent23211
+        {
+            public int Id { get; set; }
+        }
+
+        public class SecondOwner23211
+        {
+            public int Id { get; set; }
+            public List<SecondDependent23211> Dependents { get; set; }
+            public OwnedType23211 Owned { get; set; }
+        }
+
+        public class SecondDependent23211
+        {
+            public int Id { get; set; }
+        }
+    }
+
+    #endregion
+
+    public override async Task Include_collection_for_entity_with_owned_type_works()
+    {
+        await base.Include_collection_for_entity_with_owned_type_works();
+
+        AssertSql(
+"""
+SELECT [m].[Id], [m].[Title], [m].[Details_Info], [m].[Details_Rating], [a].[Id], [a].[Movie9202Id], [a].[Name], [a].[Details_Info], [a].[Details_Rating]
+FROM [Movies] AS [m]
+LEFT JOIN [Actors] AS [a] ON [m].[Id] = [a].[Movie9202Id]
+ORDER BY [m].[Id]
+""",
+                //
+                """
+SELECT [m].[Id], [m].[Title], [m].[Details_Info], [m].[Details_Rating], [a].[Id], [a].[Movie9202Id], [a].[Name], [a].[Details_Info], [a].[Details_Rating]
+FROM [Movies] AS [m]
+LEFT JOIN [Actors] AS [a] ON [m].[Id] = [a].[Movie9202Id]
+ORDER BY [m].[Id]
+""");
+    }
+
+    public override async Task Multilevel_owned_entities_determine_correct_nullability()
+    {
+        await base.Multilevel_owned_entities_determine_correct_nullability();
+
+        AssertSql(
+"""
+@p0='BaseEntity13079' (Nullable = false) (Size = 21)
+
+SET IMPLICIT_TRANSACTIONS OFF;
+SET NOCOUNT ON;
+INSERT INTO [BaseEntities] ([Discriminator])
+OUTPUT INSERTED.[Id]
+VALUES (@p0);
+""");
+    }
+
+    public override async Task Correlated_subquery_with_owned_navigation_being_compared_to_null_works()
+    {
+        await base.Correlated_subquery_with_owned_navigation_being_compared_to_null_works();
+
+        AssertSql(
+"""
+SELECT [p].[Id], CASE
+    WHEN [a].[Turnovers_AmountIn] IS NULL THEN CAST(1 AS bit)
+    ELSE CAST(0 AS bit)
+END, [a].[Turnovers_AmountIn], [a].[Id]
+FROM [Partners] AS [p]
+LEFT JOIN [Address13157] AS [a] ON [p].[Id] = [a].[Partner13157Id]
+ORDER BY [p].[Id]
+""");
+    }
+
+
+    public override async Task Owned_entity_multiple_level_in_aggregate()
+    {
+        await base.Owned_entity_multiple_level_in_aggregate();
+
+        AssertSql(
+"""
+SELECT [t].[Id], [t].[FirstValueObject_Value], [t2].[Id], [t2].[AggregateId], [t2].[FourthValueObject_Value], [t2].[Id0], [t2].[AnyValue], [t2].[SecondValueObjectId], [t2].[Id1], [t2].[SecondValueObjectId0], [t2].[FourthValueObject_Value0], [t2].[Id00], [t2].[AnyValue0], [t2].[ThirdValueObjectId]
+FROM (
+    SELECT TOP(1) [a].[Id], [a].[FirstValueObject_Value]
+    FROM [Aggregate14911] AS [a]
+    ORDER BY [a].[Id] DESC
+) AS [t]
+LEFT JOIN (
+    SELECT [s].[Id], [s].[AggregateId], [s].[FourthValueObject_Value], [s0].[Id] AS [Id0], [s0].[AnyValue], [s0].[SecondValueObjectId], [t1].[Id] AS [Id1], [t1].[SecondValueObjectId] AS [SecondValueObjectId0], [t1].[FourthValueObject_Value] AS [FourthValueObject_Value0], [t1].[Id0] AS [Id00], [t1].[AnyValue] AS [AnyValue0], [t1].[ThirdValueObjectId]
+    FROM [SecondValueObject14911] AS [s]
+    LEFT JOIN [SecondValueObject14911_FifthValueObjects] AS [s0] ON CASE
+        WHEN [s].[FourthValueObject_Value] IS NOT NULL THEN [s].[Id]
+    END = [s0].[SecondValueObjectId]
+    LEFT JOIN (
+        SELECT [t0].[Id], [t0].[SecondValueObjectId], [t0].[FourthValueObject_Value], [t3].[Id] AS [Id0], [t3].[AnyValue], [t3].[ThirdValueObjectId]
+        FROM [ThirdValueObject14911] AS [t0]
+        LEFT JOIN [ThirdValueObject14911_FifthValueObjects] AS [t3] ON CASE
+            WHEN [t0].[FourthValueObject_Value] IS NOT NULL THEN [t0].[Id]
+        END = [t3].[ThirdValueObjectId]
+    ) AS [t1] ON [s].[Id] = [t1].[SecondValueObjectId]
+) AS [t2] ON CASE
+    WHEN [t].[FirstValueObject_Value] IS NOT NULL THEN [t].[Id]
+END = [t2].[AggregateId]
+ORDER BY [t].[Id] DESC, [t2].[Id], [t2].[Id0], [t2].[Id1]
+""");
+    }
 
     public override async Task Multiple_single_result_in_projection_containing_owned_types(bool async)
     {
@@ -36,6 +491,41 @@ LEFT JOIN (
     ) AS [t2]
     WHERE [t2].[row] <= 1
 ) AS [t1] ON [e].[Id] = [t1].[Entity20277Id]
+""");
+    }
+
+    public override async Task Can_auto_include_navigation_from_model()
+    {
+        await base.Can_auto_include_navigation_from_model();
+
+        AssertSql(
+"""
+SELECT [p].[Id], [r].[Id], [c].[Id], [c].[ParentId], [p].[OwnedReference_Id], [r].[ParentId], [t].[Id], [t].[ParentId], [t].[OtherSideId]
+FROM [Parents] AS [p]
+LEFT JOIN [Reference21540] AS [r] ON [p].[Id] = [r].[ParentId]
+LEFT JOIN [Collection21540] AS [c] ON [p].[Id] = [c].[ParentId]
+LEFT JOIN (
+    SELECT [o].[Id], [j].[ParentId], [j].[OtherSideId]
+    FROM [JoinEntity21540] AS [j]
+    INNER JOIN [OtherSide21540] AS [o] ON [j].[OtherSideId] = [o].[Id]
+) AS [t] ON [p].[Id] = [t].[ParentId]
+ORDER BY [p].[Id], [r].[Id], [c].[Id], [t].[ParentId], [t].[OtherSideId]
+""",
+                //
+                """
+SELECT [p].[Id], [p].[OwnedReference_Id]
+FROM [Parents] AS [p]
+""");
+    }
+
+    public override async Task Nested_owned_required_dependents_are_materialized()
+    {
+        await base.Nested_owned_required_dependents_are_materialized();
+
+        AssertSql(
+"""
+SELECT [e].[Id], [e].[Contact_Name], [e].[Contact_Address_City], [e].[Contact_Address_State], [e].[Contact_Address_Street], [e].[Contact_Address_Zip]
+FROM [Entity21807] AS [e]
 """);
     }
 
@@ -88,11 +578,31 @@ ORDER BY [b].[Id], [p0].[BlogId]
         await base.Projecting_correlated_collection_property_for_owned_entity(async);
 
         AssertSql(
-            """
+"""
 SELECT [w].[WarehouseCode], [w].[Id], [w0].[CountryCode], [w0].[WarehouseCode], [w0].[Id]
 FROM [Warehouses] AS [w]
-LEFT JOIN [WarehouseDestinationCountry] AS [w0] ON [w].[WarehouseCode] = [w0].[WarehouseCode]
+LEFT JOIN [WarehouseDestinationCountry18582] AS [w0] ON [w].[WarehouseCode] = [w0].[WarehouseCode]
 ORDER BY [w].[Id], [w0].[WarehouseCode]
+""");
+    }
+
+
+    public override async Task Accessing_scalar_property_in_derived_type_projection_does_not_load_owned_navigations()
+    {
+        await base.Accessing_scalar_property_in_derived_type_projection_does_not_load_owned_navigations();
+
+        AssertSql(
+"""
+SELECT [t0].[Id], [t0].[OtherEntityData]
+FROM [BaseEntities] AS [b]
+LEFT JOIN (
+    SELECT [t].[Id], [t].[OtherEntityData]
+    FROM (
+        SELECT [o].[Id], [o].[OtherEntityData], ROW_NUMBER() OVER(PARTITION BY [o].[OtherEntityData] ORDER BY [o].[Id]) AS [row]
+        FROM [OtherEntities] AS [o]
+    ) AS [t]
+    WHERE [t].[row] <= 1
+) AS [t0] ON [b].[Data] = [t0].[OtherEntityData]
 """);
     }
 

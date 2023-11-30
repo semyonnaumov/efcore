@@ -17,6 +17,159 @@ namespace Microsoft.EntityFrameworkCore.Query
         protected void AssertSql(params string[] expected)
             => TestSqlLoggerFactory.AssertBaseline(expected);
 
+        #region 2951
+
+        [ConditionalFact]
+        public async Task Query_when_null_key_in_database_should_throw()
+        {
+            var contextFactory = await InitializeAsync<Context2951>(
+                onConfiguring: o => o.EnableDetailedErrors(),
+                seed: Seed2951);
+
+            using var context = contextFactory.CreateContext();
+
+            Assert.Equal(
+                RelationalStrings.ErrorMaterializingPropertyNullReference(nameof(Context2951.ZeroKey2951), "Id", typeof(int)),
+                Assert.Throws<InvalidOperationException>(() => context.ZeroKeys.ToList()).Message);
+        }
+
+        protected virtual void Seed2951(Context2951 context)
+        {
+            context.Database.ExecuteSqlRaw(
+                @"
+CREATE TABLE ZeroKey (Id int);
+INSERT ZeroKey VALUES (NULL)");
+        }
+
+        protected class Context2951 : DbContext
+        {
+            public Context2951(DbContextOptions options)
+                : base(options)
+            {
+            }
+
+            protected override void OnModelCreating(ModelBuilder modelBuilder)
+                => modelBuilder.Entity<ZeroKey2951>().ToTable("ZeroKey", t => t.ExcludeFromMigrations())
+                    .Property(z => z.Id).ValueGeneratedNever();
+
+            public DbSet<ZeroKey2951> ZeroKeys { get; set; }
+
+            public class ZeroKey2951
+            {
+                public int Id { get; set; }
+            }
+        }
+
+        #endregion
+
+        #region 11818
+
+        [ConditionalFact]
+        public virtual async Task GroupJoin_Anonymous_projection_GroupBy_Aggregate_join_elimination()
+        {
+            var contextFactory = await InitializeAsync<Context11818>(
+                onConfiguring:
+                o => o.ConfigureWarnings(w => w.Log(CoreEventId.FirstWithoutOrderByAndFilterWarning)));
+
+            using (var context = contextFactory.CreateContext())
+            {
+                var query = (from e in context.Set<Context11818.Entity11818>()
+                             join a in context.Set<Context11818.AnotherEntity11818>()
+                                 on e.Id equals a.Id into grouping
+                             from a in grouping.DefaultIfEmpty()
+                             select new { ename = e.Name, aname = a.Name })
+                    .GroupBy(g => g.aname)
+                    .Select(
+                        g => new { g.Key, cnt = g.Count() + 5 })
+                    .ToList();
+
+                Assert.Empty(query);
+            }
+
+            using (var context = contextFactory.CreateContext())
+            {
+                var query = (from e in context.Set<Context11818.Entity11818>()
+                             join a in context.Set<Context11818.AnotherEntity11818>()
+                                 on e.Id equals a.Id into grouping
+                             from a in grouping.DefaultIfEmpty()
+                             join m in context.Set<Context11818.MaumarEntity11818>()
+                                 on e.Id equals m.Id into grouping2
+                             from m in grouping2.DefaultIfEmpty()
+                             select new { aname = a.Name, mname = m.Name })
+                    .GroupBy(
+                        g => new { g.aname, g.mname })
+                    .Select(
+                        g => new { MyKey = g.Key.aname, cnt = g.Count() + 5 })
+                    .ToList();
+
+                Assert.Empty(query);
+            }
+
+            using (var context = contextFactory.CreateContext())
+            {
+                var query = (from e in context.Set<Context11818.Entity11818>()
+                             join a in context.Set<Context11818.AnotherEntity11818>()
+                                 on e.Id equals a.Id into grouping
+                             from a in grouping.DefaultIfEmpty()
+                             join m in context.Set<Context11818.MaumarEntity11818>()
+                                 on e.Id equals m.Id into grouping2
+                             from m in grouping2.DefaultIfEmpty()
+                             select new { aname = a.Name, mname = m.Name })
+                    .OrderBy(g => g.aname)
+                    .GroupBy(g => new { g.aname, g.mname })
+                    .Select(g => new { MyKey = g.Key.aname, cnt = g.Key.mname }).FirstOrDefault();
+
+                Assert.Null(query);
+            }
+        }
+
+        protected class Context11818 : DbContext
+        {
+            public Context11818(DbContextOptions options)
+                : base(options)
+            {
+            }
+
+            protected override void OnModelCreating(ModelBuilder modelBuilder)
+            {
+                modelBuilder.Entity<Entity11818>().ToTable("Table");
+                modelBuilder.Entity<AnotherEntity11818>().ToTable("Table");
+                modelBuilder.Entity<MaumarEntity11818>().ToTable("Table");
+
+                modelBuilder.Entity<Entity11818>()
+                    .HasOne<AnotherEntity11818>()
+                    .WithOne()
+                    .HasForeignKey<AnotherEntity11818>(b => b.Id);
+
+                modelBuilder.Entity<Entity11818>()
+                    .HasOne<MaumarEntity11818>()
+                    .WithOne()
+                    .HasForeignKey<MaumarEntity11818>(b => b.Id);
+            }
+
+            public class Entity11818
+            {
+                public int Id { get; set; }
+                public string Name { get; set; }
+            }
+
+            public class AnotherEntity11818
+            {
+                public int Id { get; set; }
+                public string Name { get; set; }
+                public bool Exists { get; set; }
+            }
+
+            public class MaumarEntity11818
+            {
+                public int Id { get; set; }
+                public string Name { get; set; }
+                public bool Exists { get; set; }
+            }
+        }
+
+        #endregion
+
         [ConditionalTheory]
         [MemberData(nameof(IsAsyncData))]
         public virtual async Task Multiple_different_entity_type_from_different_namespaces(bool async)

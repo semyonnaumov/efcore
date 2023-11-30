@@ -3961,4 +3961,29 @@ public abstract class ComplexNavigationsQueryTestBase<TFixture> : QueryTestBase<
                 Assert.Equal(e.Id3, a.Id3);
             });
     }
+
+    [ConditionalTheory]
+    [MemberData(nameof(IsAsyncData))]
+    public virtual Task Multiple_optional_navs_should_not_deadlock(bool async)
+        => AssertCount(
+            async,
+            ss => ss.Set<Level2>().Where(x => x.OneToMany_Optional_Inverse2 != null
+                && x.OneToMany_Optional_Inverse2.Name.Contains("L1 01")
+                || x.OneToOne_Optional_FK_Inverse2 != null
+                    && x.OneToOne_Optional_FK_Inverse2.Name.Contains("L1 01")));
+
+        //var contextFactory = await InitializeAsync<DeadlockContext>();
+
+        //using var context = contextFactory.CreateContext();
+
+        //var count
+        //    = await context.Persons
+        //        .Where(
+        //            p => p.AddressOne != null && p.AddressOne.Street.Contains("Low Street")
+        //                || p.AddressTwo != null && p.AddressTwo.Street.Contains("Low Street"))
+        //        .CountAsync();
+
+        //Assert.Equal(0, count);
+    
+
 }

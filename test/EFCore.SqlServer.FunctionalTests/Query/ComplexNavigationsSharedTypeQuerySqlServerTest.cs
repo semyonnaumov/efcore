@@ -8188,6 +8188,27 @@ END = [t1].[Level2_Optional_Id]
 """);
     }
 
+    public override async Task Multiple_optional_navs_should_not_deadlock(bool async)
+    {
+        await base.Multiple_optional_navs_should_not_deadlock(async);
+
+        AssertSql(
+"""
+SELECT COUNT(*)
+FROM [Level1] AS [l]
+LEFT JOIN (
+    SELECT [l0].[Id], [l0].[OneToOne_Required_PK_Date], [l0].[Level1_Optional_Id], [l0].[Level1_Required_Id], [l0].[OneToMany_Optional_Inverse2Id], [l0].[OneToMany_Required_Inverse2Id]
+    FROM [Level1] AS [l0]
+    WHERE [l0].[OneToOne_Required_PK_Date] IS NOT NULL AND [l0].[Level1_Required_Id] IS NOT NULL AND [l0].[OneToMany_Required_Inverse2Id] IS NOT NULL
+) AS [t] ON [l].[Id] = CASE
+    WHEN [t].[OneToOne_Required_PK_Date] IS NOT NULL AND [t].[Level1_Required_Id] IS NOT NULL AND [t].[OneToMany_Required_Inverse2Id] IS NOT NULL THEN [t].[Id]
+END
+LEFT JOIN [Level1] AS [l1] ON [t].[OneToMany_Optional_Inverse2Id] = [l1].[Id]
+LEFT JOIN [Level1] AS [l2] ON [t].[Level1_Optional_Id] = [l2].[Id]
+WHERE [t].[OneToOne_Required_PK_Date] IS NOT NULL AND [t].[Level1_Required_Id] IS NOT NULL AND [t].[OneToMany_Required_Inverse2Id] IS NOT NULL AND (([l1].[Id] IS NOT NULL AND [l1].[Name] LIKE N'%L1 01%') OR ([l2].[Id] IS NOT NULL AND [l2].[Name] LIKE N'%L1 01%'))
+""");
+    }
+
     private void AssertSql(params string[] expected)
         => Fixture.TestSqlLoggerFactory.AssertBaseline(expected);
 }

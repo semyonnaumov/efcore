@@ -13678,6 +13678,24 @@ ORDER BY [t].[Nickname], [t].[SquadId], [t0].[Nickname], [t0].[SquadId]
 """);
     }
 
+    public override async Task Derived_reference_is_skipped_when_base_type(bool async)
+    {
+        await base.Derived_reference_is_skipped_when_base_type(async);
+
+        AssertSql(
+"""
+SELECT [t].[Name], [t].[LocustHordeId], [t].[ThreatLevel], [t].[ThreatLevelByte], [t].[ThreatLevelNullableByte], [t].[DefeatedByNickname], [t].[DefeatedBySquadId], [t].[HighCommandId], [t].[Discriminator], [l].[Id], [l].[IsOperational], [l].[Name]
+FROM (
+    SELECT [l0].[Name], [l0].[LocustHordeId], [l0].[ThreatLevel], [l0].[ThreatLevelByte], [l0].[ThreatLevelNullableByte], NULL AS [DefeatedByNickname], NULL AS [DefeatedBySquadId], NULL AS [HighCommandId], N'LocustLeader' AS [Discriminator]
+    FROM [LocustLeaders] AS [l0]
+    UNION ALL
+    SELECT [l1].[Name], [l1].[LocustHordeId], [l1].[ThreatLevel], [l1].[ThreatLevelByte], [l1].[ThreatLevelNullableByte], [l1].[DefeatedByNickname], [l1].[DefeatedBySquadId], [l1].[HighCommandId], N'LocustCommander' AS [Discriminator]
+    FROM [LocustCommanders] AS [l1]
+) AS [t]
+LEFT JOIN [LocustHighCommands] AS [l] ON [t].[HighCommandId] = [l].[Id]
+""");
+    }
+
     private void AssertSql(params string[] expected)
         => Fixture.TestSqlLoggerFactory.AssertBaseline(expected);
 }

@@ -9728,6 +9728,18 @@ ORDER BY "g"."Nickname", "g"."SquadId", "g0"."Nickname", "g0"."SquadId"
 """);
     }
 
+    public override async Task Derived_reference_is_skipped_when_base_type(bool async)
+    {
+        await base.Derived_reference_is_skipped_when_base_type(async);
+
+        AssertSql(
+"""
+SELECT "l"."Name", "l"."Discriminator", "l"."LocustHordeId", "l"."ThreatLevel", "l"."ThreatLevelByte", "l"."ThreatLevelNullableByte", "l"."DefeatedByNickname", "l"."DefeatedBySquadId", "l"."HighCommandId", "l0"."Id", "l0"."IsOperational", "l0"."Name"
+FROM "LocustLeaders" AS "l"
+LEFT JOIN "LocustHighCommands" AS "l0" ON "l"."HighCommandId" = "l0"."Id"
+""");
+    }
+
     private void AssertSql(params string[] expected)
         => Fixture.TestSqlLoggerFactory.AssertBaseline(expected);
 }

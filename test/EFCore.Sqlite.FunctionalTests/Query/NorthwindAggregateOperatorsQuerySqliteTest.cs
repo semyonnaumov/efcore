@@ -71,4 +71,11 @@ public class NorthwindAggregateOperatorsQuerySqliteTest : NorthwindAggregateOper
 
     public override async Task Contains_with_local_tuple_array_closure(bool async)
         => await AssertTranslationFailed(() => base.Contains_with_local_tuple_array_closure(async));
+
+    public override async Task Type_casting_inside_sum(bool async)
+        => Assert.Equal(
+            SqliteStrings.AggregateOperationNotSupported("Sum", "decimal"),
+            (await Assert.ThrowsAsync<NotSupportedException>(
+                async () => await base.Type_casting_inside_sum(async)))
+            .Message);
 }

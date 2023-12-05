@@ -1975,6 +1975,47 @@ public abstract class NorthwindAggregateOperatorsQueryTestBase<TFixture> : Query
             asserter: (e, a) => Assert.Equal(e.CustomerId, a.CustomerId));
     }
 
+
+
+
+
+
+
+    [ConditionalTheory]
+    [MemberData(nameof(IsAsyncData))]
+    public virtual Task Type_casting_inside_sum(bool async)
+        => AssertSum(
+            async,
+            ss => ss.Set<OrderDetail>(),
+            x => (decimal)x.Discount);
+//    {
+//        var contextFactory = await InitializeAsync<MyContext13587>(seed: c => c.Seed());
+
+//        using (var context = contextFactory.CreateContext())
+//        {
+//            var result = context.InventoryPools.Sum(p => (decimal)p.Quantity);
+
+//            AssertSql(
+//                """
+//SELECT COALESCE(SUM(CAST([i].[Quantity] AS decimal(18,2))), 0.0)
+//FROM [InventoryPools] AS [i]
+//""");
+//        }
+//    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     private class CustomerIdDto
     {
         public string CustomerId { get; set; }

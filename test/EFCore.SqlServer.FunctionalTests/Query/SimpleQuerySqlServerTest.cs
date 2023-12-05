@@ -197,6 +197,89 @@ BEGIN
 
     #endregion
 
+    #region 12518
+
+    [ConditionalFact]
+    public virtual async Task Projecting_entity_with_value_converter_and_include_works()
+    {
+        var contextFactory = await InitializeAsync<Context12518>(seed: c => c.Seed());
+        using var context = contextFactory.CreateContext();
+        var result = context.Parents.Include(p => p.Child).OrderBy(e => e.Id).FirstOrDefault();
+
+        AssertSql(
+"""
+SELECT TOP(1) [p].[Id], [p].[ChildId], [c].[Id], [c].[ParentId], [c].[ULongRowVersion]
+FROM [Parents] AS [p]
+LEFT JOIN [Children] AS [c] ON [p].[ChildId] = [c].[Id]
+ORDER BY [p].[Id]
+""");
+    }
+
+    [ConditionalFact]
+    public virtual async Task Projecting_column_with_value_converter_of_ulong_byte_array()
+    {
+        var contextFactory = await InitializeAsync<Context12518>(seed: c => c.Seed());
+        using var context = contextFactory.CreateContext();
+        var result = context.Parents.OrderBy(e => e.Id).Select(p => (ulong?)p.Child.ULongRowVersion).FirstOrDefault();
+
+        AssertSql(
+"""
+SELECT TOP(1) [c].[ULongRowVersion]
+FROM [Parents] AS [p]
+LEFT JOIN [Children] AS [c] ON [p].[ChildId] = [c].[Id]
+ORDER BY [p].[Id]
+""");
+    }
+
+    protected class Context12518 : DbContext
+    {
+        public virtual DbSet<Parent12518> Parents { get; set; }
+        public virtual DbSet<Child12518> Children { get; set; }
+
+        public Context12518(DbContextOptions options)
+            : base(options)
+        {
+        }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            var child = modelBuilder.Entity<Child12518>();
+            child.HasOne(_ => _.Parent)
+                .WithOne(_ => _.Child)
+                .HasForeignKey<Parent12518>(_ => _.ChildId);
+            child.Property(x => x.ULongRowVersion)
+                .HasConversion(new NumberToBytesConverter<ulong>())
+                .IsRowVersion()
+                .IsRequired()
+                .HasColumnType("RowVersion");
+
+            modelBuilder.Entity<Parent12518>();
+        }
+
+        public void Seed()
+        {
+            Parents.Add(new Parent12518());
+            SaveChanges();
+        }
+
+        public class Parent12518
+        {
+            public Guid Id { get; set; } = Guid.NewGuid();
+            public Guid? ChildId { get; set; }
+            public Child12518 Child { get; set; }
+        }
+
+        public class Child12518
+        {
+            public Guid Id { get; set; } = Guid.NewGuid();
+            public ulong ULongRowVersion { get; set; }
+            public Guid ParentId { get; set; }
+            public Parent12518 Parent { get; set; }
+        }
+    }
+
+    #endregion
+
     #region 13118
 
     [ConditionalFact]

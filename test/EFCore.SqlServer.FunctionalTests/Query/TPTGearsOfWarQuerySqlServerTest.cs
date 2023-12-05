@@ -11784,6 +11784,21 @@ ORDER BY [g].[Nickname], [g].[SquadId], [t].[Nickname], [t].[SquadId]
 """);
     }
 
+    public override async Task Derived_reference_is_skipped_when_base_type(bool async)
+    {
+        await base.Derived_reference_is_skipped_when_base_type(async);
+
+        AssertSql(
+"""
+SELECT [l].[Name], [l].[LocustHordeId], [l].[ThreatLevel], [l].[ThreatLevelByte], [l].[ThreatLevelNullableByte], [l0].[DefeatedByNickname], [l0].[DefeatedBySquadId], [l0].[HighCommandId], CASE
+    WHEN [l0].[Name] IS NOT NULL THEN N'LocustCommander'
+END AS [Discriminator], [l1].[Id], [l1].[IsOperational], [l1].[Name]
+FROM [LocustLeaders] AS [l]
+LEFT JOIN [LocustCommanders] AS [l0] ON [l].[Name] = [l0].[Name]
+LEFT JOIN [LocustHighCommands] AS [l1] ON [l0].[HighCommandId] = [l1].[Id]
+""");
+    }
+
     private void AssertSql(params string[] expected)
         => Fixture.TestSqlLoggerFactory.AssertBaseline(expected);
 }

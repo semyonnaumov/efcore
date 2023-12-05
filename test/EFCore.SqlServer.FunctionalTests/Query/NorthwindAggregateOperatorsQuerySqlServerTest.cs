@@ -2946,6 +2946,17 @@ ORDER BY [c].[CustomerID] DESC
 """);
     }
 
+    public override async Task Type_casting_inside_sum(bool async)
+    {
+        await base.Type_casting_inside_sum(async);
+
+        AssertSql(
+"""
+SELECT COALESCE(SUM(CAST([o].[Discount] AS decimal(18,2))), 0.0)
+FROM [Order Details] AS [o]
+""");
+    }
+
     private void AssertSql(params string[] expected)
         => Fixture.TestSqlLoggerFactory.AssertBaseline(expected);
 

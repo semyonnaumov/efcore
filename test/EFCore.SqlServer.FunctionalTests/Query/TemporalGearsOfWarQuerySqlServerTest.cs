@@ -10257,6 +10257,18 @@ ORDER BY [g].[Nickname], [g].[SquadId], [g0].[Nickname], [g0].[SquadId]
 """);
     }
 
+    public override async Task Derived_reference_is_skipped_when_base_type(bool async)
+    {
+        await base.Derived_reference_is_skipped_when_base_type(async);
+
+        AssertSql(
+"""
+SELECT [l].[Name], [l].[Discriminator], [l].[LocustHordeId], [l].[PeriodEnd], [l].[PeriodStart], [l].[ThreatLevel], [l].[ThreatLevelByte], [l].[ThreatLevelNullableByte], [l].[DefeatedByNickname], [l].[DefeatedBySquadId], [l].[HighCommandId], [l0].[Id], [l0].[IsOperational], [l0].[Name], [l0].[PeriodEnd], [l0].[PeriodStart]
+FROM [LocustLeaders] FOR SYSTEM_TIME AS OF '2010-01-01T00:00:00.0000000' AS [l]
+LEFT JOIN [LocustHighCommands] FOR SYSTEM_TIME AS OF '2010-01-01T00:00:00.0000000' AS [l0] ON [l].[HighCommandId] = [l0].[Id]
+""");
+    }
+
     private void AssertSql(params string[] expected)
         => Fixture.TestSqlLoggerFactory.AssertBaseline(expected);
 }

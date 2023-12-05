@@ -8504,6 +8504,63 @@ public abstract class GearsOfWarQueryTestBase<TFixture> : QueryTestBase<TFixture
                 }
             });
 
+    [ConditionalTheory]
+    [MemberData(nameof(IsAsyncData))]
+    public virtual Task Derived_reference_is_skipped_when_base_type(bool async)
+        => AssertQuery(
+            async,
+            ss => ss.Set<LocustLeader>().Include(x => ((LocustCommander)x).HighCommand),
+            elementAsserter: (e, a) => AssertInclude(e, a, new ExpectedInclude<LocustCommander>(x => x.HighCommand)));
+
+
+//        var contextFactory = await InitializeAsync<MyContext16233>(seed: c => c.Seed());
+
+//        using (var context = contextFactory.CreateContext())
+//        {
+//            var result = context.Bases.Include(p => ((MyContext16233.DerivedType16233)p).Reference).OrderBy(b => b.Id).ToList();
+
+//            Assert.Equal(3, result.Count);
+//            Assert.NotNull(Assert.IsType<MyContext16233.DerivedType16233>(result[1]).Reference);
+//            Assert.Null(Assert.IsType<MyContext16233.DerivedType16233>(result[2]).Reference);
+//            Assert.True(context.Entry(Assert.IsType<MyContext16233.DerivedType16233>(result[2])).Reference("Reference").IsLoaded);
+
+//            AssertSql(
+//                """
+//SELECT [b].[Id], [b].[Discriminator], [r].[Id], [r].[DerivedTypeId]
+//FROM [Bases] AS [b]
+//LEFT JOIN [Reference16233] AS [r] ON [b].[Id] = [r].[DerivedTypeId]
+//ORDER BY [b].[Id]
+//""");
+//        }
+
+//        using (var context = contextFactory.CreateContext())
+//        {
+//            ClearLog();
+//            var result = context.Bases.AsNoTracking().Include(p => ((MyContext16233.DerivedType16233)p).Reference).OrderBy(b => b.Id)
+//                .ToList();
+
+//            Assert.Equal(3, result.Count);
+//            Assert.NotNull(Assert.IsType<MyContext16233.DerivedType16233>(result[1]).Reference);
+//            Assert.NotNull(Assert.IsType<MyContext16233.DerivedType16233>(result[1]).Reference.DerivedType);
+//            Assert.Null(Assert.IsType<MyContext16233.DerivedType16233>(result[2]).Reference);
+
+//            AssertSql(
+//                """
+//SELECT [b].[Id], [b].[Discriminator], [r].[Id], [r].[DerivedTypeId]
+//FROM [Bases] AS [b]
+//LEFT JOIN [Reference16233] AS [r] ON [b].[Id] = [r].[DerivedTypeId]
+//ORDER BY [b].[Id]
+//""");
+//        }
+//    }
+
+
+
+
+
+
+
+
     protected GearsOfWarContext CreateContext()
         => Fixture.CreateContext();
 

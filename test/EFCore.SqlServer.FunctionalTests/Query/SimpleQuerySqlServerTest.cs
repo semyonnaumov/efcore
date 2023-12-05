@@ -1028,57 +1028,6 @@ WHERE [Id] = @p0;
 """);
     }
 
-    public override async Task ThenInclude_with_interface_navigations()
-    {
-        await base.ThenInclude_with_interface_navigations();
-
-        AssertSql(
-"""
-SELECT [p].[Id], [t].[Id], [t].[ParentBackNavigationId], [t].[SelfReferenceBackNavigationId], [t].[Id0], [t].[ParentBackNavigationId0], [t].[SelfReferenceBackNavigationId0]
-FROM [Parents] AS [p]
-LEFT JOIN (
-    SELECT [c].[Id], [c].[ParentBackNavigationId], [c].[SelfReferenceBackNavigationId], [c0].[Id] AS [Id0], [c0].[ParentBackNavigationId] AS [ParentBackNavigationId0], [c0].[SelfReferenceBackNavigationId] AS [SelfReferenceBackNavigationId0]
-    FROM [Children] AS [c]
-    LEFT JOIN [Children] AS [c0] ON [c].[Id] = [c0].[SelfReferenceBackNavigationId]
-) AS [t] ON [p].[Id] = [t].[ParentBackNavigationId]
-ORDER BY [p].[Id], [t].[Id]
-""",
-                //
-                """
-SELECT [c0].[Id], [c0].[ParentBackNavigationId], [c0].[SelfReferenceBackNavigationId], [p].[Id]
-FROM [Children] AS [c]
-LEFT JOIN [Children] AS [c0] ON [c].[SelfReferenceBackNavigationId] = [c0].[Id]
-LEFT JOIN [Parents] AS [p] ON [c0].[ParentBackNavigationId] = [p].[Id]
-""",
-                //
-                """
-SELECT [c0].[Id], [c0].[ParentBackNavigationId], [c0].[SelfReferenceBackNavigationId], [p].[Id]
-FROM [Children] AS [c]
-LEFT JOIN [Children] AS [c0] ON [c].[SelfReferenceBackNavigationId] = [c0].[Id]
-LEFT JOIN [Parents] AS [p] ON [c0].[ParentBackNavigationId] = [p].[Id]
-""",
-                //
-                """
-SELECT [c].[Id], [c].[ParentBackNavigationId], [c].[SelfReferenceBackNavigationId], [c0].[Id], [c0].[ParentBackNavigationId], [c0].[SelfReferenceBackNavigationId], [p].[Id]
-FROM [Children] AS [c]
-LEFT JOIN [Children] AS [c0] ON [c].[SelfReferenceBackNavigationId] = [c0].[Id]
-LEFT JOIN [Parents] AS [p] ON [c0].[ParentBackNavigationId] = [p].[Id]
-""");
-    }
-
-    public override async Task Reference_include_on_derived_type_with_sibling_works()
-    {
-        await base.Reference_include_on_derived_type_with_sibling_works();
-
-        AssertSql(
-"""
-SELECT [p].[Id], [p].[Discriminator], [p].[LeaveStart], [p].[LeaveTypeId], [p0].[Id]
-FROM [Proposal] AS [p]
-LEFT JOIN [ProposalLeaveType7312] AS [p0] ON [p].[LeaveTypeId] = [p0].[Id]
-WHERE [p].[Discriminator] = N'ProposalLeave7312'
-""");
-    }
-
     public override async Task Discriminator_type_is_handled_correctly()
     {
         await base.Discriminator_type_is_handled_correctly();
@@ -1094,6 +1043,42 @@ WHERE [p].[Discriminator] = 1
 SELECT [p].[Id], [p].[Discriminator], [p].[Name]
 FROM [Products] AS [p]
 WHERE [p].[Discriminator] = 1
+""");
+    }
+
+    public override async Task Enum_has_flag_applies_explicit_cast_for_constant()
+    {
+        await base.Enum_has_flag_applies_explicit_cast_for_constant();
+
+        AssertSql(
+"""
+SELECT [e].[Id], [e].[Permission], [e].[PermissionByte], [e].[PermissionShort]
+FROM [Entity] AS [e]
+WHERE [e].[Permission] & CAST(17179869184 AS bigint) = CAST(17179869184 AS bigint)
+""",
+                //
+                """
+SELECT [e].[Id], [e].[Permission], [e].[PermissionByte], [e].[PermissionShort]
+FROM [Entity] AS [e]
+WHERE [e].[PermissionShort] & CAST(4 AS smallint) = CAST(4 AS smallint)
+""");
+    }
+
+    public override async Task Enum_has_flag_does_not_apply_explicit_cast_for_non_constant()
+    {
+        await base.Enum_has_flag_does_not_apply_explicit_cast_for_non_constant();
+
+        AssertSql(
+"""
+SELECT [e].[Id], [e].[Permission], [e].[PermissionByte], [e].[PermissionShort]
+FROM [Entity] AS [e]
+WHERE [e].[Permission] & [e].[Permission] = [e].[Permission]
+""",
+                //
+                """
+SELECT [e].[Id], [e].[Permission], [e].[PermissionByte], [e].[PermissionShort]
+FROM [Entity] AS [e]
+WHERE [e].[PermissionByte] & [e].[PermissionByte] = [e].[PermissionByte]
 """);
     }
 
@@ -1198,16 +1183,6 @@ WHERE [e].[Id] = 1
 """);
     }
 
-    public override async Task Include_collection_optional_reference_collection()
-    {
-        await base.Include_collection_optional_reference_collection();
-
-        AssertSql(
-"""
-ORDER BY [p].[Id]
-""");
-    }
-
     public override async Task Conditional_expression_with_conditions_does_not_collapse_if_nullable_bool()
     {
         await base.Conditional_expression_with_conditions_does_not_collapse_if_nullable_bool();
@@ -1223,26 +1198,6 @@ SELECT CASE
 END AS [Processing]
 FROM [Carts] AS [c]
 LEFT JOIN [Configuration9468] AS [c0] ON [c].[ConfigurationId] = [c0].[Id]
-""");
-    }
-
-    public override async Task Include_with_order_by_on_interface_key()
-    {
-        await base.Include_with_order_by_on_interface_key();
-
-        AssertSql(
-"""
-SELECT [p].[Id], [p].[Name], [c].[Id], [c].[Name], [c].[Parent10635Id], [c].[ParentId]
-FROM [Parents] AS [p]
-LEFT JOIN [Children] AS [c] ON [p].[Id] = [c].[Parent10635Id]
-ORDER BY [p].[Id]
-""",
-                //
-                """
-SELECT [p].[Id], [c].[Id], [c].[Name], [c].[Parent10635Id], [c].[ParentId]
-FROM [Parents] AS [p]
-LEFT JOIN [Children] AS [c] ON [p].[Id] = [c].[Parent10635Id]
-ORDER BY [p].[Id]
 """);
     }
 
@@ -1295,30 +1250,6 @@ SELECT (
     WHERE [b].[Id] = [p1].[BlogId3]
     ORDER BY [p1].[Id]) AS [Collection3]
 FROM [Blogs] AS [b]
-""");
-    }
-
-    public override async Task Include_collection_with_OfType_base()
-    {
-        await base.Include_collection_with_OfType_base();
-
-        AssertSql(
-"""
-SELECT [e].[Id], [e].[Name], [d].[Id], [d].[Device], [d].[EmployeeId]
-FROM [Employees] AS [e]
-LEFT JOIN [Devices] AS [d] ON [e].[Id] = [d].[EmployeeId]
-ORDER BY [e].[Id]
-""",
-                //
-                """
-SELECT [e].[Id], [t].[Id], [t].[Device], [t].[EmployeeId]
-FROM [Employees] AS [e]
-LEFT JOIN (
-    SELECT [d].[Id], [d].[Device], [d].[EmployeeId]
-    FROM [Devices] AS [d]
-    WHERE [d].[Device] <> N'foo' OR [d].[Device] IS NULL
-) AS [t] ON [e].[Id] = [t].[EmployeeId]
-ORDER BY [e].[Id]
 """);
     }
 

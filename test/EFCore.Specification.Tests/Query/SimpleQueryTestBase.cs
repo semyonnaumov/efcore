@@ -62,149 +62,6 @@ public abstract class SimpleQueryTestBase : NonSharedModelTestBase
 
     #endregion
 
-    #region 3409
-
-    [ConditionalFact]
-    public virtual async Task ThenInclude_with_interface_navigations()
-    {
-        var contextFactory = await InitializeAsync<Context3409>(seed: c => c.Seed());
-
-        using (var context = contextFactory.CreateContext())
-        {
-            var results = context.Parents
-                .Include(p => p.ChildCollection)
-                .ThenInclude(c => c.SelfReferenceCollection)
-                .ToList();
-
-            Assert.Single(results);
-            Assert.Equal(1, results[0].ChildCollection.Count);
-            Assert.Equal(2, results[0].ChildCollection.Single().SelfReferenceCollection.Count);
-        }
-
-        using (var context = contextFactory.CreateContext())
-        {
-            var results = context.Children
-                .Select(
-                    c => new { c.SelfReferenceBackNavigation, c.SelfReferenceBackNavigation.ParentBackNavigation })
-                .ToList();
-
-            Assert.Equal(3, results.Count);
-            Assert.Equal(2, results.Count(c => c.SelfReferenceBackNavigation != null));
-            Assert.Equal(2, results.Count(c => c.ParentBackNavigation != null));
-        }
-
-        using (var context = contextFactory.CreateContext())
-        {
-            var results = context.Children
-                .Select(
-                    c => new
-                    {
-                        SelfReferenceBackNavigation
-                            = EF.Property<Context3409.IChild3409>(c, "SelfReferenceBackNavigation"),
-                        ParentBackNavigationB
-                            = EF.Property<Context3409.IParent3409>(
-                                EF.Property<Context3409.IChild3409>(c, "SelfReferenceBackNavigation"),
-                                "ParentBackNavigation")
-                    })
-                .ToList();
-
-            Assert.Equal(3, results.Count);
-            Assert.Equal(2, results.Count(c => c.SelfReferenceBackNavigation != null));
-            Assert.Equal(2, results.Count(c => c.ParentBackNavigationB != null));
-        }
-
-        using (var context = contextFactory.CreateContext())
-        {
-            var results = context.Children
-                .Include(c => c.SelfReferenceBackNavigation)
-                .ThenInclude(c => c.ParentBackNavigation)
-                .ToList();
-
-            Assert.Equal(3, results.Count);
-            Assert.Equal(2, results.Count(c => c.SelfReferenceBackNavigation != null));
-            Assert.Equal(1, results.Count(c => c.ParentBackNavigation != null));
-        }
-    }
-
-    private class Context3409 : DbContext
-    {
-        public DbSet<Parent3409> Parents { get; set; }
-        public DbSet<Child3409> Children { get; set; }
-
-        public Context3409(DbContextOptions options)
-            : base(options)
-        {
-        }
-
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
-        {
-            modelBuilder.Entity<Parent3409>()
-                .HasMany(p => (ICollection<Child3409>)p.ChildCollection)
-                .WithOne(c => (Parent3409)c.ParentBackNavigation);
-
-            modelBuilder.Entity<Child3409>()
-                .HasMany(c => (ICollection<Child3409>)c.SelfReferenceCollection)
-                .WithOne(c => (Child3409)c.SelfReferenceBackNavigation);
-        }
-
-        public void Seed()
-        {
-            var parent1 = new Parent3409();
-
-            var child1 = new Child3409();
-            var child2 = new Child3409();
-            var child3 = new Child3409();
-
-            parent1.ChildCollection = new List<IChild3409> { child1 };
-            child1.SelfReferenceCollection = new List<IChild3409> { child2, child3 };
-
-            Parents.AddRange(parent1);
-            Children.AddRange(child1, child2, child3);
-
-            SaveChanges();
-        }
-
-        public interface IParent3409
-        {
-            int Id { get; set; }
-
-            ICollection<IChild3409> ChildCollection { get; set; }
-        }
-
-        public interface IChild3409
-        {
-            int Id { get; set; }
-
-            int? ParentBackNavigationId { get; set; }
-            IParent3409 ParentBackNavigation { get; set; }
-
-            ICollection<IChild3409> SelfReferenceCollection { get; set; }
-            int? SelfReferenceBackNavigationId { get; set; }
-            IChild3409 SelfReferenceBackNavigation { get; set; }
-        }
-
-        public class Parent3409 : IParent3409
-        {
-            public int Id { get; set; }
-
-            public ICollection<IChild3409> ChildCollection { get; set; }
-        }
-
-        public class Child3409 : IChild3409
-        {
-            public int Id { get; set; }
-
-            public int? ParentBackNavigationId { get; set; }
-            public IParent3409 ParentBackNavigation { get; set; }
-
-            public ICollection<IChild3409> SelfReferenceCollection { get; set; }
-            public int? SelfReferenceBackNavigationId { get; set; }
-            public IChild3409 SelfReferenceBackNavigation { get; set; }
-        }
-    }
-
-    #endregion
-
     #region 3758
 
     [ConditionalFact]
@@ -604,67 +461,6 @@ public abstract class SimpleQueryTestBase : NonSharedModelTestBase
 
     #endregion
 
-    #region 7312
-
-    [ConditionalFact]
-    public virtual async Task Reference_include_on_derived_type_with_sibling_works()
-    {
-        var contextFactory = await InitializeAsync<Context7312>(seed: c => c.Seed());
-
-        using (var context = contextFactory.CreateContext())
-        {
-            var query = context.Proposal.OfType<Context7312.ProposalLeave7312>().Include(l => l.LeaveType).ToList();
-
-            Assert.Single(query);
-        }
-    }
-
-    private class Context7312 : DbContext
-    {
-        public Context7312(DbContextOptions options)
-            : base(options)
-        {
-        }
-
-        public DbSet<Proposal7312> Proposal { get; set; }
-        public DbSet<ProposalCustom7312> ProposalCustoms { get; set; }
-        public DbSet<ProposalLeave7312> ProposalLeaves { get; set; }
-
-        public void Seed()
-        {
-            AddRange(
-                new Proposal7312(),
-                new ProposalCustom7312 { Name = "CustomProposal" },
-                new ProposalLeave7312 { LeaveStart = DateTime.Now, LeaveType = new ProposalLeaveType7312() }
-            );
-            SaveChanges();
-        }
-
-        public class Proposal7312
-        {
-            public int Id { get; set; }
-        }
-
-        public class ProposalCustom7312 : Proposal7312
-        {
-            public string Name { get; set; }
-        }
-
-        public class ProposalLeave7312 : Proposal7312
-        {
-            public DateTime LeaveStart { get; set; }
-            public virtual ProposalLeaveType7312 LeaveType { get; set; }
-        }
-
-        public class ProposalLeaveType7312
-        {
-            public int Id { get; set; }
-            public ICollection<ProposalLeave7312> ProposalLeaves { get; set; }
-        }
-    }
-
-    #endregion
-
     #region 7359
 
     [ConditionalFact]
@@ -725,6 +521,124 @@ public abstract class SimpleQueryTestBase : NonSharedModelTestBase
     }
 
     #endregion
+
+    #region 8538
+
+    [ConditionalFact]
+    public virtual async Task Enum_has_flag_applies_explicit_cast_for_constant()
+    {
+        var contextFactory = await InitializeAsync<Context8538>(seed: c => c.Seed());
+
+        using (var context = contextFactory.CreateContext())
+        {
+            var query = context.Entity.Where(e => e.Permission.HasFlag(Context8538.Permission8538.READ_WRITE)).ToList();
+            Assert.Single(query);
+        }
+
+        using (var context = contextFactory.CreateContext())
+        {
+            var query = context.Entity.Where(e => e.PermissionShort.HasFlag(Context8538.PermissionShort8538.READ_WRITE)).ToList();
+            Assert.Single(query);
+        }
+    }
+
+    [ConditionalFact]
+    public virtual async Task Enum_has_flag_does_not_apply_explicit_cast_for_non_constant()
+    {
+        var contextFactory = await InitializeAsync<Context8538>(seed: c => c.Seed());
+
+        using (var context = contextFactory.CreateContext())
+        {
+            var query = context.Entity.Where(e => e.Permission.HasFlag(e.Permission)).ToList();
+            Assert.Equal(3, query.Count);
+        }
+
+        using (var context = contextFactory.CreateContext())
+        {
+            var query = context.Entity.Where(e => e.PermissionByte.HasFlag(e.PermissionByte)).ToList();
+            Assert.Equal(3, query.Count);
+        }
+    }
+
+    private class Context8538 : DbContext
+    {
+        public Context8538(DbContextOptions options)
+            : base(options)
+        {
+        }
+
+        public DbSet<Entity8538> Entity { get; set; }
+
+        public void Seed()
+        {
+            AddRange(
+                new Entity8538
+                {
+                    Permission = Permission8538.NONE,
+                    PermissionByte = PermissionByte8538.NONE,
+                    PermissionShort = PermissionShort8538.NONE
+                },
+                new Entity8538
+                {
+                    Permission = Permission8538.READ_ONLY,
+                    PermissionByte = PermissionByte8538.READ_ONLY,
+                    PermissionShort = PermissionShort8538.READ_ONLY
+                },
+                new Entity8538
+                {
+                    Permission = Permission8538.READ_WRITE,
+                    PermissionByte = PermissionByte8538.READ_WRITE,
+                    PermissionShort = PermissionShort8538.READ_WRITE
+                }
+            );
+
+            SaveChanges();
+        }
+
+        public class Entity8538
+        {
+            public int Id { get; set; }
+            public Permission8538 Permission { get; set; }
+            public PermissionByte8538 PermissionByte { get; set; }
+            public PermissionShort8538 PermissionShort { get; set; }
+        }
+
+        [Flags]
+        public enum PermissionByte8538 : byte
+        {
+            NONE = 1,
+            READ_ONLY = 2,
+            READ_WRITE = 4
+        }
+
+        [Flags]
+        public enum PermissionShort8538 : short
+        {
+            NONE = 1,
+            READ_ONLY = 2,
+            READ_WRITE = 4
+        }
+
+        [Flags]
+        public enum Permission8538 : long
+        {
+            NONE = 0x01,
+            READ_ONLY = 0x02,
+            READ_WRITE = 0x400000000 // 36 bits
+        }
+    }
+
+    #endregion
+
+
+
+
+
+
+
+
+
+
 
     #region 8909
 
@@ -879,133 +793,6 @@ public abstract class SimpleQueryTestBase : NonSharedModelTestBase
 
     #endregion
 
-    #region 9038
-
-    [ConditionalFact]
-    public virtual async Task Include_collection_optional_reference_collection()
-    {
-        var contextFactory = await InitializeAsync<Context9038>(seed: c => c.Seed());
-
-        using (var context = contextFactory.CreateContext())
-        {
-            var result = await context.People.OfType<Context9038.PersonTeacher9038>()
-                .Include(m => m.Students)
-                .ThenInclude(m => m.Family)
-                .ThenInclude(m => m.Members)
-                .ToListAsync();
-
-            Assert.Equal(2, result.Count);
-            Assert.True(result.All(r => r.Students.Count > 0));
-        }
-
-        using (var context = contextFactory.CreateContext())
-        {
-            var result = await context.Set<Context9038.PersonTeacher9038>()
-                .Include(m => m.Family.Members)
-                .Include(m => m.Students)
-                .ToListAsync();
-
-            Assert.Equal(2, result.Count);
-            Assert.True(result.All(r => r.Students.Count > 0));
-            Assert.Null(result.Single(t => t.Name == "Ms. Frizzle").Family);
-            Assert.NotNull(result.Single(t => t.Name == "Mr. Garrison").Family);
-        }
-    }
-
-    protected class Context9038 : DbContext
-    {
-        public Context9038(DbContextOptions options)
-            : base(options)
-        {
-        }
-
-        public DbSet<Person9038> People { get; set; }
-
-        public DbSet<PersonFamily9038> Families { get; set; }
-
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
-        {
-            modelBuilder.Entity<PersonTeacher9038>().HasBaseType<Person9038>();
-            modelBuilder.Entity<PersonKid9038>().HasBaseType<Person9038>();
-            modelBuilder.Entity<PersonFamily9038>();
-
-            modelBuilder.Entity<PersonKid9038>(
-                entity =>
-                {
-                    entity.Property("Discriminator").HasMaxLength(63);
-                    entity.HasIndex("Discriminator");
-                    entity.HasOne(m => m.Teacher)
-                        .WithMany(m => m.Students)
-                        .HasForeignKey(m => m.TeacherId)
-                        .HasPrincipalKey(m => m.Id)
-                        .OnDelete(DeleteBehavior.Restrict);
-                });
-        }
-
-        public void Seed()
-        {
-            var famalies = new List<PersonFamily9038> { new() { LastName = "Garrison" }, new() { LastName = "Cartman" } };
-            var teachers = new List<PersonTeacher9038>
-            {
-                new() { Name = "Ms. Frizzle" }, new() { Name = "Mr. Garrison", Family = famalies[0] }
-            };
-            var students = new List<PersonKid9038>
-            {
-                new()
-                {
-                    Name = "Arnold",
-                    Grade = 2,
-                    Teacher = teachers[0]
-                },
-                new()
-                {
-                    Name = "Eric",
-                    Grade = 4,
-                    Teacher = teachers[1],
-                    Family = famalies[1]
-                }
-            };
-
-            People.AddRange(teachers);
-            People.AddRange(students);
-            SaveChanges();
-        }
-
-        public abstract class Person9038
-        {
-            public int Id { get; set; }
-
-            public string Name { get; set; }
-
-            public int? TeacherId { get; set; }
-
-            public PersonFamily9038 Family { get; set; }
-        }
-
-        public class PersonKid9038 : Person9038
-        {
-            public int Grade { get; set; }
-
-            public PersonTeacher9038 Teacher { get; set; }
-        }
-
-        public class PersonTeacher9038 : Person9038
-        {
-            public ICollection<PersonKid9038> Students { get; set; }
-        }
-
-        public class PersonFamily9038
-        {
-            public int Id { get; set; }
-
-            public string LastName { get; set; }
-
-            public ICollection<Person9038> Members { get; set; }
-        }
-    }
-
-    #endregion
-
     #region 9468
 
     [ConditionalFact]
@@ -1052,69 +839,6 @@ public abstract class SimpleQueryTestBase : NonSharedModelTestBase
         {
             public int Id { get; set; }
             public bool Processed { get; set; }
-        }
-    }
-
-    #endregion
-
-    #region 10635
-
-    [ConditionalFact]
-    public virtual async Task Include_with_order_by_on_interface_key()
-    {
-        var contextFactory = await InitializeAsync<Context10635>(seed: c => c.Seed());
-        using (var context = contextFactory.CreateContext())
-        {
-            var query = context.Parents.Include(p => p.Children).OrderBy(p => p.Id).ToList();
-        }
-
-        using (var context = contextFactory.CreateContext())
-        {
-            var query = context.Parents.OrderBy(p => p.Id).Select(p => p.Children.ToList()).ToList();
-        }
-    }
-
-    private class Context10635 : DbContext
-    {
-        public Context10635(DbContextOptions options)
-            : base(options)
-        {
-        }
-
-        public DbSet<Parent10635> Parents { get; set; }
-        public DbSet<Child10635> Children { get; set; }
-
-        public void Seed()
-        {
-            var c11 = new Child10635 { Name = "Child111" };
-            var c12 = new Child10635 { Name = "Child112" };
-            var c13 = new Child10635 { Name = "Child113" };
-            var c21 = new Child10635 { Name = "Child121" };
-
-            var p1 = new Parent10635 { Name = "Parent1", Children = new[] { c11, c12, c13 } };
-            var p2 = new Parent10635 { Name = "Parent2", Children = new[] { c21 } };
-            Parents.AddRange(p1, p2);
-            Children.AddRange(c11, c12, c13, c21);
-            SaveChanges();
-        }
-
-        public interface IEntity10635
-        {
-            int Id { get; set; }
-        }
-
-        public class Parent10635 : IEntity10635
-        {
-            public int Id { get; set; }
-            public string Name { get; set; }
-            public virtual ICollection<Child10635> Children { get; set; }
-        }
-
-        public class Child10635 : IEntity10635
-        {
-            public int Id { get; set; }
-            public string Name { get; set; }
-            public int ParentId { get; set; }
         }
     }
 
@@ -1314,87 +1038,6 @@ public abstract class SimpleQueryTestBase : NonSharedModelTestBase
 
         public class CustomCollection11923 : List<Post11923>
         {
-        }
-    }
-
-    #endregion
-
-    #region 12582
-
-    [ConditionalFact]
-    public virtual async Task Include_collection_with_OfType_base()
-    {
-        var contextFactory = await InitializeAsync<Context12582>(seed: c => c.Seed());
-
-        using (var context = contextFactory.CreateContext())
-        {
-            var query = context.Employees
-                .Include(i => i.Devices)
-                .OfType<Context12582.IEmployee12582>()
-                .ToList();
-
-            Assert.Single(query);
-
-            var employee = (Context12582.Employee12582)query[0];
-            Assert.Equal(2, employee.Devices.Count);
-        }
-
-        using (var context = contextFactory.CreateContext())
-        {
-            var query = context.Employees
-                .Select(e => e.Devices.Where(d => d.Device != "foo").Cast<Context12582.IEmployeeDevice12582>())
-                .ToList();
-
-            Assert.Single(query);
-            var result = query[0];
-            Assert.Equal(2, result.Count());
-        }
-    }
-
-    private class Context12582 : DbContext
-    {
-        public DbSet<Employee12582> Employees { get; set; }
-        public DbSet<EmployeeDevice12582> Devices { get; set; }
-
-        public Context12582(DbContextOptions options)
-            : base(options)
-        {
-        }
-
-        public void Seed()
-        {
-            var d1 = new EmployeeDevice12582 { Device = "d1" };
-            var d2 = new EmployeeDevice12582 { Device = "d2" };
-            var e = new Employee12582 { Devices = new List<EmployeeDevice12582> { d1, d2 }, Name = "e" };
-
-            Devices.AddRange(d1, d2);
-            Employees.Add(e);
-            SaveChanges();
-        }
-
-        public interface IEmployee12582
-        {
-            string Name { get; set; }
-        }
-
-        public class Employee12582 : IEmployee12582
-        {
-            public int Id { get; set; }
-            public string Name { get; set; }
-            public ICollection<EmployeeDevice12582> Devices { get; set; }
-        }
-
-        public interface IEmployeeDevice12582
-        {
-            string Device { get; set; }
-        }
-
-        public class EmployeeDevice12582 : IEmployeeDevice12582
-        {
-            public int Id { get; set; }
-            public int EmployeeId { get; set; }
-            public string Device { get; set; }
-            public Employee12582 Employee { get; set; }
         }
     }
 

@@ -4466,7 +4466,8 @@ public abstract class GearsOfWarQueryTestBase<TFixture> : QueryTestBase<TFixture
                 }),
             elementSorter: s => s.Name);
 
-    private static int ClientFunction(int a, int b)
+    //maumar public for AOT
+    public static int ClientFunction(int a, int b)
         => a + b + 1;
 
     [ConditionalTheory]
@@ -8384,7 +8385,8 @@ public abstract class GearsOfWarQueryTestBase<TFixture> : QueryTestBase<TFixture
                 Assert.Equal(e.ThreatLevel, a.ThreatLevel);
             });
 
-    private class GearLocustLeaderDto
+    // public because AOT
+    public class GearLocustLeaderDto
     {
         public string FullName { get; set; }
         public int? ThreatLevel { get; set; }

@@ -227,7 +227,7 @@ public partial class RelationalQueryableMethodTranslatingExpressionVisitor
                     // duplicated for every property on the complex type.
                     // TODO: Make this work by using a common table expression (CTE)
 
-                    var nestedShaperExpression = projection.BindComplexProperty(complexProperty);
+                    var nestedShaperExpression = projection.BindComplexProperty(complexProperty, LiftableConstantFactory);
                     var nestedValueExpression = CreateComplexPropertyAccessExpression(valueExpression, complexProperty);
                     if (!TryProcessComplexType(nestedShaperExpression, nestedValueExpression))
                     {
@@ -326,7 +326,7 @@ public partial class RelationalQueryableMethodTranslatingExpressionVisitor
                                 StructuralType: IComplexType,
                                 ValueBufferExpression: StructuralTypeProjectionExpression projection
                             }
-                            => projection.BindComplexProperty(complexProperty),
+                            => projection.BindComplexProperty(complexProperty, LiftableConstantFactory),
 
                         _ => throw new UnreachableException()
                     };

@@ -724,7 +724,8 @@ public abstract class NorthwindJoinQueryTestBase<TFixture> : QueryTestBase<TFixt
                 .Select(e => new { e.OrderProperty, e.CustomerProperty }),
             elementSorter: e => e.OrderProperty);
 
-    private static int ClientMethod(Order order)
+    // public for AOT
+    public static int ClientMethod(Order order)
         => order.OrderID;
 
     [ConditionalTheory]
@@ -754,7 +755,7 @@ public abstract class NorthwindJoinQueryTestBase<TFixture> : QueryTestBase<TFixt
                     a.Views.OrderBy(od => od.OrderID).ThenBy(od => od.ProductID));
             });
 
-    private class CustomerViewModel(string customerID, string city, OrderDetailViewModel[] views)
+    public class CustomerViewModel(string customerID, string city, OrderDetailViewModel[] views)
     {
         public string CustomerID { get; } = customerID;
         public string City { get; } = city;
@@ -781,7 +782,7 @@ public abstract class NorthwindJoinQueryTestBase<TFixture> : QueryTestBase<TFixt
             => HashCode.Combine(CustomerID, City);
     }
 
-    private class OrderDetailViewModel(int orderID, int productID)
+    public class OrderDetailViewModel(int orderID, int productID)
     {
         public int OrderID { get; } = orderID;
         public int ProductID { get; } = productID;

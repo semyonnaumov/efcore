@@ -37,6 +37,7 @@ public sealed partial class SelectExpression : TableExpressionBase
     private readonly List<(ColumnExpression Column, ValueComparer Comparer)> _childIdentifiers = [];
 
     private readonly SqlAliasManager _sqlAliasManager;
+    private readonly ILiftableConstantFactory _liftableConstantFactory;
 
     internal bool IsMutable { get; private set; } = true;
     private Dictionary<ProjectionMember, Expression> _projectionMapping = new();
@@ -58,7 +59,8 @@ public sealed partial class SelectExpression : TableExpressionBase
         List<ProjectionExpression> projections,
         List<OrderingExpression> orderings,
         IReadOnlyDictionary<string, IAnnotation>? annotations,
-        SqlAliasManager sqlAliasManager)
+        SqlAliasManager sqlAliasManager,
+        ILiftableConstantFactory liftableConstantFactory)
         : base(alias, annotations)
     {
         _projection = projections;
@@ -66,6 +68,7 @@ public sealed partial class SelectExpression : TableExpressionBase
         _groupBy = groupBy;
         _orderings = orderings;
         _sqlAliasManager = sqlAliasManager;
+        _liftableConstantFactory = liftableConstantFactory;
     }
 
     /// <summary>
@@ -79,13 +82,15 @@ public sealed partial class SelectExpression : TableExpressionBase
         List<TableExpressionBase> tables,
         Expression projection,
         List<(ColumnExpression Column, ValueComparer Comparer)> identifier,
-        SqlAliasManager sqlAliasManager)
+        SqlAliasManager sqlAliasManager,
+        ILiftableConstantFactory liftableConstantFactory)
         : base(null)
     {
         _tables = tables;
         _projectionMapping[new ProjectionMember()] = projection;
         _identifier = identifier;
         _sqlAliasManager = sqlAliasManager;
+        _liftableConstantFactory = liftableConstantFactory;
     }
 
     /// <summary>
@@ -95,8 +100,8 @@ public sealed partial class SelectExpression : TableExpressionBase
     ///     doing so can result in application failures when updating to a new Entity Framework Core release.
     /// </summary>
     [EntityFrameworkInternal]
-    public SelectExpression(SqlExpression projection, SqlAliasManager sqlAliasManager)
-        : this(tables: [], projection, identifier: [], sqlAliasManager)
+    public SelectExpression(SqlExpression projection, SqlAliasManager sqlAliasManager, ILiftableConstantFactory liftableConstantFactory)
+        : this(tables: [], projection, identifier: [], sqlAliasManager, liftableConstantFactory)
     {
     }
 
@@ -109,8 +114,8 @@ public sealed partial class SelectExpression : TableExpressionBase
     // Immutable selects no longer need to create tables, so no need for an alias manager (note that in the long term, SelectExpression
     // should have an alias manager at all, so this is temporary).
     [EntityFrameworkInternal]
-    public static SelectExpression CreateImmutable(string alias, List<TableExpressionBase> tables, List<ProjectionExpression> projection)
-        => new(alias, tables, groupBy: [], projections: projection, orderings: [], annotations: null, sqlAliasManager: null!) { IsMutable = false };
+    public static SelectExpression CreateImmutable(string alias, List<TableExpressionBase> tables, List<ProjectionExpression> projection, ILiftableConstantFactory liftableConstantFactory)
+        => new(alias, tables, groupBy: [], projections: projection, orderings: [], annotations: null, sqlAliasManager: null!, liftableConstantFactory: liftableConstantFactory) { IsMutable = false };
 
     /// <summary>
     ///     The list of tags applied to this <see cref="SelectExpression" />.
@@ -255,7 +260,7 @@ public sealed partial class SelectExpression : TableExpressionBase
                             foreach (var complexProperty in complexType.GetComplexProperties())
                             {
                                 ProcessComplexType(
-                                    (StructuralTypeProjectionExpression)complexTypeProjection.BindComplexProperty(complexProperty)
+                                    (StructuralTypeProjectionExpression)complexTypeProjection.BindComplexProperty(complexProperty, _liftableConstantFactory)
                                         .ValueBufferExpression);
                             }
                         }
@@ -390,7 +395,7 @@ public sealed partial class SelectExpression : TableExpressionBase
                 foreach (var complexProperty in GetAllComplexPropertiesInHierarchy(projection.StructuralType))
                 {
                     ProcessTypeProjection(
-                        (StructuralTypeProjectionExpression)projection.BindComplexProperty(complexProperty).ValueBufferExpression);
+                        (StructuralTypeProjectionExpression)projection.BindComplexProperty(complexProperty, _liftableConstantFactory).ValueBufferExpression);
                 }
             }
 
@@ -491,7 +496,7 @@ public sealed partial class SelectExpression : TableExpressionBase
                     pushdownOccurred = true;
                 }
 
-                entityShaperNullableMarkingExpressionVisitor = new EntityShaperNullableMarkingExpressionVisitor();
+                entityShaperNullableMarkingExpressionVisitor = new EntityShaperNullableMarkingExpressionVisitor(_liftableConstantFactory);
             }
 
             if (querySplittingBehavior == QuerySplittingBehavior.SplitQuery
@@ -782,7 +787,7 @@ public sealed partial class SelectExpression : TableExpressionBase
                         var count = innerSelectExpression._clientProjections.Count;
 
                         _clientProjections.AddRange(
-                            innerSelectExpression._clientProjections.Select(e => MakeNullable(e, nullable: true)));
+                            innerSelectExpression._clientProjections.Select(e => MakeNullable(e, nullable: true, liftableConstantFactory: _liftableConstantFactory)));
 
                         _aliasForClientProjections.AddRange(innerSelectExpression._aliasForClientProjections);
                         innerShaperExpression = new ProjectionIndexRemappingExpressionVisitor(
@@ -1298,7 +1303,7 @@ public sealed partial class SelectExpression : TableExpressionBase
                 foreach (var complexProperty in GetAllComplexPropertiesInHierarchy(typeProjection.StructuralType))
                 {
                     ProcessType(
-                        (StructuralTypeProjectionExpression)typeProjection.BindComplexProperty(complexProperty).ValueBufferExpression);
+                        (StructuralTypeProjectionExpression)typeProjection.BindComplexProperty(complexProperty, _liftableConstantFactory).ValueBufferExpression);
                 }
             }
 
@@ -1884,7 +1889,7 @@ public sealed partial class SelectExpression : TableExpressionBase
     {
         // TODO: Introduce clone method? See issue#24460
         var select1 = new SelectExpression(
-            alias: null, tables: _tables.ToList(), groupBy: _groupBy.ToList(), projections: [], orderings: _orderings.ToList(), annotations: Annotations, sqlAliasManager: _sqlAliasManager)
+            alias: null, tables: _tables.ToList(), groupBy: _groupBy.ToList(), projections: [], orderings: _orderings.ToList(), annotations: Annotations, sqlAliasManager: _sqlAliasManager, liftableConstantFactory: _liftableConstantFactory)
         {
             IsDistinct = IsDistinct,
             Predicate = Predicate,
@@ -2147,6 +2152,11 @@ public sealed partial class SelectExpression : TableExpressionBase
                 {
                     var complexPropertyShaper1 = structuralProjection1.BindComplexProperty(complexProperty);
                     var complexPropertyShaper2 = structuralProjection2.BindComplexProperty(complexProperty);
+   rong                 ProcessStructuralType(
+   rong                     (StructuralTypeProjectionExpression)nestedProjection1.BindComplexProperty(complexProperty, _liftableConstantFactory).ValueBufferExpression,
+   rong                     (StructuralTypeProjectionExpression)nestedProjection2.BindComplexProperty(complexProperty, _liftableConstantFactory).ValueBufferExpression);
+                }
+            }
 
                     var resultComplexProjection = ProcessStructuralType(
                         (StructuralTypeProjectionExpression)complexPropertyShaper1.ValueBufferExpression,
@@ -2234,7 +2244,8 @@ public sealed partial class SelectExpression : TableExpressionBase
         var dummySelectExpression = CreateImmutable(
             _sqlAliasManager.GenerateTableAlias("empty"),
             tables: [],
-            [new ProjectionExpression(nullSqlExpression, "empty")]);
+            [new ProjectionExpression(nullSqlExpression, "empty")],
+            _liftableConstantFactory);
 
         if (Orderings.Any()
             || Limit != null
@@ -2259,7 +2270,7 @@ public sealed partial class SelectExpression : TableExpressionBase
             var projectionToAdd = projection.Value;
             if (projectionToAdd is StructuralTypeProjectionExpression typeProjection)
             {
-                projectionToAdd = typeProjection.MakeNullable();
+                projectionToAdd = typeProjection.MakeNullable(_liftableConstantFactory);
             }
             else if (projectionToAdd is ColumnExpression column)
             {
@@ -2304,7 +2315,8 @@ public sealed partial class SelectExpression : TableExpressionBase
         var entityShaper = new RelationalStructuralTypeShaperExpression(
             navigation.TargetEntityType,
             new StructuralTypeProjectionExpression(navigation.TargetEntityType, expressions, principalEntityProjection.TableMap),
-            identifyingColumn.IsNullable || navigation.DeclaringEntityType.BaseType != null || !navigation.ForeignKey.IsRequiredDependent);
+            identifyingColumn.IsNullable || navigation.DeclaringEntityType.BaseType != null || !navigation.ForeignKey.IsRequiredDependent,
+            _liftableConstantFactory);
         principalEntityProjection.AddNavigationBinding(navigation, entityShaper);
 
         return entityShaper;
@@ -2565,7 +2577,8 @@ public sealed partial class SelectExpression : TableExpressionBase
     [EntityFrameworkInternal]
     public static StructuralTypeShaperExpression GenerateComplexPropertyShaperExpression(
         StructuralTypeProjectionExpression containerProjection,
-        IComplexProperty complexProperty)
+        IComplexProperty complexProperty,
+        ILiftableConstantFactory liftableConstantFactory)
     {
         var propertyExpressionMap = new Dictionary<IProperty, ColumnExpression>();
 
@@ -2607,7 +2620,8 @@ public sealed partial class SelectExpression : TableExpressionBase
         var entityShaper = new RelationalStructuralTypeShaperExpression(
             complexProperty.ComplexType,
             new StructuralTypeProjectionExpression(complexProperty.ComplexType, propertyExpressionMap, newTableMap, isComplexTypeNullable),
-            isComplexTypeNullable);
+            isComplexTypeNullable,
+            liftableConstantFactory);
 
         return entityShaper;
     }
@@ -2678,7 +2692,7 @@ public sealed partial class SelectExpression : TableExpressionBase
                 for (var i = 0; i < innerSelectExpression._clientProjections.Count; i++)
                 {
                     var projectionToAdd = innerSelectExpression._clientProjections[i];
-                    projectionToAdd = MakeNullable(projectionToAdd, innerNullable);
+                    projectionToAdd = MakeNullable(projectionToAdd, innerNullable, _liftableConstantFactory);
                     _clientProjections.Add(projectionToAdd);
                     _aliasForClientProjections.Add(innerSelectExpression._aliasForClientProjections[i]);
                     indexMap[i] = _clientProjections.Count - 1;
@@ -2709,7 +2723,7 @@ public sealed partial class SelectExpression : TableExpressionBase
                 for (var i = 0; i < innerSelectExpression._clientProjections.Count; i++)
                 {
                     var projectionToAdd = innerSelectExpression._clientProjections[i];
-                    projectionToAdd = MakeNullable(projectionToAdd, innerNullable);
+                    projectionToAdd = MakeNullable(projectionToAdd, innerNullable, _liftableConstantFactory);
                     _clientProjections.Add(projectionToAdd);
                     _aliasForClientProjections.Add(innerSelectExpression._aliasForClientProjections[i]);
                     indexMap[i] = _clientProjections.Count - 1;
@@ -2741,7 +2755,7 @@ public sealed partial class SelectExpression : TableExpressionBase
                     var remappedProjectionMember = projection.Key.Prepend(innerMemberInfo);
                     mapping[projectionMember] = remappedProjectionMember;
                     var projectionToAdd = projection.Value;
-                    projectionToAdd = MakeNullable(projectionToAdd, innerNullable);
+                    projectionToAdd = MakeNullable(projectionToAdd, innerNullable, _liftableConstantFactory);
                     projectionMapping[remappedProjectionMember] = projectionToAdd;
                 }
 
@@ -2753,7 +2767,7 @@ public sealed partial class SelectExpression : TableExpressionBase
 
         if (innerNullable)
         {
-            innerShaper = new EntityShaperNullableMarkingExpressionVisitor().Visit(innerShaper);
+            innerShaper = new EntityShaperNullableMarkingExpressionVisitor(_liftableConstantFactory).Visit(innerShaper);
         }
 
         return New(
@@ -3358,7 +3372,7 @@ public sealed partial class SelectExpression : TableExpressionBase
             _sqlAliasManager.GenerateTableAlias(_tables is [{ Alias: string singleTableAlias }] ? singleTableAlias : "subquery");
 
         var subquery = new SelectExpression(
-            subqueryAlias, _tables.ToList(), _groupBy.ToList(), [], _orderings.ToList(), Annotations, _sqlAliasManager)
+            subqueryAlias, _tables.ToList(), _groupBy.ToList(), [], _orderings.ToList(), Annotations, _sqlAliasManager, _liftableConstantFactory)
         {
             IsDistinct = IsDistinct,
             Predicate = Predicate,
@@ -3744,7 +3758,7 @@ public sealed partial class SelectExpression : TableExpressionBase
         var limit = (SqlExpression?)cloningExpressionVisitor.Visit(Limit);
 
         var newSelectExpression = new SelectExpression(
-            alias, newTables, newGroupBy, newProjections, newOrderings, Annotations, _sqlAliasManager)
+            alias, newTables, newGroupBy, newProjections, newOrderings, Annotations, _sqlAliasManager, _liftableConstantFactory)
         {
             Predicate = predicate,
             Having = havingExpression,
@@ -3779,7 +3793,7 @@ public sealed partial class SelectExpression : TableExpressionBase
     // TODO: Look into TPC handling and possibly clean this up, #32873
     [EntityFrameworkInternal]
     public SelectExpression RemoveTpcTableExpression()
-        => (SelectExpression)new TpcTableExpressionRemovingExpressionVisitor().Visit(this);
+        => (SelectExpression)new TpcTableExpressionRemovingExpressionVisitor(_liftableConstantFactory).Visit(this);
 
     private Dictionary<ProjectionMember, int> ConvertProjectionMappingToClientProjections(
         Dictionary<ProjectionMember, Expression> projectionMapping,
@@ -3799,7 +3813,7 @@ public sealed partial class SelectExpression : TableExpressionBase
                     var entityProjectionToCache = typeProjection;
                     if (makeNullable)
                     {
-                        typeProjection = typeProjection.MakeNullable();
+                        typeProjection = typeProjection.MakeNullable(_liftableConstantFactory);
                     }
 
                     _clientProjections.Add(typeProjection);
@@ -3812,7 +3826,7 @@ public sealed partial class SelectExpression : TableExpressionBase
             }
             else
             {
-                projectionToAdd = MakeNullable(projectionToAdd, makeNullable);
+                projectionToAdd = MakeNullable(projectionToAdd, makeNullable, _liftableConstantFactory);
                 var existingIndex = _clientProjections.FindIndex(e => e.Equals(projectionToAdd));
                 if (existingIndex == -1)
                 {
@@ -3833,11 +3847,11 @@ public sealed partial class SelectExpression : TableExpressionBase
     private static SqlExpression MakeNullable(SqlExpression expression, bool nullable)
         => nullable && expression is ColumnExpression column ? column.MakeNullable() : expression;
 
-    private static Expression MakeNullable(Expression expression, bool nullable)
+    private static Expression MakeNullable(Expression expression, bool nullable, ILiftableConstantFactory liftableConstantFactory)
         => nullable
             ? expression switch
             {
-                StructuralTypeProjectionExpression projection => projection.MakeNullable(),
+                StructuralTypeProjectionExpression projection => projection.MakeNullable(liftableConstantFactory),
                 ColumnExpression column => column.MakeNullable(),
                 JsonQueryExpression jsonQueryExpression => jsonQueryExpression.MakeNullable(),
                 _ => expression
@@ -4046,7 +4060,7 @@ public sealed partial class SelectExpression : TableExpressionBase
             if (changed)
             {
                 var newSelectExpression = new SelectExpression(
-                    Alias, newTables, newGroupBy, newProjections, newOrderings, Annotations, _sqlAliasManager)
+                    Alias, newTables, newGroupBy, newProjections, newOrderings, Annotations, _sqlAliasManager, _liftableConstantFactory)
                 {
                     _clientProjections = _clientProjections,
                     _projectionMapping = _projectionMapping,
@@ -4159,7 +4173,7 @@ public sealed partial class SelectExpression : TableExpressionBase
         }
 
         var newSelectExpression = new SelectExpression(
-            Alias, tables.ToList(), groupBy.ToList(), projections.ToList(), orderings.ToList(), Annotations, _sqlAliasManager)
+            Alias, tables.ToList(), groupBy.ToList(), projections.ToList(), orderings.ToList(), Annotations, _sqlAliasManager, _liftableConstantFactory)
         {
             _projectionMapping = projectionMapping,
             _clientProjections = _clientProjections.ToList(),
@@ -4187,7 +4201,7 @@ public sealed partial class SelectExpression : TableExpressionBase
     {
         Check.DebugAssert(!IsMutable, "Can't change alias on mutable SelectExpression");
 
-        return new SelectExpression(newAlias, _tables, _groupBy, _projection, _orderings, Annotations, _sqlAliasManager)
+        return new SelectExpression(newAlias, _tables, _groupBy, _projection, _orderings, Annotations, _sqlAliasManager, _liftableConstantFactory)
         {
             _projectionMapping = _projectionMapping,
             _clientProjections = _clientProjections.ToList(),

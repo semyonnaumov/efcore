@@ -422,7 +422,7 @@ public abstract class OwnedQueryTestBase<TFixture> : QueryTestBase<TFixture>
             async,
             ss => ss.Set<OwnedPerson>().OrderBy(e => e.Id).Select(e => Map(e)).Skip(1).Take(2));
 
-    private static string Map(OwnedPerson person)
+    public static string Map(OwnedPerson person)
         => person.PersonAddress.Country.Name;
 
     // Issue#18734
@@ -447,7 +447,7 @@ public abstract class OwnedQueryTestBase<TFixture> : QueryTestBase<TFixture>
             async,
             ss => ss.Set<OwnedPerson>().OrderBy(e => e.Id).Select(e => Identity(e)).Skip(1).Take(2));
 
-    private static OwnedPerson Identity(OwnedPerson person)
+    public static OwnedPerson Identity(OwnedPerson person)
         => person;
 
     [ConditionalTheory]
@@ -1856,7 +1856,7 @@ public abstract class OwnedQueryTestBase<TFixture> : QueryTestBase<TFixture>
         }
     }
 
-    protected class OwnedAddress
+    public class OwnedAddress
     {
         private string _addressLine;
         private int _zipCode;
@@ -1912,7 +1912,7 @@ public abstract class OwnedQueryTestBase<TFixture> : QueryTestBase<TFixture>
         }
     }
 
-    protected class OwnedCountry
+    public class OwnedCountry
     {
         public string Name { get; set; }
 
@@ -1920,7 +1920,7 @@ public abstract class OwnedQueryTestBase<TFixture> : QueryTestBase<TFixture>
         public Planet Planet { get; set; }
     }
 
-    protected class OwnedPerson
+    public class OwnedPerson
     {
         private string _name;
 
@@ -1945,7 +1945,7 @@ public abstract class OwnedQueryTestBase<TFixture> : QueryTestBase<TFixture>
         public ICollection<Order> Orders { get; set; }
     }
 
-    protected class Order
+    public class Order
     {
         private DateTime _orderDate;
         public int Id { get; set; }
@@ -1966,27 +1966,27 @@ public abstract class OwnedQueryTestBase<TFixture> : QueryTestBase<TFixture>
         public List<OrderDetail> Details { get; set; }
     }
 
-    protected class OrderDetail
+    public class OrderDetail
     {
         public string Detail { get; set; }
     }
 
-    protected class Branch : OwnedPerson
+    public class Branch : OwnedPerson
     {
         public OwnedAddress BranchAddress { get; set; }
     }
 
-    protected class LeafA : Branch
+    public class LeafA : Branch
     {
         public OwnedAddress LeafAAddress { get; set; }
     }
 
-    protected class LeafB : OwnedPerson
+    public class LeafB : OwnedPerson
     {
         public OwnedAddress LeafBAddress { get; set; }
     }
 
-    protected class Planet
+    public class Planet
     {
         public int Id { get; set; }
 
@@ -1998,7 +1998,7 @@ public abstract class OwnedQueryTestBase<TFixture> : QueryTestBase<TFixture>
         public List<Moon> Moons { get; set; }
     }
 
-    protected class Moon
+    public class Moon
     {
         public int Id { get; set; }
         public int Diameter { get; set; }
@@ -2006,7 +2006,7 @@ public abstract class OwnedQueryTestBase<TFixture> : QueryTestBase<TFixture>
         public int PlanetId { get; set; }
     }
 
-    protected class Star
+    public class Star
     {
         public int Id { get; set; }
         public string Name { get; set; }
@@ -2016,7 +2016,7 @@ public abstract class OwnedQueryTestBase<TFixture> : QueryTestBase<TFixture>
         public List<Planet> Planets { get; set; }
     }
 
-    protected class Element
+    public class Element
     {
         public string Id { get; set; }
         public string Name { get; set; }
@@ -2024,7 +2024,7 @@ public abstract class OwnedQueryTestBase<TFixture> : QueryTestBase<TFixture>
         public int StarId { get; set; }
     }
 
-    protected class Barton
+    public class Barton
     {
         public int Id { get; set; }
 
@@ -2033,40 +2033,40 @@ public abstract class OwnedQueryTestBase<TFixture> : QueryTestBase<TFixture>
         public string Simple { get; set; }
     }
 
-    protected class Fink
+    public class Fink
     {
         public Barton Barton { get; set; }
 
         public int Id { get; set; }
     }
 
-    protected class Throned
+    public class Throned
     {
         public int Value { get; set; }
         public string Property { get; set; }
     }
 
-    protected abstract class Balloon
+    public abstract class Balloon
     {
         public string Id { get; set; }
     }
 
-    protected class Helium
+    public class Helium
     {
         public int X { get; set; }
     }
 
-    protected class Hydrogen
+    public class Hydrogen
     {
         public int Y { get; set; }
     }
 
-    protected class HeliumBalloon : Balloon
+    public class HeliumBalloon : Balloon
     {
         public Helium Gas { get; set; }
     }
 
-    protected class HydrogenBalloon : Balloon
+    public class HydrogenBalloon : Balloon
     {
         public Hydrogen Gas { get; set; }
     }

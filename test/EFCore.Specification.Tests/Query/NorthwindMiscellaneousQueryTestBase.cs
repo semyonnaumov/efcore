@@ -426,7 +426,7 @@ public abstract class NorthwindMiscellaneousQueryTestBase<TFixture> : QueryTestB
                 .Select(o => new CustomerWrapper { Customer = o.Customer })
                 .Where(x => x.Customer != null));
 
-    private class CustomerWrapper
+    public class CustomerWrapper
     {
         public Customer Customer { get; set; }
 
@@ -1358,7 +1358,7 @@ public abstract class NorthwindMiscellaneousQueryTestBase<TFixture> : QueryTestB
                 Assert.Equal(e.o.Count, a.o.Count);
             });
 
-    private class OrderCountDTO
+    public class OrderCountDTO
     {
         public string Id { get; set; }
         public int Count { get; set; }
@@ -3971,7 +3971,7 @@ public abstract class NorthwindMiscellaneousQueryTestBase<TFixture> : QueryTestB
                 .OrderBy(n => n.A),
             assertOrder: true);
 
-    protected class DTO<T>
+    public class DTO<T>
     {
         public T Property { get; set; }
 
@@ -5090,7 +5090,7 @@ public abstract class NorthwindMiscellaneousQueryTestBase<TFixture> : QueryTestB
             elementAsserter: (e, a) => Assert.Equal(e.CustomerID, a.CustomerID));
     }
 
-    private class Dto(string value)
+    public class Dto(string value)
     {
         public string Value { get; } = value;
         public string CustomerID { get; set; }
@@ -5247,7 +5247,7 @@ public abstract class NorthwindMiscellaneousQueryTestBase<TFixture> : QueryTestB
             assertOrder: true,
             elementAsserter: (e, a) => Assert.True(e.Property.SequenceEqual(a.Property)));
 
-    private static int ClientMethod(int s)
+    public static int ClientMethod(int s)
         => s;
 
     [ConditionalTheory]

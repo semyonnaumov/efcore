@@ -1813,7 +1813,7 @@ public abstract class ComplexNavigationsQueryTestBase<TFixture> : QueryTestBase<
                 Assert.Equal(e.property, a.property);
             });
 
-    private static TResult ClientMethodReturnSelf<TResult>(TResult element)
+    public static TResult ClientMethodReturnSelf<TResult>(TResult element)
         => element;
 
     [ConditionalTheory]
@@ -2078,7 +2078,7 @@ public abstract class ComplexNavigationsQueryTestBase<TFixture> : QueryTestBase<
                   select l1.Id,
             assertOrder: true);
 
-    private static int ClientMethodNullableInt(int? id)
+    public static int ClientMethodNullableInt(int? id)
         => id ?? 0;
 
     [ConditionalTheory]
@@ -3320,14 +3320,14 @@ public abstract class ComplexNavigationsQueryTestBase<TFixture> : QueryTestBase<
                 }
             });
 
-    private class Level1Dto
+    public class Level1Dto
     {
         public int Id { get; set; }
         public string Name { get; set; }
         public Level2Dto Level2 { get; set; }
     }
 
-    private class Level2Dto
+    public class Level2Dto
     {
         public int Id { get; set; }
         public string Name { get; set; }

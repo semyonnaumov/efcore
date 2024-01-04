@@ -36,8 +36,9 @@ public abstract class QueryableMethodTranslatingExpressionVisitor : ExpressionVi
     {
         Dependencies = dependencies;
         QueryCompilationContext = queryCompilationContext;
+        LiftableConstantFactory = dependencies.LiftableConstantFactory;
         _subquery = subquery;
-        _entityShaperNullableMarkingExpressionVisitor = new EntityShaperNullableMarkingExpressionVisitor();
+        _entityShaperNullableMarkingExpressionVisitor = new EntityShaperNullableMarkingExpressionVisitor(Dependencies.LiftableConstantFactory);
     }
 
     /// <summary>
@@ -46,6 +47,11 @@ public abstract class QueryableMethodTranslatingExpressionVisitor : ExpressionVi
     protected virtual QueryableMethodTranslatingExpressionVisitorDependencies Dependencies { get; }
 
     private Expression? _untranslatedExpression;
+
+    /// <summary>
+    /// TODO
+    /// </summary>
+    public virtual ILiftableConstantFactory LiftableConstantFactory { get; set; }
 
     /// <summary>
     ///     Detailed information about errors encountered during translation.
@@ -540,11 +546,11 @@ public abstract class QueryableMethodTranslatingExpressionVisitor : ExpressionVi
             : throw new InvalidOperationException(CoreStrings.TranslationFailed(methodCallExpression.Print()));
     }
 
-    private sealed class EntityShaperNullableMarkingExpressionVisitor : ExpressionVisitor
+    private sealed class EntityShaperNullableMarkingExpressionVisitor(ILiftableConstantFactory liftableConstantFactory) : ExpressionVisitor
     {
         protected override Expression VisitExtension(Expression extensionExpression)
             => extensionExpression is StructuralTypeShaperExpression shaper
-                ? shaper.MakeNullable()
+                ? shaper.MakeNullable(liftableConstantFactory)
                 : base.VisitExtension(extensionExpression);
     }
 

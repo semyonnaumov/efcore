@@ -100,7 +100,7 @@ INSERT ZeroKey VALUES (NULL)
             });
     }
 
-    private class Context5456(DbContextOptions options) : DbContext(options)
+    public class Context5456(DbContextOptions options) : DbContext(options)
     {
         public DbSet<Blog> Blogs { get; set; }
         public DbSet<Post> Posts { get; set; }
@@ -350,7 +350,7 @@ END
         }
     }
 
-    protected class Context9277(DbContextOptions options) : DbContext(options)
+    public class Context9277(DbContextOptions options) : DbContext(options)
     {
         public DbSet<Blog9277> Blogs { get; set; }
 
@@ -483,7 +483,7 @@ ORDER BY [p].[Id]
 """);
     }
 
-    protected class Context12518(DbContextOptions options) : DbContext(options)
+    public class Context12518(DbContextOptions options) : DbContext(options)
     {
         public virtual DbSet<Parent12518> Parents { get; set; }
         public virtual DbSet<Child12518> Children { get; set; }
@@ -554,7 +554,7 @@ WHERE [r].[MyTime] IN (
 """);
     }
 
-    private class Context13118(DbContextOptions options) : DbContext(options)
+    public class Context13118(DbContextOptions options) : DbContext(options)
     {
         public virtual DbSet<ReproEntity13118> ReproEntity { get; set; }
 
@@ -569,13 +569,14 @@ WHERE [r].[MyTime] IN (
 
             SaveChanges();
         }
+
+        public class ReproEntity13118
+        {
+            public Guid Id { get; set; }
+            public DateTime MyTime { get; set; }
+        }
     }
 
-    private class ReproEntity13118
-    {
-        public Guid Id { get; set; }
-        public DateTime MyTime { get; set; }
-    }
 
     #endregion
 
@@ -767,7 +768,7 @@ WHERE [d].[SmallDateTime] IN (
 """);
     }
 
-    protected class Context14095(DbContextOptions options) : DbContext(options)
+    public class Context14095(DbContextOptions options) : DbContext(options)
     {
         public DbSet<DatesAndPrunes14095> Dates { get; set; }
 
@@ -970,7 +971,7 @@ CROSS JOIN (
         }
     }
 
-    private class Context19206(DbContextOptions options) : DbContext(options)
+    public class Context19206(DbContextOptions options) : DbContext(options)
     {
         public DbSet<Test> Tests { get; set; }
 
@@ -1022,7 +1023,7 @@ CROSS JOIN (
             });
     }
 
-    private class Context21666(DbContextOptions options) : DbContext(options)
+    public class Context21666(DbContextOptions options) : DbContext(options)
     {
         public DbSet<List> Lists { get; set; }
 
@@ -1063,7 +1064,7 @@ WHERE [l].[Name] = N'My Location'
 """);
     }
 
-    private class Context23282(DbContextOptions options) : DbContext(options)
+    public class Context23282(DbContextOptions options) : DbContext(options)
     {
         public DbSet<Location> Locations { get; set; }
 

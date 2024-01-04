@@ -35,7 +35,7 @@ namespace Microsoft.EntityFrameworkCore.Query
 
         protected abstract void Seed2951(Context2951 context);
 
-        protected class Context2951(DbContextOptions options) : DbContext(options)
+        public class Context2951(DbContextOptions options) : DbContext(options)
         {
             protected override void OnModelCreating(ModelBuilder modelBuilder)
                 => modelBuilder.Entity<ZeroKey2951>().ToTable("ZeroKey", t => t.ExcludeFromMigrations())
@@ -112,7 +112,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        protected class Context11818(DbContextOptions options) : DbContext(options)
+        public class Context11818(DbContextOptions options) : DbContext(options)
         {
             protected override void OnModelCreating(ModelBuilder modelBuilder)
             {
@@ -167,7 +167,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             var bad = context.Set<TestQuery>().FromSqlRaw(@"SELECT cast(null as int) AS MyValue").ToList(); // Exception
         }
 
-        protected class Context23981(DbContextOptions options) : DbContext(options)
+        public class Context23981(DbContextOptions options) : DbContext(options)
         {
             protected override void OnModelCreating(ModelBuilder modelBuilder)
             {
@@ -212,7 +212,7 @@ namespace Microsoft.EntityFrameworkCore.Query
             }
         }
 
-        protected class Context27954(DbContextOptions options) : DbContext(options)
+        public class Context27954(DbContextOptions options) : DbContext(options)
         {
             public DbSet<MyEntity> MyEntities { get; set; }
 

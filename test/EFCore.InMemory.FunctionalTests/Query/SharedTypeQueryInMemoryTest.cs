@@ -12,17 +12,17 @@ public class SharedTypeQueryInMemoryTest : SharedTypeQueryTestBase
     [MemberData(nameof(IsAsyncData))]
     public virtual async Task Can_use_shared_type_entity_type_in_ToInMemoryQuery(bool async)
     {
-        var contextFactory = await InitializeAsync<MyContextInMemory24601>(
+        var contextFactory = await InitializeAsync<ContextInMemory24601>(
             seed: c => c.Seed());
 
         using var context = contextFactory.CreateContext();
 
-        var data = context.Set<ViewQuery24601>();
+        var data = context.Set<Context24601.ViewQuery>();
 
         Assert.Equal("Maumar", Assert.Single(data).Value);
     }
 
-    private class MyContextInMemory24601(DbContextOptions options) : MyContext24601(options)
+    private class ContextInMemory24601(DbContextOptions options) : Context24601(options)
     {
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -34,9 +34,9 @@ public class SharedTypeQueryInMemoryTest : SharedTypeQueryTestBase
                     b.IndexerProperty<string>("Value");
                 });
 
-            modelBuilder.Entity<ViewQuery24601>().HasNoKey()
+            modelBuilder.Entity<ViewQuery>().HasNoKey()
                 .ToInMemoryQuery(
-                    () => Set<Dictionary<string, object>>("STET").Select(e => new ViewQuery24601 { Value = (string)e["Value"] }));
+                    () => Set<Dictionary<string, object>>("STET").Select(e => new ViewQuery { Value = (string)e["Value"] }));
         }
     }
 }

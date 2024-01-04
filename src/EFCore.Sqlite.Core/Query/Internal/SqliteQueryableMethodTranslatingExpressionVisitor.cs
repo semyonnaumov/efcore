@@ -99,7 +99,7 @@ public class SqliteQueryableMethodTranslatingExpressionVisitor : RelationalQuery
                     _sqlExpressionFactory.Constant(0));
 
 #pragma warning disable EF1001
-            return source.UpdateQueryExpression(new SelectExpression(translation, _sqlAliasManager));
+            return source.UpdateQueryExpression(new SelectExpression(translation, _sqlAliasManager, LiftableConstantFactory));
 #pragma warning restore EF1001
         }
 
@@ -196,7 +196,7 @@ public class SqliteQueryableMethodTranslatingExpressionVisitor : RelationalQuery
                 typeof(int));
 
 #pragma warning disable EF1001
-            return source.UpdateQueryExpression(new SelectExpression(translation, _sqlAliasManager));
+            return source.UpdateQueryExpression(new SelectExpression(translation, _sqlAliasManager, LiftableConstantFactory));
 #pragma warning restore EF1001
         }
 
@@ -245,7 +245,8 @@ public class SqliteQueryableMethodTranslatingExpressionVisitor : RelationalQuery
                 elementTypeMapping,
                 isElementNullable ?? elementClrType.IsNullableType()),
             identifier: [(new ColumnExpression("key", tableAlias, typeof(int), keyColumnTypeMapping, nullable: false), keyColumnTypeMapping.Comparer)],
-            _sqlAliasManager);
+            _sqlAliasManager,
+            LiftableConstantFactory);
 #pragma warning restore EF1001 // Internal EF Core API usage.
 
         // If we have a collection column, we know the type mapping at this point (as opposed to parameters, whose type mapping will get
@@ -426,7 +427,8 @@ public class SqliteQueryableMethodTranslatingExpressionVisitor : RelationalQuery
                     newOuterSelectExpression,
                     new ProjectionMember(),
                     typeof(ValueBuffer)),
-                false));
+                false,
+                LiftableConstantFactory));
     }
 
     /// <summary>
@@ -490,7 +492,7 @@ public class SqliteQueryableMethodTranslatingExpressionVisitor : RelationalQuery
                 }
 
 #pragma warning disable EF1001
-                return source.UpdateQueryExpression(new SelectExpression(translation, _sqlAliasManager));
+                return source.UpdateQueryExpression(new SelectExpression(translation, _sqlAliasManager, LiftableConstantFactory));
 #pragma warning restore EF1001
             }
         }

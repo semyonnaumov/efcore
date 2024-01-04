@@ -176,7 +176,7 @@ public abstract class NorthwindNavigationsQueryTestBase<TFixture> : QueryTestBas
                     o => new { o.CustomerID, OrderID = ClientFunction(o.OrderID, 5) }).FirstOrDefault()),
             assertOrder: true);
 
-    private static int ClientFunction(int a, int b)
+    public static int ClientFunction(int a, int b)
         => a + b + 1;
 
     [ConditionalTheory]

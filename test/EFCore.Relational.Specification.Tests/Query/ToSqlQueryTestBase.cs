@@ -38,7 +38,7 @@ public abstract class ToSqlQueryTestBase : NonSharedModelTestBase
         Assert.Equal(10, authors[0].PostCount);
     }
 
-    protected class Context27629(DbContextOptions options) : DbContext(options)
+    public class Context27629(DbContextOptions options) : DbContext(options)
     {
         public DbSet<Author> Authors
             => Set<Author>();
@@ -87,7 +87,7 @@ public abstract class ToSqlQueryTestBase : NonSharedModelTestBase
         }
     }
 
-    protected class Author
+    public class Author
     {
         public long Id { get; set; }
         public string Name { get; set; } = null!;
@@ -95,7 +95,7 @@ public abstract class ToSqlQueryTestBase : NonSharedModelTestBase
         public PostStat? PostStat { get; set; }
     }
 
-    protected class Post
+    public class Post
     {
         public long Id { get; set; }
         public long AuthorId { get; set; }
@@ -104,7 +104,7 @@ public abstract class ToSqlQueryTestBase : NonSharedModelTestBase
         public string? Content { get; set; }
     }
 
-    protected class PostStat
+    public class PostStat
     {
         public long AuthorId { get; set; }
         public Author Author { get; set; } = null!;

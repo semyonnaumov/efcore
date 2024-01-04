@@ -23,8 +23,17 @@ public class RelationalStructuralTypeShaperExpression : StructuralTypeShaperExpr
     /// <param name="structuralType">The entity type to shape.</param>
     /// <param name="valueBufferExpression">An expression of ValueBuffer to get values for properties of the entity.</param>
     /// <param name="nullable">A bool value indicating whether this entity instance can be null.</param>
-    public RelationalStructuralTypeShaperExpression(ITypeBase structuralType, Expression valueBufferExpression, bool nullable)
-        : base(structuralType, valueBufferExpression, nullable, null)
+    /// <param name="liftableConstantFactory">TODO</param>
+    public RelationalStructuralTypeShaperExpression(ITypeBase structuralType, Expression valueBufferExpression, bool nullable, ILiftableConstantFactory liftableConstantFactory)
+        : base(structuralType, valueBufferExpression, nullable, null, liftableConstantFactory)
+    {
+    }
+
+    /// <summary>
+    ///     Creates a new instance of the <see cref="RelationalStructuralTypeShaperExpression" /> class.
+    /// </summary>
+    protected RelationalStructuralTypeShaperExpression(ITypeBase structuralType, Expression valueBufferExpression, bool nullable, LambdaExpression materializationCondition)
+        : base(structuralType, valueBufferExpression, nullable, materializationCondition)
     {
     }
 
@@ -38,21 +47,23 @@ public class RelationalStructuralTypeShaperExpression : StructuralTypeShaperExpr
     ///     An expression of <see cref="Func{T,TResult}" /> to determine which entity type to
     ///     materialize.
     /// </param>
+    /// <param name="liftableConstantFactory">TODO</param>
     protected RelationalStructuralTypeShaperExpression(
         ITypeBase type,
         Expression valueBufferExpression,
         bool nullable,
-        LambdaExpression? materializationCondition)
-        : base(type, valueBufferExpression, nullable, materializationCondition)
+        LambdaExpression? materializationCondition,
+        ILiftableConstantFactory liftableConstantFactory)
+        : base(type, valueBufferExpression, nullable, materializationCondition, liftableConstantFactory)
     {
     }
 
     /// <inheritdoc />
-    protected override LambdaExpression GenerateMaterializationCondition(ITypeBase type, bool nullable)
+    protected override LambdaExpression GenerateMaterializationCondition(ITypeBase type, bool nullable, ILiftableConstantFactory liftableConstantFactory)
     {
         if (type is IComplexType)
         {
-            return base.GenerateMaterializationCondition(type, nullable);
+            return base.GenerateMaterializationCondition(type, nullable, liftableConstantFactory);
         }
 
         var entityType = (IEntityType)type;
@@ -77,19 +88,31 @@ public class RelationalStructuralTypeShaperExpression : StructuralTypeShaperExpr
             for (var i = 0; i < derivedConcreteEntityTypes.Length; i++)
             {
                 var discriminatorValue = Constant(derivedConcreteEntityTypes[i].ShortName(), typeof(string));
-                switchCases[i] = SwitchCase(Constant(derivedConcreteEntityTypes[i], typeof(IEntityType)), discriminatorValue);
+                //switchCases[i] = SwitchCase(Constant(derivedConcreteEntityTypes[i], typeof(IEntityType)), discriminatorValue);
+                var derivedConcreteEntityTypeName = derivedConcreteEntityTypes[i].Name;
+                switchCases[i] = SwitchCase(
+                    liftableConstantFactory.CreateLiftableConstant(
+                        c => c.Dependencies.Model.FindEntityType(derivedConcreteEntityTypeName)!,
+                       derivedConcreteEntityTypeName + "EntityType",
+                        typeof(IEntityType)),
+                    discriminatorValue);
             }
 
+            var entityTypeName = entityType.Name;
+            //var defaultBlock = entityType.IsAbstract()
+            //    ? CreateUnableToDiscriminateExceptionExpression(entityType, discriminatorValueVariable, liftableConstantFactory)
+            //    : Constant(entityType, typeof(IEntityType));
             var defaultBlock = entityType.IsAbstract()
-                ? CreateUnableToDiscriminateExceptionExpression(entityType, discriminatorValueVariable)
-                : Constant(entityType, typeof(IEntityType));
+                ? CreateUnableToDiscriminateExceptionExpression(entityType, discriminatorValueVariable, liftableConstantFactory)
+                :  liftableConstantFactory.CreateLiftableConstant(c => c.Dependencies.Model.FindEntityType(entityTypeName)!, entityTypeName + "EntityType", typeof(IEntityType));
+
 
             expressions.Add(Switch(discriminatorValueVariable, defaultBlock, switchCases));
             baseCondition = Lambda(Block(new[] { discriminatorValueVariable }, expressions), valueBufferParameter);
         }
         else
         {
-            baseCondition = base.GenerateMaterializationCondition(entityType, nullable);
+            baseCondition = base.GenerateMaterializationCondition(entityType, nullable, liftableConstantFactory);
         }
 
         if (containsDiscriminatorProperty
@@ -149,16 +172,16 @@ public class RelationalStructuralTypeShaperExpression : StructuralTypeShaperExpr
     }
 
     /// <inheritdoc />
-    public override StructuralTypeShaperExpression WithType(ITypeBase type)
+    public override StructuralTypeShaperExpression WithType(ITypeBase type, ILiftableConstantFactory liftableConstantFactory)
         => type != StructuralType
-            ? new RelationalStructuralTypeShaperExpression(type, ValueBufferExpression, IsNullable)
+            ? new RelationalStructuralTypeShaperExpression(type, ValueBufferExpression, IsNullable, liftableConstantFactory)
             : this;
 
     /// <inheritdoc />
-    public override StructuralTypeShaperExpression MakeNullable(bool nullable = true)
+    public override StructuralTypeShaperExpression MakeNullable(ILiftableConstantFactory liftableConstantFactory, bool nullable = true)
         => IsNullable != nullable
             // Marking nullable requires re-computation of Discriminator condition
-            ? new RelationalStructuralTypeShaperExpression(StructuralType, ValueBufferExpression, true)
+            ? new RelationalStructuralTypeShaperExpression(StructuralType, ValueBufferExpression, true, liftableConstantFactory)
             : this;
 
     /// <inheritdoc />

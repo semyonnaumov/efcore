@@ -254,7 +254,7 @@ public abstract class ComplexNavigationsCollectionsQueryTestBase<TFixture> : Que
                 elementSorter: ee => ee.Level3?.Value,
                 elementAsserter: (ee, aa) => Assert.Equal(ee.Level3?.Value, aa.Level3?.Value)));
 
-    private class ProjectedDto<T>
+    public class ProjectedDto<T>
     {
         public T Value { get; set; }
     }

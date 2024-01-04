@@ -116,7 +116,8 @@ public class SqlServerQueryableMethodTranslatingExpressionVisitor : RelationalQu
                         selectExpression,
                         new ProjectionMember(),
                         typeof(ValueBuffer)),
-                    false));
+                    false,
+                    LiftableConstantFactory));
         }
 
         return base.VisitExtension(extensionExpression);
@@ -278,7 +279,8 @@ public class SqlServerQueryableMethodTranslatingExpressionVisitor : RelationalQu
                 elementTypeMapping,
                 isElementNullable ?? elementClrType.IsNullableType()),
             identifier: [(new ColumnExpression("key", tableAlias, typeof(string), keyColumnTypeMapping, nullable: false), keyColumnTypeMapping.Comparer)],
-            _queryCompilationContext.SqlAliasManager);
+            _queryCompilationContext.SqlAliasManager,
+            LiftableConstantFactory);
 #pragma warning restore EF1001 // Internal EF Core API usage.
 
         // OPENJSON doesn't guarantee the ordering of the elements coming out; when using OPENJSON without WITH, a [key] column is returned
@@ -405,7 +407,8 @@ public class SqlServerQueryableMethodTranslatingExpressionVisitor : RelationalQu
                     selectExpression,
                     new ProjectionMember(),
                     typeof(ValueBuffer)),
-                false));
+                false,
+                LiftableConstantFactory));
     }
 
     /// <summary>
@@ -444,7 +447,7 @@ public class SqlServerQueryableMethodTranslatingExpressionVisitor : RelationalQu
         {
             var newInExpression = _sqlExpressionFactory.In(translatedItem, parameter);
 #pragma warning disable EF1001
-            return source.UpdateQueryExpression(new SelectExpression(newInExpression, _queryCompilationContext.SqlAliasManager));
+            return source.UpdateQueryExpression(new SelectExpression(newInExpression, _queryCompilationContext.SqlAliasManager, LiftableConstantFactory));
 #pragma warning restore EF1001
         }
 
@@ -530,7 +533,7 @@ public class SqlServerQueryableMethodTranslatingExpressionVisitor : RelationalQu
 
 #pragma warning disable EF1001
                     return source.UpdateQueryExpression(
-                        new SelectExpression(translation, _queryCompilationContext.SqlAliasManager));
+                        new SelectExpression(translation, _queryCompilationContext.SqlAliasManager, LiftableConstantFactory));
 #pragma warning restore EF1001
                 }
             }

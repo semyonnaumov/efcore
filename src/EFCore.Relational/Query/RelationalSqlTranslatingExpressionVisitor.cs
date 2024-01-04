@@ -62,6 +62,7 @@ public class RelationalSqlTranslatingExpressionVisitor : ExpressionVisitor
     private readonly QueryCompilationContext _queryCompilationContext;
     private readonly IModel _model;
     private readonly ISqlExpressionFactory _sqlExpressionFactory;
+    private readonly ILiftableConstantFactory _liftableConstantFactory;
     private readonly QueryableMethodTranslatingExpressionVisitor _queryableMethodTranslatingExpressionVisitor;
 
     private bool _throwForNotTranslatedEfProperty;
@@ -79,6 +80,7 @@ public class RelationalSqlTranslatingExpressionVisitor : ExpressionVisitor
     {
         Dependencies = dependencies;
         _sqlExpressionFactory = dependencies.SqlExpressionFactory;
+        _liftableConstantFactory = dependencies.LiftableConstantFactory;
         _queryCompilationContext = queryCompilationContext;
         _model = queryCompilationContext.Model;
         _queryableMethodTranslatingExpressionVisitor = queryableMethodTranslatingExpressionVisitor;
@@ -1388,7 +1390,7 @@ public class RelationalSqlTranslatingExpressionVisitor : ExpressionVisitor
 
                 // TODO: Move all this logic into StructuralTypeProjectionExpression
                 Check.DebugAssert(projection.IsNullable == shaper.IsNullable, "Nullability mismatch");
-                return new StructuralTypeReferenceExpression(projection.BindComplexProperty(complexProperty));
+                return new StructuralTypeReferenceExpression(projection.BindComplexProperty(complexProperty, _liftableConstantFactory));
 
             case { Subquery: ShapedQueryExpression }:
                 throw new InvalidOperationException(); // TODO: Figure this out; do we support it?
@@ -2040,13 +2042,18 @@ public class RelationalSqlTranslatingExpressionVisitor : ExpressionVisitor
             case SqlParameterExpression sqlParameterExpression
                 when sqlParameterExpression.Name.StartsWith(QueryCompilationContext.QueryParameterPrefix, StringComparison.Ordinal):
             {
+                var entityTypeName = property.DeclaringType.Name;
                 var lambda = Expression.Lambda(
                     Expression.Call(
                         ParameterValueExtractorMethod.MakeGenericMethod(property.ClrType.MakeNullable()),
                         QueryCompilationContext.QueryContextParameter,
                         Expression.Constant(sqlParameterExpression.Name, typeof(string)),
                         Expression.Constant(null, typeof(List<IComplexProperty>)),
-                        Expression.Constant(property, typeof(IProperty))),
+                        _liftableConstantFactory.CreateLiftableConstant(
+                            c => c.Dependencies.Model.FindEntityType(entityTypeName)!.GetProperties().Single(p => p.Name == property.Name),
+                            property.Name + "Property",
+                            typeof(IProperty))),
+                //Expression.Constant(property, typeof(IProperty))),
                     QueryCompilationContext.QueryContextParameter);
 
                 var newParameterName =
@@ -2058,13 +2065,20 @@ public class RelationalSqlTranslatingExpressionVisitor : ExpressionVisitor
 
             case ParameterBasedComplexPropertyChainExpression chainExpression:
             {
+                var entityTypeName = property.DeclaringType.Name;
+
+
                 var lambda = Expression.Lambda(
                     Expression.Call(
                         ParameterValueExtractorMethod.MakeGenericMethod(property.ClrType.MakeNullable()),
                         QueryCompilationContext.QueryContextParameter,
                         Expression.Constant(chainExpression.ParameterExpression.Name, typeof(string)),
                         Expression.Constant(chainExpression.ComplexPropertyChain, typeof(List<IComplexProperty>)),
-                        Expression.Constant(property, typeof(IProperty))),
+                        //Expression.Constant(property, typeof(IProperty))),
+                        _liftableConstantFactory.CreateLiftableConstant(
+                            c => c.Dependencies.Model.FindEntityType(entityTypeName)!.GetProperties().Single(p => p.Name == property.Name),
+                            property.Name + "Property",
+                            typeof(IProperty))),
                     QueryCompilationContext.QueryContextParameter);
 
                 var newParameterName =
@@ -2106,7 +2120,11 @@ public class RelationalSqlTranslatingExpressionVisitor : ExpressionVisitor
             _ => throw new UnreachableException()
         };
 
-    private static T? ParameterValueExtractor<T>(
+    /// <summary>
+    /// TODO
+    /// </summary>
+    [EntityFrameworkInternal]
+    public static T? ParameterValueExtractor<T>(
         QueryContext context,
         string baseParameterName,
         List<IComplexProperty>? complexPropertyChain,
@@ -2130,7 +2148,11 @@ public class RelationalSqlTranslatingExpressionVisitor : ExpressionVisitor
         return baseValue == null ? (T?)(object?)null : (T?)property.GetGetter().GetClrValue(baseValue);
     }
 
-    private static List<TProperty?>? ParameterListValueExtractor<TEntity, TProperty>(
+    /// <summary>
+    /// TODO
+    /// </summary>
+    [EntityFrameworkInternal]
+    public static List<TProperty?>? ParameterListValueExtractor<TEntity, TProperty>(
         QueryContext context,
         string baseParameterName,
         IProperty property)

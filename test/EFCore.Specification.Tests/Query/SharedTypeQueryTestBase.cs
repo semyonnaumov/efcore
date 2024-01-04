@@ -12,11 +12,11 @@ public abstract class SharedTypeQueryTestBase : NonSharedModelTestBase
     [MemberData(nameof(IsAsyncData))]
     public virtual async Task Can_use_shared_type_entity_type_in_query_filter(bool async)
     {
-        var contextFactory = await InitializeAsync<MyContext24601>(
+        var contextFactory = await InitializeAsync<Context24601>(
             seed: c => c.Seed());
 
         using var context = contextFactory.CreateContext();
-        var query = context.Set<ViewQuery24601>();
+        var query = context.Set<Context24601.ViewQuery>();
         var result = async
             ? await query.ToListAsync()
             : query.ToList();
@@ -24,7 +24,7 @@ public abstract class SharedTypeQueryTestBase : NonSharedModelTestBase
         Assert.Empty(result);
     }
 
-    protected class MyContext24601(DbContextOptions options) : DbContext(options)
+    public class Context24601(DbContextOptions options) : DbContext(options)
     {
         public void Seed()
         {
@@ -43,13 +43,13 @@ public abstract class SharedTypeQueryTestBase : NonSharedModelTestBase
                     b.IndexerProperty<string>("Value");
                 });
 
-            modelBuilder.Entity<ViewQuery24601>().HasNoKey()
+            modelBuilder.Entity<ViewQuery>().HasNoKey()
                 .HasQueryFilter(e => Set<Dictionary<string, object>>("STET").Select(i => (string)i["Value"]).Contains(e.Value));
         }
-    }
 
-    protected class ViewQuery24601
-    {
-        public string Value { get; set; }
+        public class ViewQuery
+        {
+            public string Value { get; set; }
+        }
     }
 }

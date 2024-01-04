@@ -40,7 +40,7 @@ public abstract class OwnedEntityQueryTestBase : NonSharedModelTestBase
         }
     }
 
-    private class Context9202(DbContextOptions options) : DbContext(options)
+    public class Context9202(DbContextOptions options) : DbContext(options)
     {
         public DbSet<Movie> Movies { get; set; }
         public DbSet<Actor> Actors { get; set; }
@@ -111,7 +111,7 @@ public abstract class OwnedEntityQueryTestBase : NonSharedModelTestBase
         context.SaveChanges();
     }
 
-    private class Context13079(DbContextOptions options) : DbContext(options)
+    public class Context13079(DbContextOptions options) : DbContext(options)
     {
         public virtual DbSet<BaseEntity> BaseEntities { get; set; }
 
@@ -180,7 +180,7 @@ public abstract class OwnedEntityQueryTestBase : NonSharedModelTestBase
         }
     }
 
-    private class Context13157(DbContextOptions options) : DbContext(options)
+    public class Context13157(DbContextOptions options) : DbContext(options)
     {
         public virtual DbSet<Partner> Partners { get; set; }
 
@@ -234,7 +234,7 @@ public abstract class OwnedEntityQueryTestBase : NonSharedModelTestBase
         Assert.Equal(20, aggregate.FirstValueObject.SecondValueObjects[0].ThirdValueObjects[0].FourthValueObject.FifthValueObjects[0].AnyValue);
     }
 
-    protected class Context14911(DbContextOptions options) : DbContext(options)
+    public class Context14911(DbContextOptions options) : DbContext(options)
     {
         protected override void OnModelCreating(ModelBuilder modelBuilder)
             => modelBuilder.Entity<Aggregate>(
@@ -379,7 +379,7 @@ public abstract class OwnedEntityQueryTestBase : NonSharedModelTestBase
         Assert.True(new[] { "US", "CA" }.SequenceEqual(warehouseModel.DestinationCountryCodes));
     }
 
-    private class Context18582(DbContextOptions options) : DbContext(options)
+    public class Context18582(DbContextOptions options) : DbContext(options)
     {
         public DbSet<Warehouse> Warehouses { get; set; }
 
@@ -444,7 +444,7 @@ public abstract class OwnedEntityQueryTestBase : NonSharedModelTestBase
         Assert.Equal("A", Assert.Single(result).OtherEntityData);
     }
 
-    private class Context19138(DbContextOptions options) : DbContext(options)
+    public class Context19138(DbContextOptions options) : DbContext(options)
     {
         public DbSet<BaseEntity> BaseEntities { get; set; }
         public DbSet<OtherEntity> OtherEntities { get; set; }
@@ -526,7 +526,7 @@ public abstract class OwnedEntityQueryTestBase : NonSharedModelTestBase
         x.Type,
     };
 
-    private class Context20277(DbContextOptions options) : DbContext(options)
+    public class Context20277(DbContextOptions options) : DbContext(options)
     {
         public DbSet<Entity> Entities
             => Set<Entity>();
@@ -598,7 +598,7 @@ public abstract class OwnedEntityQueryTestBase : NonSharedModelTestBase
         }
     }
 
-    private class Context21540(DbContextOptions options) : DbContext(options)
+    public class Context21540(DbContextOptions options) : DbContext(options)
     {
         public DbSet<Parent> Parents { get; set; }
 
@@ -696,7 +696,7 @@ public abstract class OwnedEntityQueryTestBase : NonSharedModelTestBase
         Assert.Equal(12345, result.Contact.Address.Zip);
     }
 
-    private class Context21807(DbContextOptions options) : DbContext(options)
+    public class Context21807(DbContextOptions options) : DbContext(options)
     {
         protected override void OnModelCreating(ModelBuilder modelBuilder)
             => modelBuilder.Entity<Entity>(
@@ -756,7 +756,7 @@ public abstract class OwnedEntityQueryTestBase : NonSharedModelTestBase
             .ToListAsync();
     }
 
-    private class Context22089(DbContextOptions options) : DbContext(options)
+    public class Context22089(DbContextOptions options) : DbContext(options)
     {
         public DbSet<Contact> Contacts { get; set; }
 
@@ -815,7 +815,7 @@ public abstract class OwnedEntityQueryTestBase : NonSharedModelTestBase
             : query.ToList();
     }
 
-    private class Context24133(DbContextOptions options) : DbContext(options)
+    public class Context24133(DbContextOptions options) : DbContext(options)
     {
         protected override void OnModelCreating(ModelBuilder modelBuilder)
             => modelBuilder.Entity<Blog>(
@@ -864,6 +864,8 @@ public abstract class OwnedEntityQueryTestBase : NonSharedModelTestBase
 
     #endregion
 
+    #region 26592
+
     protected virtual async Task Owned_references_on_same_level_expanded_at_different_times_around_take_helper(
         MyContext26592Base context,
         bool async)
@@ -895,7 +897,7 @@ public abstract class OwnedEntityQueryTestBase : NonSharedModelTestBase
         Assert.Equal("IM Free shipping", owner.OwnedEntity.SupplierData.AdditionalSupplierData);
     }
 
-    protected abstract class MyContext26592Base : DbContext
+    public abstract class MyContext26592Base : DbContext
     {
         protected MyContext26592Base(DbContextOptions options)
             : base(options)
@@ -968,4 +970,6 @@ public abstract class OwnedEntityQueryTestBase : NonSharedModelTestBase
             public SupplierData SupplierData { get; set; }
         }
     }
+
+    #endregion
 }

@@ -30,7 +30,7 @@ public class InMemoryQueryableMethodTranslatingExpressionVisitor : QueryableMeth
         : base(dependencies, queryCompilationContext, subquery: false)
     {
         _expressionTranslator = new InMemoryExpressionTranslatingExpressionVisitor(queryCompilationContext, this);
-        _weakEntityExpandingExpressionVisitor = new SharedTypeEntityExpandingExpressionVisitor(_expressionTranslator);
+        _weakEntityExpandingExpressionVisitor = new SharedTypeEntityExpandingExpressionVisitor(_expressionTranslator, dependencies.LiftableConstantFactory);
         _projectionBindingExpressionVisitor = new InMemoryProjectionBindingExpressionVisitor(this, _expressionTranslator);
         _model = queryCompilationContext.Model;
     }
@@ -46,7 +46,7 @@ public class InMemoryQueryableMethodTranslatingExpressionVisitor : QueryableMeth
         : base(parentVisitor.Dependencies, parentVisitor.QueryCompilationContext, subquery: true)
     {
         _expressionTranslator = new InMemoryExpressionTranslatingExpressionVisitor(QueryCompilationContext, parentVisitor);
-        _weakEntityExpandingExpressionVisitor = new SharedTypeEntityExpandingExpressionVisitor(_expressionTranslator);
+        _weakEntityExpandingExpressionVisitor = new SharedTypeEntityExpandingExpressionVisitor(_expressionTranslator, parentVisitor.Dependencies.LiftableConstantFactory);
         _projectionBindingExpressionVisitor = new InMemoryProjectionBindingExpressionVisitor(this, _expressionTranslator);
         _model = parentVisitor._model;
     }
@@ -112,11 +112,11 @@ public class InMemoryQueryableMethodTranslatingExpressionVisitor : QueryableMeth
     ///     doing so can result in application failures when updating to a new Entity Framework Core release.
     /// </summary>
     protected override ShapedQueryExpression CreateShapedQueryExpression(IEntityType entityType)
-        => CreateShapedQueryExpressionStatic(entityType);
+        => CreateShapedQueryExpressionStatic(entityType, Dependencies.LiftableConstantFactory);
 
-    private static ShapedQueryExpression CreateShapedQueryExpressionStatic(IEntityType entityType)
+    private static ShapedQueryExpression CreateShapedQueryExpressionStatic(IEntityType entityType, ILiftableConstantFactory liftableConstantFactory)
     {
-        var queryExpression = new InMemoryQueryExpression(entityType);
+        var queryExpression = new InMemoryQueryExpression(entityType, liftableConstantFactory);
 
         return new ShapedQueryExpression(
             queryExpression,
@@ -126,7 +126,8 @@ public class InMemoryQueryableMethodTranslatingExpressionVisitor : QueryableMeth
                     queryExpression,
                     new ProjectionMember(),
                     typeof(ValueBuffer)),
-                false));
+                false,
+                liftableConstantFactory));
     }
 
     /// <summary>
@@ -226,7 +227,7 @@ public class InMemoryQueryableMethodTranslatingExpressionVisitor : QueryableMeth
     ///     doing so can result in application failures when updating to a new Entity Framework Core release.
     /// </summary>
     protected override ShapedQueryExpression? TranslateConcat(ShapedQueryExpression source1, ShapedQueryExpression source2)
-        => TranslateSetOperation(EnumerableMethods.Concat, source1, source2);
+        => TranslateSetOperation(EnumerableMethods.Concat, source1, source2, Dependencies.LiftableConstantFactory);
 
     /// <summary>
     ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
@@ -327,7 +328,7 @@ public class InMemoryQueryableMethodTranslatingExpressionVisitor : QueryableMeth
     ///     doing so can result in application failures when updating to a new Entity Framework Core release.
     /// </summary>
     protected override ShapedQueryExpression? TranslateExcept(ShapedQueryExpression source1, ShapedQueryExpression source2)
-        => TranslateSetOperation(EnumerableMethods.Except, source1, source2);
+        => TranslateSetOperation(EnumerableMethods.Except, source1, source2, Dependencies.LiftableConstantFactory);
 
     /// <summary>
     ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
@@ -478,7 +479,7 @@ public class InMemoryQueryableMethodTranslatingExpressionVisitor : QueryableMeth
     ///     doing so can result in application failures when updating to a new Entity Framework Core release.
     /// </summary>
     protected override ShapedQueryExpression? TranslateIntersect(ShapedQueryExpression source1, ShapedQueryExpression source2)
-        => TranslateSetOperation(EnumerableMethods.Intersect, source1, source2);
+        => TranslateSetOperation(EnumerableMethods.Intersect, source1, source2, Dependencies.LiftableConstantFactory);
 
     /// <summary>
     ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
@@ -508,7 +509,8 @@ public class InMemoryQueryableMethodTranslatingExpressionVisitor : QueryableMeth
             outerKeySelector,
             innerKeySelector,
             outer.ShaperExpression,
-            inner.ShaperExpression);
+            inner.ShaperExpression,
+            LiftableConstantFactory);
 
         outer = outer.UpdateShaperExpression(outerShaperExpression);
 
@@ -668,7 +670,8 @@ public class InMemoryQueryableMethodTranslatingExpressionVisitor : QueryableMeth
             outerKeySelector,
             innerKeySelector,
             outer.ShaperExpression,
-            inner.ShaperExpression);
+            inner.ShaperExpression,
+            LiftableConstantFactory);
 
         outer = outer.UpdateShaperExpression(outerShaperExpression);
 
@@ -760,7 +763,7 @@ public class InMemoryQueryableMethodTranslatingExpressionVisitor : QueryableMeth
             var baseType = entityType.GetAllBaseTypes().SingleOrDefault(et => et.ClrType == resultType);
             if (baseType != null)
             {
-                return source.UpdateShaperExpression(shaper.WithType(baseType));
+                return source.UpdateShaperExpression(shaper.WithType(baseType, Dependencies.LiftableConstantFactory));
             }
 
             var derivedType = entityType.GetDerivedTypes().Single(et => et.ClrType == resultType);
@@ -778,7 +781,7 @@ public class InMemoryQueryableMethodTranslatingExpressionVisitor : QueryableMeth
                     { projectionMember, entityProjectionExpression.UpdateEntityType(derivedType) }
                 });
 
-            return source.UpdateShaperExpression(shaper.WithType(derivedType));
+            return source.UpdateShaperExpression(shaper.WithType(derivedType, Dependencies.LiftableConstantFactory));
         }
 
         return null;
@@ -870,7 +873,7 @@ public class InMemoryQueryableMethodTranslatingExpressionVisitor : QueryableMeth
         if (Visit(collectionSelectorBody) is ShapedQueryExpression inner)
         {
             var outerShaperExpression = ((InMemoryQueryExpression)source.QueryExpression).AddSelectMany(
-                (InMemoryQueryExpression)inner.QueryExpression, source.ShaperExpression, inner.ShaperExpression, defaultIfEmpty);
+                (InMemoryQueryExpression)inner.QueryExpression, source.ShaperExpression, inner.ShaperExpression, defaultIfEmpty, LiftableConstantFactory);
 
             source = source.UpdateShaperExpression(outerShaperExpression);
 
@@ -1055,7 +1058,7 @@ public class InMemoryQueryableMethodTranslatingExpressionVisitor : QueryableMeth
     ///     doing so can result in application failures when updating to a new Entity Framework Core release.
     /// </summary>
     protected override ShapedQueryExpression? TranslateUnion(ShapedQueryExpression source1, ShapedQueryExpression source2)
-        => TranslateSetOperation(EnumerableMethods.Union, source1, source2);
+        => TranslateSetOperation(EnumerableMethods.Union, source1, source2, Dependencies.LiftableConstantFactory);
 
     /// <summary>
     ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
@@ -1132,12 +1135,16 @@ public class InMemoryQueryableMethodTranslatingExpressionVisitor : QueryableMeth
     private sealed class SharedTypeEntityExpandingExpressionVisitor : ExpressionVisitor
     {
         private readonly InMemoryExpressionTranslatingExpressionVisitor _expressionTranslator;
+        private readonly ILiftableConstantFactory _liftableConstantFactory;
 
         private InMemoryQueryExpression _queryExpression;
 
-        public SharedTypeEntityExpandingExpressionVisitor(InMemoryExpressionTranslatingExpressionVisitor expressionTranslator)
+        public SharedTypeEntityExpandingExpressionVisitor(
+            InMemoryExpressionTranslatingExpressionVisitor expressionTranslator,
+            ILiftableConstantFactory liftableConstantFactory)
         {
             _expressionTranslator = expressionTranslator;
+            _liftableConstantFactory = liftableConstantFactory;
             _queryExpression = null!;
         }
 
@@ -1222,7 +1229,7 @@ public class InMemoryQueryableMethodTranslatingExpressionVisitor : QueryableMeth
             var foreignKey = navigation.ForeignKey;
             if (navigation.IsCollection)
             {
-                var innerShapedQuery = CreateShapedQueryExpressionStatic(targetEntityType);
+                var innerShapedQuery = CreateShapedQueryExpressionStatic(targetEntityType, _liftableConstantFactory);
                 var innerQueryExpression = (InMemoryQueryExpression)innerShapedQuery.QueryExpression;
 
                 var makeNullable = foreignKey.PrincipalKey.Properties
@@ -1276,7 +1283,7 @@ public class InMemoryQueryableMethodTranslatingExpressionVisitor : QueryableMeth
             var innerShaper = entityProjectionExpression.BindNavigation(navigation);
             if (innerShaper == null)
             {
-                var innerShapedQuery = CreateShapedQueryExpressionStatic(targetEntityType);
+                var innerShapedQuery = CreateShapedQueryExpressionStatic(targetEntityType, _liftableConstantFactory);
                 var innerQueryExpression = (InMemoryQueryExpression)innerShapedQuery.QueryExpression;
 
                 var makeNullable = foreignKey.PrincipalKey.Properties
@@ -1306,7 +1313,7 @@ public class InMemoryQueryableMethodTranslatingExpressionVisitor : QueryableMeth
                     _expressionTranslator.Translate(innerKey)!, innerQueryExpression.CurrentParameter);
                 (outerKeySelector, innerKeySelector) = AlignKeySelectorTypes(outerKeySelector, innerKeySelector);
                 innerShaper = _queryExpression.AddNavigationToWeakEntityType(
-                    entityProjectionExpression, navigation, innerQueryExpression, outerKeySelector, innerKeySelector);
+                    entityProjectionExpression, navigation, innerQueryExpression, outerKeySelector, innerKeySelector, _liftableConstantFactory);
             }
 
             return innerShaper;
@@ -1410,7 +1417,8 @@ public class InMemoryQueryableMethodTranslatingExpressionVisitor : QueryableMeth
     private static ShapedQueryExpression TranslateSetOperation(
         MethodInfo setOperationMethodInfo,
         ShapedQueryExpression source1,
-        ShapedQueryExpression source2)
+        ShapedQueryExpression source2,
+        ILiftableConstantFactory liftableConstantFactory)
     {
         var inMemoryQueryExpression1 = (InMemoryQueryExpression)source1.QueryExpression;
         var inMemoryQueryExpression2 = (InMemoryQueryExpression)source2.QueryExpression;
@@ -1426,17 +1434,17 @@ public class InMemoryQueryableMethodTranslatingExpressionVisitor : QueryableMeth
 
         return source1.UpdateShaperExpression(
             MatchShaperNullabilityForSetOperation(
-                source1.ShaperExpression, source2.ShaperExpression, makeNullable));
+                source1.ShaperExpression, source2.ShaperExpression, makeNullable, liftableConstantFactory));
     }
 
-    private static Expression MatchShaperNullabilityForSetOperation(Expression shaper1, Expression shaper2, bool makeNullable)
+    private static Expression MatchShaperNullabilityForSetOperation(Expression shaper1, Expression shaper2, bool makeNullable, ILiftableConstantFactory liftableConstantFactory)
     {
         switch (shaper1)
         {
             case StructuralTypeShaperExpression entityShaperExpression1
                 when shaper2 is StructuralTypeShaperExpression entityShaperExpression2:
                 return entityShaperExpression1.IsNullable != entityShaperExpression2.IsNullable
-                    ? entityShaperExpression1.MakeNullable(makeNullable)
+                    ? entityShaperExpression1.MakeNullable(liftableConstantFactory, makeNullable)
                     : entityShaperExpression1;
 
             case NewExpression newExpression1
@@ -1445,7 +1453,7 @@ public class InMemoryQueryableMethodTranslatingExpressionVisitor : QueryableMeth
                 for (var i = 0; i < newArguments.Length; i++)
                 {
                     newArguments[i] = MatchShaperNullabilityForSetOperation(
-                        newExpression1.Arguments[i], newExpression2.Arguments[i], makeNullable);
+                        newExpression1.Arguments[i], newExpression2.Arguments[i], makeNullable, liftableConstantFactory);
                 }
 
                 return newExpression1.Update(newArguments);
@@ -1453,7 +1461,7 @@ public class InMemoryQueryableMethodTranslatingExpressionVisitor : QueryableMeth
             case MemberInitExpression memberInitExpression1
                 when shaper2 is MemberInitExpression memberInitExpression2:
                 var newExpression = (NewExpression)MatchShaperNullabilityForSetOperation(
-                    memberInitExpression1.NewExpression, memberInitExpression2.NewExpression, makeNullable);
+                    memberInitExpression1.NewExpression, memberInitExpression2.NewExpression, makeNullable, liftableConstantFactory);
 
                 var memberBindings = new MemberBinding[memberInitExpression1.Bindings.Count];
                 for (var i = 0; i < memberBindings.Length; i++)
@@ -1464,7 +1472,8 @@ public class InMemoryQueryableMethodTranslatingExpressionVisitor : QueryableMeth
                     memberBindings[i] = memberAssignment.Update(
                         MatchShaperNullabilityForSetOperation(
                             memberAssignment.Expression, ((MemberAssignment)memberInitExpression2.Bindings[i]).Expression,
-                            makeNullable));
+                            makeNullable,
+                            liftableConstantFactory));
                 }
 
                 return memberInitExpression1.Update(newExpression, memberBindings);

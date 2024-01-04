@@ -26,7 +26,7 @@ public abstract class OwnedEntityQueryRelationalTestBase : OwnedEntityQueryTestB
             message);
     }
 
-    private class Context23198(DbContextOptions options) : DbContext(options)
+    public class Context23198(DbContextOptions options) : DbContext(options)
     {
         protected override void OnModelCreating(ModelBuilder modelBuilder)
             => modelBuilder.Entity<AnAggregateRoot>().OwnsOne(
@@ -79,7 +79,7 @@ public abstract class OwnedEntityQueryRelationalTestBase : OwnedEntityQueryTestB
         Assert.Equal(2, root3.ModdleA.Leaves.Count);
     }
 
-    private class Context24777(DbContextOptions options) : DbContext(options)
+    public class Context24777(DbContextOptions options) : DbContext(options)
     {
         public DbSet<Root> Roots { get; set; }
 
@@ -182,16 +182,16 @@ public abstract class OwnedEntityQueryRelationalTestBase : OwnedEntityQueryTestB
         using var context = contextFactory.CreateContext();
 
         var id = new Guid("6c1ae3e5-30b9-4c77-8d98-f02075974a0a");
-        var query = context.Set<Location25680>().Where(e => e.Id == id).AsSplitQuery();
+        var query = context.Set<Context25680.Location>().Where(e => e.Id == id).AsSplitQuery();
         var result = async
             ? await query.FirstOrDefaultAsync()
             : query.FirstOrDefault();
     }
 
-    protected class Context25680(DbContextOptions options) : DbContext(options)
+    public class Context25680(DbContextOptions options) : DbContext(options)
     {
         protected override void OnModelCreating(ModelBuilder modelBuilder)
-            => modelBuilder.Entity<Location25680>().OwnsMany(
+            => modelBuilder.Entity<Location>().OwnsMany(
                 e => e.PublishTokenTypes,
                 b =>
                 {
@@ -205,23 +205,23 @@ public abstract class OwnedEntityQueryRelationalTestBase : OwnedEntityQueryTestB
                             e.TokenGroupId
                         });
                 });
-    }
 
-    protected class Location25680
-    {
-        public Guid Id { get; set; }
-        public ICollection<PublishTokenType25680> PublishTokenTypes { get; set; }
-    }
+        public class Location
+        {
+            public Guid Id { get; set; }
+            public ICollection<PublishTokenType> PublishTokenTypes { get; set; }
+        }
 
-    protected class PublishTokenType25680
-    {
-        public Location25680 Location { get; set; }
-        public Guid LocationId { get; set; }
+        public class PublishTokenType
+        {
+            public Location Location { get; set; }
+            public Guid LocationId { get; set; }
 
-        public string ExternalId { get; set; }
-        public string VisualNumber { get; set; }
-        public string TokenGroupId { get; set; }
-        public string IssuerName { get; set; }
+            public string ExternalId { get; set; }
+            public string VisualNumber { get; set; }
+            public string TokenGroupId { get; set; }
+            public string IssuerName { get; set; }
+        }
     }
 
     #endregion
@@ -248,7 +248,7 @@ public abstract class OwnedEntityQueryRelationalTestBase : OwnedEntityQueryTestB
         await base.Owned_references_on_same_level_nested_expanded_at_different_times_around_take_helper(context, async);
     }
 
-    protected class MyContext26592(DbContextOptions options) : MyContext26592Base(options)
+    public class MyContext26592(DbContextOptions options) : MyContext26592Base(options)
     {
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -414,7 +414,7 @@ public abstract class OwnedEntityQueryRelationalTestBase : OwnedEntityQueryTestB
             });
     }
 
-    private class Context28247(DbContextOptions options) : DbContext(options)
+    public class Context28247(DbContextOptions options) : DbContext(options)
     {
         public DbSet<RotRutCase> RotRutCases { get; set; }
 
@@ -497,7 +497,7 @@ public abstract class OwnedEntityQueryRelationalTestBase : OwnedEntityQueryTestB
         Assert.Equal("The Divider", result[0].magus.ToolUsed.Name);
     }
 
-    private class Context30358(DbContextOptions options) : DbContext(options)
+    public class Context30358(DbContextOptions options) : DbContext(options)
     {
         public DbSet<Monarch> Monarchs { get; set; }
         public DbSet<Magus> Magi { get; set; }
@@ -571,7 +571,7 @@ public abstract class OwnedEntityQueryRelationalTestBase : OwnedEntityQueryTestB
         context.Set<Context31107.BaseEntity>().ToList();
     }
 
-    private class Context31107(DbContextOptions options) : DbContext(options)
+    public class Context31107(DbContextOptions options) : DbContext(options)
     {
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

@@ -24,6 +24,7 @@ public class CosmosProjectionBindingExpressionVisitor : ExpressionVisitor
 
     private readonly CosmosSqlTranslatingExpressionVisitor _sqlTranslator;
     private readonly IModel _model;
+    private readonly ILiftableConstantFactory _liftableConstantFactory;
     private SelectExpression _selectExpression;
     private bool _clientEval;
 
@@ -40,10 +41,12 @@ public class CosmosProjectionBindingExpressionVisitor : ExpressionVisitor
     /// </summary>
     public CosmosProjectionBindingExpressionVisitor(
         IModel model,
-        CosmosSqlTranslatingExpressionVisitor sqlTranslator)
+        CosmosSqlTranslatingExpressionVisitor sqlTranslator,
+        ILiftableConstantFactory liftableConstantFactory)
     {
         _model = model;
         _sqlTranslator = sqlTranslator;
+        _liftableConstantFactory = liftableConstantFactory;
     }
 
     /// <summary>
@@ -326,7 +329,8 @@ public class CosmosProjectionBindingExpressionVisitor : ExpressionVisitor
                 return new StructuralTypeShaperExpression(
                     navigation.TargetEntityType,
                     Expression.Convert(Expression.Convert(entityProjection, typeof(object)), typeof(ValueBuffer)),
-                    nullable: true);
+                    nullable: true,
+                    _liftableConstantFactory);
 
             case ObjectArrayProjectionExpression objectArrayProjectionExpression:
             {
@@ -334,7 +338,8 @@ public class CosmosProjectionBindingExpressionVisitor : ExpressionVisitor
                     navigation.TargetEntityType,
                     Expression.Convert(
                         Expression.Convert(objectArrayProjectionExpression.InnerProjection, typeof(object)), typeof(ValueBuffer)),
-                    nullable: true);
+                    nullable: true,
+                    liftableConstantFactory: _liftableConstantFactory);
 
                 return new CollectionShaperExpression(
                     objectArrayProjectionExpression,
@@ -526,7 +531,8 @@ public class CosmosProjectionBindingExpressionVisitor : ExpressionVisitor
                     return new StructuralTypeShaperExpression(
                         navigation.TargetEntityType,
                         Expression.Convert(Expression.Convert(entityProjection, typeof(object)), typeof(ValueBuffer)),
-                        nullable: true);
+                        nullable: true,
+                        liftableConstantFactory: _liftableConstantFactory);
 
                 case ObjectArrayProjectionExpression objectArrayProjectionExpression:
                 {
@@ -534,7 +540,8 @@ public class CosmosProjectionBindingExpressionVisitor : ExpressionVisitor
                         navigation.TargetEntityType,
                         Expression.Convert(
                             Expression.Convert(objectArrayProjectionExpression.InnerProjection, typeof(object)), typeof(ValueBuffer)),
-                        nullable: true);
+                        nullable: true,
+                        liftableConstantFactory: _liftableConstantFactory);
 
                     return new CollectionShaperExpression(
                         objectArrayProjectionExpression,

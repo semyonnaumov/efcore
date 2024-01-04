@@ -4,6 +4,7 @@
 #nullable enable
 
 using System.Diagnostics.CodeAnalysis;
+using Microsoft.EntityFrameworkCore.Query;
 
 // ReSharper disable once CheckNamespace
 namespace System.Linq.Expressions;
@@ -45,7 +46,10 @@ internal static class ExpressionExtensions
             : expression;
 
     public static T GetConstantValue<T>(this Expression expression)
-        => expression is ConstantExpression constantExpression
-            ? (T)constantExpression.Value!
-            : throw new InvalidOperationException();
+        => expression switch
+        {
+            ConstantExpression constantExpression => (T)constantExpression.Value!,
+            LiftableConstantExpression liftableConstantExpression => (T)liftableConstantExpression.OriginalExpression.Value!,
+            _ => throw new InvalidOperationException()
+        }; 
 }

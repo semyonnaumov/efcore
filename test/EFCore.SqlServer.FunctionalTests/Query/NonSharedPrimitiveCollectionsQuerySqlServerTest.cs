@@ -643,10 +643,10 @@ WHERE (
         var arrayClrType = typeof(TElement).MakeArrayType();
 
         var contextFactory = await InitializeAsync<TestContext>(
-            onModelCreating: onModelCreating ?? (mb => mb.Entity<TestEntity>().Property(arrayClrType, "SomeArray")),
+            onModelCreating: onModelCreating ?? (mb => mb.Entity<TestContext.TestEntity>().Property(arrayClrType, "SomeArray")),
             seed: context =>
             {
-                var instance1 = new TestEntity { Id = 1 };
+                var instance1 = new TestContext.TestEntity { Id = 1 };
                 context.Add(instance1);
                 var array1 = new TElement[3];
                 array1.SetValue(value1, 0); // We have an extra copy of the first value which we'll Skip, to preserve the ordering
@@ -654,7 +654,7 @@ WHERE (
                 array1.SetValue(value1, 2);
                 context.Entry(instance1).Property("SomeArray").CurrentValue = array1;
 
-                var instance2 = new TestEntity { Id = 2 };
+                var instance2 = new TestContext.TestEntity { Id = 2 };
                 context.Add(instance2);
                 var array2 = new TElement[3];
                 array2.SetValue(value1, 0);
@@ -667,14 +667,14 @@ WHERE (
 
         await using var context = contextFactory.CreateContext();
 
-        var entityParam = Parameter(typeof(TestEntity), "m");
+        var entityParam = Parameter(typeof(TestContext.TestEntity), "m");
         var efPropertyCall = Call(
             typeof(EF).GetMethod(nameof(EF.Property), BindingFlags.Public | BindingFlags.Static)!.MakeGenericMethod(arrayClrType),
             entityParam,
             Constant("SomeArray"));
 
         var elementParam = Parameter(typeof(TElement), "a");
-        var predicate = Lambda<Func<TestEntity, bool>>(
+        var predicate = Lambda<Func<TestContext.TestEntity, bool>>(
             Equal(
                 Call(
                     CountWithPredicateMethod.MakeGenericMethod(typeof(TElement)),
@@ -687,7 +687,7 @@ WHERE (
             entityParam);
 
         // context.Set<TestEntity>().SingleAsync(m => EF.Property<int[]>(m, "SomeArray").Skip(1).Count(a => a == <value1>) == 2)
-        var result = await context.Set<TestEntity>().SingleAsync(predicate);
+        var result = await context.Set<TestContext.TestEntity>().SingleAsync(predicate);
         Assert.Equal(1, result.Id);
     }
 
@@ -699,7 +699,6 @@ WHERE (
 
     #endregion
 
-    [ConditionalFact]
     public override Task Column_with_custom_converter()
         => base.Column_with_custom_converter();
 
@@ -766,7 +765,7 @@ WHERE JSON_VALUE(JSON_VALUE([t].[Owned], '$.Strings'), '$[1]') = N'bar'
     public virtual async Task Same_parameter_with_different_type_mappings()
     {
         var contextFactory = await InitializeAsync<TestContext>(
-            onModelCreating: mb => mb.Entity<TestEntity>(
+            onModelCreating: mb => mb.Entity<TestContext.TestEntity>(
                 b =>
                 {
                     b.Property(typeof(DateTime), "DateTime").HasColumnType("datetime");
@@ -777,7 +776,7 @@ WHERE JSON_VALUE(JSON_VALUE([t].[Owned], '$.Strings'), '$[1]') = N'bar'
 
         var dateTimes = new[] { new DateTime(2020, 1, 1, 12, 30, 00), new DateTime(2020, 1, 2, 12, 30, 00) };
 
-        _ = await context.Set<TestEntity>()
+        _ = await context.Set<TestContext.TestEntity>()
             .Where(
                 m =>
                     dateTimes.Contains(EF.Property<DateTime>(m, "DateTime"))
@@ -805,13 +804,13 @@ WHERE [t].[DateTime] IN (
     public virtual async Task Same_collection_with_default_type_mapping_and_uninferrable_context()
     {
         var contextFactory = await InitializeAsync<TestContext>(
-            onModelCreating: mb => mb.Entity<TestEntity>(b => b.Property(typeof(DateTime), "DateTime")));
+            onModelCreating: mb => mb.Entity<TestContext.TestEntity>(b => b.Property(typeof(DateTime), "DateTime")));
 
         await using var context = contextFactory.CreateContext();
 
         var dateTimes = new DateTime?[] { new DateTime(2020, 1, 1, 12, 30, 00), new DateTime(2020, 1, 2, 12, 30, 00), null };
 
-        _ = await context.Set<TestEntity>()
+        _ = await context.Set<TestContext.TestEntity>()
             .Where(m => dateTimes.Any(d => d == EF.Property<DateTime>(m, "DateTime") && d != null))
             .ToArrayAsync();
 
@@ -832,7 +831,7 @@ WHERE EXISTS (
     public virtual async Task Same_collection_with_non_default_type_mapping_and_uninferrable_context()
     {
         var contextFactory = await InitializeAsync<TestContext>(
-            onModelCreating: mb => mb.Entity<TestEntity>(
+            onModelCreating: mb => mb.Entity<TestContext.TestEntity>(
                 b => b.Property(typeof(DateTime), "DateTime").HasColumnType("datetime")));
 
         await using var context = contextFactory.CreateContext();
@@ -840,7 +839,7 @@ WHERE EXISTS (
         var dateTimes = new DateTime?[] { new DateTime(2020, 1, 1, 12, 30, 00), new DateTime(2020, 1, 2, 12, 30, 00), null };
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => context.Set<TestEntity>()
+            () => context.Set<TestContext.TestEntity>()
                 .Where(
                     m => dateTimes.Any(d => d == EF.Property<DateTime>(m, "DateTime") && d != null))
                 .ToArrayAsync());
@@ -851,7 +850,7 @@ WHERE EXISTS (
     public virtual async Task Same_collection_with_conflicting_type_mappings_not_supported()
     {
         var contextFactory = await InitializeAsync<TestContext>(
-            onModelCreating: mb => mb.Entity<TestEntity>(
+            onModelCreating: mb => mb.Entity<TestContext.TestEntity>(
                 b =>
                 {
                     b.Property(typeof(DateTime), "DateTime").HasColumnType("datetime");
@@ -863,7 +862,7 @@ WHERE EXISTS (
         var dateTimes = new[] { new DateTime(2020, 1, 1, 12, 30, 00), new DateTime(2020, 1, 2, 12, 30, 00) };
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => context.Set<TestEntity>()
+            () => context.Set<TestContext.TestEntity>()
                 .Where(
                     m => dateTimes
                         .Any(d => d == EF.Property<DateTime>(m, "DateTime") && d == EF.Property<DateTime>(m, "DateTime2")))

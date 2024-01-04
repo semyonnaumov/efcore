@@ -54,9 +54,13 @@ public abstract class ServiceParameterBinding : ParameterBinding
             return serviceInstance;
         }
 
-        return BindToParameter(
+        //return BindToParameter(
+        //    bindingInfo.MaterializationContextExpression,
+        //    Expression.Constant(bindingInfo));
+
+        return BindToParameter2(
             bindingInfo.MaterializationContextExpression,
-            Expression.Constant(bindingInfo));
+            bindingInfo);
     }
 
     /// <summary>
@@ -69,6 +73,18 @@ public abstract class ServiceParameterBinding : ParameterBinding
     public abstract Expression BindToParameter(
         Expression materializationExpression,
         Expression bindingInfoExpression);
+
+
+    /// <summary>
+    ///     Creates an expression tree representing the binding of the value of a property from a
+    ///     materialization expression to a parameter of the constructor, factory method, etc.
+    /// </summary>
+    /// <param name="materializationExpression">The expression representing the materialization context.</param>
+    /// <param name="bindingInfo">The binding information.</param>
+    /// <returns>The expression tree.</returns>
+    public abstract Expression BindToParameter2(
+        Expression materializationExpression,
+        ParameterBindingInfo bindingInfo);
 
     /// <summary>
     ///     A delegate to set a CLR service property on an entity instance.

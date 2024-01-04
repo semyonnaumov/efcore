@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.EntityFrameworkCore.InMemory.Internal;
-using Microsoft.EntityFrameworkCore.Internal;
 using ExpressionExtensions = Microsoft.EntityFrameworkCore.Infrastructure.ExpressionExtensions;
 
 namespace Microsoft.EntityFrameworkCore.InMemory.Query.Internal;
@@ -896,6 +895,9 @@ public partial class InMemoryQueryExpression : Expression, IPrintableExpression
         }
     }
 
+    private static readonly MethodInfo PropertyGetValueConverterMethod
+        = typeof(IReadOnlyProperty).GetMethod(nameof(IReadOnlyProperty.GetValueComparer))!;
+
     private Expression AddJoin(
         InMemoryQueryExpression innerQueryExpression,
         LambdaExpression? outerKeySelector,
@@ -1054,9 +1056,8 @@ public partial class InMemoryQueryExpression : Expression, IPrintableExpression
         if (outerKeySelector != null
             && innerKeySelector != null)
         {
-            var comparer = ((InferPropertyFromInner(outerKeySelector.Body)
-                    ?? InferPropertyFromInner(outerKeySelector.Body))
-                as IProperty)?.GetValueComparer();
+            var property = (InferPropertyFromInner(outerKeySelector.Body) ?? InferPropertyFromInner(outerKeySelector.Body)) as IProperty;
+            var comparer = property?.GetValueComparer();
 
             if (comparer?.Type != outerKeySelector.ReturnType)
             {
@@ -1074,7 +1075,13 @@ public partial class InMemoryQueryExpression : Expression, IPrintableExpression
                     innerKeySelector,
                     resultSelector,
                     Constant(new ValueBuffer(Enumerable.Repeat((object?)null, resultSelectorExpressions.Count - outerIndex).ToArray())),
-                    Constant(comparer, typeof(IEqualityComparer<>).MakeGenericType(outerKeySelector.ReturnType)));
+                    comparer != null
+                        ? Convert(
+                            Call(
+                                Constant(property),
+                                PropertyGetValueConverterMethod),
+                            typeof(IEqualityComparer<>).MakeGenericType(outerKeySelector.ReturnType))
+                        : Constant(comparer, typeof(IEqualityComparer<>).MakeGenericType(outerKeySelector.ReturnType)));
             }
             else
             {
@@ -1095,7 +1102,13 @@ public partial class InMemoryQueryExpression : Expression, IPrintableExpression
                         outerKeySelector,
                         innerKeySelector,
                         resultSelector,
-                        Constant(comparer, typeof(IEqualityComparer<>).MakeGenericType(outerKeySelector.ReturnType)));
+                    comparer != null
+                        ? Convert(
+                            Call(
+                                Constant(property),
+                                PropertyGetValueConverterMethod),
+                            typeof(IEqualityComparer<>).MakeGenericType(outerKeySelector.ReturnType))
+                        : Constant(comparer, typeof(IEqualityComparer<>).MakeGenericType(outerKeySelector.ReturnType)));
             }
         }
         else

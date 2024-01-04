@@ -66,22 +66,22 @@ public abstract class MappingQueryTestBase<TFixture> : IClassFixture<TFixture>
     protected virtual DbContext CreateContext()
         => Fixture.CreateContext();
 
-    protected class MappedCustomer : Customer
+    public class MappedCustomer : Customer
     {
         public string CompanyName2 { get; set; }
     }
 
-    protected class MappedEmployee : Employee
+    public class MappedEmployee : Employee
     {
         public string City2 { get; set; }
     }
 
-    protected class MappedOrder : Order
+    public class MappedOrder : Order
     {
         public ShipVia? ShipVia2 { get; set; }
     }
 
-    protected enum ShipVia
+    public enum ShipVia
     {
         One = 1,
         Two,

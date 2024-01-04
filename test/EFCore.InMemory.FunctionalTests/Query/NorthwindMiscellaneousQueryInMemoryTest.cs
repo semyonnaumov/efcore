@@ -55,4 +55,13 @@ public class NorthwindMiscellaneousQueryInMemoryTest(NorthwindQueryInMemoryFixtu
 
     public override Task Collection_navigation_equal_to_null_for_subquery_using_ElementAtOrDefault_parameter(bool async)
         => Task.CompletedTask;
+
+    [ConditionalTheory(Skip = "AOT: executing client code is not supported, in AOT mode it will throw different exception than expected")]
+    public override Task Client_code_using_instance_in_anonymous_type(bool async) => base.Client_code_using_instance_in_anonymous_type(async);
+
+    [ConditionalTheory(Skip = "AOT: executing client code is not supported, in AOT mode it will throw different exception than expected")]
+    public override Task Client_code_using_instance_in_static_method(bool async) => base.Client_code_using_instance_in_static_method(async);
+
+    [ConditionalTheory(Skip = "AOT: executing client code is not supported, in AOT mode it will throw different exception than expected")]
+    public override Task Client_code_using_instance_method_throws(bool async) => base.Client_code_using_instance_method_throws(async);
 }

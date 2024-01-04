@@ -53,7 +53,7 @@ WHERE ([t].[Name] <> N'Bar') OR [t].[Name] IS NULL
 """);
     }
 
-    protected class Context11803(DbContextOptions options) : DbContext(options)
+    public class Context11803(DbContextOptions options) : DbContext(options)
     {
         public DbSet<Faction11803> Factions { get; set; }
         public DbSet<Leader11803> Leaders { get; set; }

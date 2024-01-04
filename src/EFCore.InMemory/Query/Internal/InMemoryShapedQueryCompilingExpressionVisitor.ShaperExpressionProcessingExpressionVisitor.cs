@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Microsoft.EntityFrameworkCore.Query.Internal;
 using static System.Linq.Expressions.Expression;
 using ExpressionExtensions = Microsoft.EntityFrameworkCore.Infrastructure.ExpressionExtensions;
 
@@ -132,14 +133,25 @@ public partial class InMemoryShapedQueryCompilingExpressionVisitor
                                 IncludeCollectionMethodInfo.MakeGenericMethod(entityClrType, includingClrType, relatedEntityClrType),
                                 QueryCompilationContext.QueryContextParameter,
                                 Visit(collectionResultShaperExpression.Projection),
-                                Constant(shaperLambda.Compile()),
+                                shaperLambda,
                                 entity,
-                                Constant(includeExpression.Navigation),
-                                Constant(inverseNavigation, typeof(INavigationBase)),
-                                Constant(
-                                    GenerateFixup(
-                                            includingClrType, relatedEntityClrType, includeExpression.Navigation, inverseNavigation)
-                                        .Compile()),
+                                _inMemoryShapedQueryCompilingExpressionVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
+                                    Constant(includeExpression.Navigation),
+#pragma warning disable EF1001 // Internal EF Core API usage.
+                                    LiftableConstantExpressionHelpers.BuildNavigationAccessLambda(includeExpression.Navigation),
+#pragma warning restore EF1001 // Internal EF Core API usage.
+                                    includeExpression.Navigation + "Navigation",
+                                    typeof(INavigationBase)),
+                                inverseNavigation != null
+                                ? _inMemoryShapedQueryCompilingExpressionVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
+                                    Constant(inverseNavigation, typeof(INavigationBase)),
+#pragma warning disable EF1001 // Internal EF Core API usage.
+                                    LiftableConstantExpressionHelpers.BuildNavigationAccessLambda(inverseNavigation),
+#pragma warning restore EF1001 // Internal EF Core API usage.
+                                    inverseNavigation + "InverseNavigation",
+                                    typeof(INavigationBase))
+                                : Default(typeof(INavigationBase)),
+                                GenerateFixup(includingClrType, relatedEntityClrType, includeExpression.Navigation, inverseNavigation),
                                 Constant(_tracking),
 #pragma warning disable EF1001 // Internal EF Core API usage.
                                 Constant(includeExpression.SetLoaded)));
@@ -153,12 +165,23 @@ public partial class InMemoryShapedQueryCompilingExpressionVisitor
                                 QueryCompilationContext.QueryContextParameter,
                                 entity,
                                 Visit(includeExpression.NavigationExpression),
-                                Constant(includeExpression.Navigation),
-                                Constant(inverseNavigation, typeof(INavigationBase)),
-                                Constant(
-                                    GenerateFixup(
-                                            includingClrType, relatedEntityClrType, includeExpression.Navigation, inverseNavigation)
-                                        .Compile()),
+                                _inMemoryShapedQueryCompilingExpressionVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
+                                    Constant(includeExpression.Navigation),
+#pragma warning disable EF1001 // Internal EF Core API usage.
+                                    LiftableConstantExpressionHelpers.BuildNavigationAccessLambda(includeExpression.Navigation),
+#pragma warning restore EF1001 // Internal EF Core API usage.
+                                    includeExpression.Navigation + "Navigation",
+                                    typeof(INavigationBase)),
+                                inverseNavigation != null
+                                ? _inMemoryShapedQueryCompilingExpressionVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
+                                    Constant(inverseNavigation, typeof(INavigationBase)),
+#pragma warning disable EF1001 // Internal EF Core API usage.
+                                    LiftableConstantExpressionHelpers.BuildNavigationAccessLambda(inverseNavigation),
+#pragma warning restore EF1001 // Internal EF Core API usage.
+                                    inverseNavigation + "InverseNavigation",
+                                    typeof(INavigationBase))
+                                : Default(typeof(INavigationBase)),
+                                GenerateFixup(includingClrType, relatedEntityClrType, includeExpression.Navigation, inverseNavigation),
                                 Constant(_tracking)));
                     }
 
@@ -179,8 +202,16 @@ public partial class InMemoryShapedQueryCompilingExpressionVisitor
                         MaterializeCollectionMethodInfo.MakeGenericMethod(elementType, collectionType),
                         QueryCompilationContext.QueryContextParameter,
                         Visit(collectionResultShaperExpression.Projection),
-                        Constant(shaperLambda.Compile()),
-                        Constant(collectionAccessor, typeof(IClrCollectionAccessor)));
+                        shaperLambda,
+                        navigation != null
+                            ? _inMemoryShapedQueryCompilingExpressionVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
+                                Constant(collectionAccessor, typeof(IClrCollectionAccessor)),
+#pragma warning disable EF1001 // Internal EF Core API usage.
+                                LiftableConstantExpressionHelpers.BuildClrCollectionAccessorLambda(navigation),
+#pragma warning restore EF1001 // Internal EF Core API usage.
+                                navigation.Name + "ClrCollectionAccessor",
+                                typeof(IClrCollectionAccessor))
+                            : Expression.Default(typeof(IClrCollectionAccessor)));
                 }
 
                 case SingleResultShaperExpression singleResultShaperExpression:
@@ -193,7 +224,7 @@ public partial class InMemoryShapedQueryCompilingExpressionVisitor
                         MaterializeSingleResultMethodInfo.MakeGenericMethod(singleResultShaperExpression.Type),
                         QueryCompilationContext.QueryContextParameter,
                         Visit(singleResultShaperExpression.Projection),
-                        Constant(shaperLambda.Compile()));
+                        shaperLambda);
                 }
             }
 
@@ -361,7 +392,7 @@ public partial class InMemoryShapedQueryCompilingExpressionVisitor
                 ? default
                 : innerShaper(queryContext, valueBuffer);
 
-        private static LambdaExpression GenerateFixup(
+        private LambdaExpression GenerateFixup(
             Type entityType,
             Type relatedEntityType,
             INavigationBase navigation,
@@ -397,12 +428,18 @@ public partial class InMemoryShapedQueryCompilingExpressionVisitor
             INavigationBase navigation)
             => entity.MakeMemberAccess(navigation.GetMemberInfo(forMaterialization: true, forSet: true)).Assign(relatedEntity);
 
-        private static Expression AddToCollectionNavigation(
+        private Expression AddToCollectionNavigation(
             ParameterExpression entity,
             ParameterExpression relatedEntity,
             INavigationBase navigation)
             => Call(
-                Constant(navigation.GetCollectionAccessor()),
+                _inMemoryShapedQueryCompilingExpressionVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
+                    Constant(navigation.GetCollectionAccessor()),
+#pragma warning disable EF1001 // Internal EF Core API usage.
+                    LiftableConstantExpressionHelpers.BuildClrCollectionAccessorLambda(navigation),
+#pragma warning restore EF1001 // Internal EF Core API usage.
+                    navigation.Name + "ClrCollectionAccessor",
+                    typeof(IClrCollectionAccessor)),
                 CollectionAccessorAddMethodInfo,
                 entity,
                 relatedEntity,

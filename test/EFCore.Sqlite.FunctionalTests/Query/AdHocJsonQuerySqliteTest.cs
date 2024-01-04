@@ -10,12 +10,12 @@ public class AdHocJsonQuerySqliteTest : AdHocJsonQueryTestBase
     protected override ITestStoreFactory TestStoreFactory
         => SqliteTestStoreFactory.Instance;
 
-    protected override async Task Seed29219(MyContext29219 ctx)
+    protected override async Task Seed29219(Context29219 ctx)
     {
-        var entity1 = new MyEntity29219
+        var entity1 = new Context29219.MyEntity
         {
             Id = 1,
-            Reference = new MyJsonEntity29219 { NonNullableScalar = 10, NullableScalar = 11 },
+            Reference = new Context29219.MyJsonEntity { NonNullableScalar = 10, NullableScalar = 11 },
             Collection =
             [
                 new() { NonNullableScalar = 100, NullableScalar = 101 },
@@ -24,10 +24,10 @@ public class AdHocJsonQuerySqliteTest : AdHocJsonQueryTestBase
             ]
         };
 
-        var entity2 = new MyEntity29219
+        var entity2 = new Context29219.MyEntity
         {
             Id = 2,
-            Reference = new MyJsonEntity29219 { NonNullableScalar = 20, NullableScalar = null },
+            Reference = new Context29219.MyJsonEntity { NonNullableScalar = 20, NullableScalar = null },
             Collection = [new() { NonNullableScalar = 1001, NullableScalar = null }]
         };
 
@@ -41,7 +41,7 @@ VALUES(3, '{ "NonNullableScalar" : 30 }', '[{ "NonNullableScalar" : 10001 }]')
 """);
     }
 
-    protected override async Task Seed30028(MyContext30028 ctx)
+    protected override async Task Seed30028(Context30028 ctx)
     {
         // complete
         await ctx.Database.ExecuteSqlAsync(
@@ -87,12 +87,12 @@ INSERT INTO "Reviews" ("Rounds", "Id")
 VALUES('[{"RoundNumber":11,"SubRounds":[{"SubRoundNumber":111},{"SubRoundNumber":112}]}]', 1)
 """);
 
-    protected override Task SeedArrayOfPrimitives(MyContextArrayOfPrimitives ctx)
+    protected override Task SeedArrayOfPrimitives(ContextArrayOfPrimitives ctx)
     {
-        var entity1 = new MyEntityArrayOfPrimitives
+        var entity1 = new ContextArrayOfPrimitives.MyEntity
         {
             Id = 1,
-            Reference = new MyJsonEntityArrayOfPrimitives
+            Reference = new ContextArrayOfPrimitives.MyJsonEntity
             {
                 IntArray = [1, 2, 3],
                 ListOfString =
@@ -109,10 +109,10 @@ VALUES('[{"RoundNumber":11,"SubRounds":[{"SubRoundNumber":111},{"SubRoundNumber"
             ]
         };
 
-        var entity2 = new MyEntityArrayOfPrimitives
+        var entity2 = new ContextArrayOfPrimitives.MyEntity
         {
             Id = 2,
-            Reference = new MyJsonEntityArrayOfPrimitives
+            Reference = new ContextArrayOfPrimitives.MyJsonEntity
             {
                 IntArray = [10, 20, 30],
                 ListOfString =
@@ -133,7 +133,7 @@ VALUES('[{"RoundNumber":11,"SubRounds":[{"SubRoundNumber":111},{"SubRoundNumber"
         return ctx.SaveChangesAsync();
     }
 
-    protected override Task SeedJunkInJson(MyContextJunkInJson ctx)
+    protected override Task SeedJunkInJson(ContextJunkInJson ctx)
         => ctx.Database.ExecuteSqlAsync(
             $$$"""
 INSERT INTO "Entities" ("Collection", "CollectionWithCtor", "Reference", "ReferenceWithCtor", "Id")
@@ -145,7 +145,7 @@ VALUES(
 1)
 """);
 
-    protected override Task SeedTrickyBuffering(MyContextTrickyBuffering ctx)
+    protected override Task SeedTrickyBuffering(ContextTrickyBuffering ctx)
         => ctx.Database.ExecuteSqlAsync(
             $$$"""
 INSERT INTO "Entities" ("Reference", "Id")
@@ -153,7 +153,7 @@ VALUES(
 '{"Name": "r1", "Number": 7, "JunkReference":{"Something": "SomeValue" }, "JunkCollection": [{"Foo": "junk value"}], "NestedReference": {"DoB": "2000-01-01T00:00:00"}, "NestedCollection": [{"DoB": "2000-02-01T00:00:00", "JunkReference": {"Something": "SomeValue"}}, {"DoB": "2000-02-02T00:00:00"}]}',1)
 """);
 
-    protected override Task SeedShadowProperties(MyContextShadowProperties ctx)
+    protected override Task SeedShadowProperties(ContextShadowProperties ctx)
         => ctx.Database.ExecuteSqlAsync(
             $$"""
 INSERT INTO "Entities" ("Collection", "CollectionWithCtor", "Reference", "ReferenceWithCtor", "Id", "Name")
@@ -166,7 +166,7 @@ VALUES(
 'e1')
 """);
 
-    protected override async Task SeedNotICollection(MyContextNotICollection ctx)
+    protected override async Task SeedNotICollection(ContextNotICollection ctx)
     {
         await ctx.Database.ExecuteSqlAsync(
             $$"""

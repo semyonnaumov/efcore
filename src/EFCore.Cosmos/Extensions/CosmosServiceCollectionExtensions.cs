@@ -5,6 +5,7 @@ using System.ComponentModel;
 using Microsoft.EntityFrameworkCore.Cosmos.Diagnostics.Internal;
 using Microsoft.EntityFrameworkCore.Cosmos.Infrastructure.Internal;
 using Microsoft.EntityFrameworkCore.Cosmos.Metadata.Conventions.Internal;
+using Microsoft.EntityFrameworkCore.Cosmos.Query;
 using Microsoft.EntityFrameworkCore.Cosmos.Query.Internal;
 using Microsoft.EntityFrameworkCore.Cosmos.Storage.Internal;
 using Microsoft.EntityFrameworkCore.Cosmos.ValueGeneration.Internal;
@@ -110,11 +111,13 @@ public static class CosmosServiceCollectionExtensions
             .TryAdd<IQueryTranslationPreprocessorFactory, CosmosQueryTranslationPreprocessorFactory>()
             .TryAdd<IQueryCompilationContextFactory, CosmosQueryCompilationContextFactory>()
             .TryAdd<IQueryTranslationPostprocessorFactory, CosmosQueryTranslationPostprocessorFactory>()
+            .TryAdd<ILiftableConstantProcessor, CosmosLiftableConstantProcessor>()
             .TryAddProviderSpecificServices(
                 b => b
                     .TryAddSingleton<ICosmosSingletonOptions, CosmosSingletonOptions>()
                     .TryAddSingleton<ISingletonCosmosClientWrapper, SingletonCosmosClientWrapper>()
                     .TryAddSingleton<IQuerySqlGeneratorFactory, QuerySqlGeneratorFactory>()
+                    .TryAddSingleton<ICosmosLiftableConstantFactory, CosmosLiftableConstantFactory>()
                     .TryAddScoped<ISqlExpressionFactory, SqlExpressionFactory>()
                     .TryAddScoped<IMemberTranslatorProvider, CosmosMemberTranslatorProvider>()
                     .TryAddScoped<IMethodCallTranslatorProvider, CosmosMethodCallTranslatorProvider>()

@@ -15,6 +15,7 @@ public class CosmosShapedQueryCompilingExpressionVisitorFactory : IShapedQueryCo
 {
     private readonly ISqlExpressionFactory _sqlExpressionFactory;
     private readonly IQuerySqlGeneratorFactory _querySqlGeneratorFactory;
+    private readonly ICosmosLiftableConstantFactory _cosmosLiftableConstantFactory;
 
     /// <summary>
     ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
@@ -24,18 +25,27 @@ public class CosmosShapedQueryCompilingExpressionVisitorFactory : IShapedQueryCo
     /// </summary>
     public CosmosShapedQueryCompilingExpressionVisitorFactory(
         ShapedQueryCompilingExpressionVisitorDependencies dependencies,
+        //CosmosShapedQueryCompilingExpressionVisitorDependencies cosmosDependencies,
         ISqlExpressionFactory sqlExpressionFactory,
-        IQuerySqlGeneratorFactory querySqlGeneratorFactory)
+        IQuerySqlGeneratorFactory querySqlGeneratorFactory,
+        ICosmosLiftableConstantFactory cosmosLiftableConstantFactory)
     {
         Dependencies = dependencies;
+        //CosmosDependencies = cosmosDependencies;
         _sqlExpressionFactory = sqlExpressionFactory;
         _querySqlGeneratorFactory = querySqlGeneratorFactory;
+        _cosmosLiftableConstantFactory = cosmosLiftableConstantFactory;
     }
 
     /// <summary>
     ///     Dependencies for this service.
     /// </summary>
     protected virtual ShapedQueryCompilingExpressionVisitorDependencies Dependencies { get; }
+
+    ///// <summary>
+    /////     Cosmos provider-specific dependencies for this service.
+    ///// </summary>
+    //protected virtual CosmosShapedQueryCompilingExpressionVisitorDependencies CosmosDependencies { get; }
 
     /// <summary>
     ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
@@ -48,5 +58,6 @@ public class CosmosShapedQueryCompilingExpressionVisitorFactory : IShapedQueryCo
             Dependencies,
             (CosmosQueryCompilationContext)queryCompilationContext,
             _sqlExpressionFactory,
-            _querySqlGeneratorFactory);
+            _querySqlGeneratorFactory,
+            _cosmosLiftableConstantFactory);
 }

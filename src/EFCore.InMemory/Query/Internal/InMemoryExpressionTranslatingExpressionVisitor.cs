@@ -341,6 +341,10 @@ public class InMemoryExpressionTranslatingExpressionVisitor : ExpressionVisitor
         }
     }
 
+    private static readonly MethodInfo PropertyGetValueConverterMethod
+        = typeof(IReadOnlyProperty).GetMethod(nameof(IReadOnlyProperty.GetValueComparer))!;
+        //= typeof(IProperty).GetMethod(nameof(IProperty.GetValueComparer))!;
+
     private static bool TryUseComparer(
         Expression? newLeft,
         Expression? newRight,
@@ -425,12 +429,20 @@ public class InMemoryExpressionTranslatingExpressionVisitor : ExpressionVisitor
         updatedExpression =
             exactMatch != null
                 ? Expression.Call(
-                    Expression.Constant(comparer, comparer.GetType()),
+                    Expression.Convert(
+                        Expression.Call(
+                            Expression.Constant(property),
+                            PropertyGetValueConverterMethod),
+                    comparer.GetType()),
                     exactMatch,
                     newLeft,
                     newRight)
                 : Expression.Call(
-                    Expression.Constant(comparer, comparer.GetType()),
+                    Expression.Convert(
+                        Expression.Call(
+                            Expression.Constant(property),
+                            PropertyGetValueConverterMethod),
+                        comparer.GetType()),
                     objectEquals!,
                     Expression.Convert(newLeft, typeof(object)),
                     Expression.Convert(newRight, typeof(object)));

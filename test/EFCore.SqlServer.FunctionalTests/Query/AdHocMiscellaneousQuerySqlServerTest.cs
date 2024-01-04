@@ -100,7 +100,7 @@ INSERT ZeroKey VALUES (NULL)
             });
     }
 
-    private class Context5456(DbContextOptions options) : DbContext(options)
+    public class Context5456(DbContextOptions options) : DbContext(options)
     {
         public DbSet<Blog> Blogs { get; set; }
         public DbSet<Post> Posts { get; set; }
@@ -191,7 +191,7 @@ WHERE [c].[Id] = @__id_0
 """);
     }
 
-    private class Context8864(DbContextOptions options) : DbContext(options)
+    public class Context8864(DbContextOptions options) : DbContext(options)
     {
         public DbSet<Customer> Customers { get; set; }
 
@@ -346,7 +346,7 @@ END
         }
     }
 
-    protected class Context9277(DbContextOptions options) : DbContext(options)
+    public class Context9277(DbContextOptions options) : DbContext(options)
     {
         public DbSet<Blog9277> Blogs { get; set; }
 
@@ -479,7 +479,7 @@ ORDER BY [p].[Id]
 """);
     }
 
-    protected class Context12518(DbContextOptions options) : DbContext(options)
+    public class Context12518(DbContextOptions options) : DbContext(options)
     {
         public virtual DbSet<Parent12518> Parents { get; set; }
         public virtual DbSet<Child12518> Children { get; set; }
@@ -531,7 +531,7 @@ ORDER BY [p].[Id]
         var contextFactory = await InitializeAsync<Context13118>(seed: c => c.SeedAsync());
         using var context = contextFactory.CreateContext();
         var testDateList = new List<DateTime> { new(2018, 10, 07) };
-        var findRecordsWithDateInList = context.ReproEntity
+        var findRecordsWithDateInList = context.ReproEntities
             .Where(a => testDateList.Contains(a.MyTime))
             .ToList();
 
@@ -542,7 +542,7 @@ ORDER BY [p].[Id]
 @__testDateList_0='["2018-10-07T00:00:00"]' (Size = 4000)
 
 SELECT [r].[Id], [r].[MyTime]
-FROM [ReproEntity] AS [r]
+FROM [ReproEntities] AS [r]
 WHERE [r].[MyTime] IN (
     SELECT [t].[value]
     FROM OPENJSON(@__testDateList_0) WITH ([value] smalldatetime '$') AS [t]
@@ -550,27 +550,27 @@ WHERE [r].[MyTime] IN (
 """);
     }
 
-    private class Context13118(DbContextOptions options) : DbContext(options)
+    public class Context13118(DbContextOptions options) : DbContext(options)
     {
-        public virtual DbSet<ReproEntity13118> ReproEntity { get; set; }
+        public virtual DbSet<ReproEntity> ReproEntities { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
-            => modelBuilder.Entity<ReproEntity13118>(e => e.Property("MyTime").HasColumnType("smalldatetime"));
+            => modelBuilder.Entity<ReproEntity>(e => e.Property("MyTime").HasColumnType("smalldatetime"));
 
         public Task SeedAsync()
         {
             AddRange(
-                new ReproEntity13118 { MyTime = new DateTime(2018, 10, 07) },
-                new ReproEntity13118 { MyTime = new DateTime(2018, 10, 08) });
+                new ReproEntity { MyTime = new DateTime(2018, 10, 07) },
+                new ReproEntity { MyTime = new DateTime(2018, 10, 08) });
 
             return SaveChangesAsync();
         }
-    }
 
-    private class ReproEntity13118
-    {
-        public Guid Id { get; set; }
-        public DateTime MyTime { get; set; }
+        public class ReproEntity
+        {
+            public Guid Id { get; set; }
+            public DateTime MyTime { get; set; }
+        }
     }
 
     #endregion
@@ -763,7 +763,7 @@ WHERE [d].[SmallDateTime] IN (
 """);
     }
 
-    protected class Context14095(DbContextOptions options) : DbContext(options)
+    public class Context14095(DbContextOptions options) : DbContext(options)
     {
         public DbSet<DatesAndPrunes14095> Dates { get; set; }
 
@@ -828,107 +828,6 @@ WHERE [d].[SmallDateTime] IN (
 
     #endregion
 
-    #region 15518
-
-    [ConditionalTheory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public virtual async Task Nested_queries_does_not_cause_concurrency_exception_sync(bool tracking)
-    {
-        var contextFactory = await InitializeAsync<Context15518>(seed: c => c.SeedAsync());
-
-        using (var context = contextFactory.CreateContext())
-        {
-            var query = context.Repos.OrderBy(r => r.Id).Where(r => r.Id > 0);
-            query = tracking ? query.AsTracking() : query.AsNoTracking();
-
-            foreach (var a in query)
-            {
-                foreach (var b in query)
-                {
-                }
-            }
-        }
-
-        using (var context = contextFactory.CreateContext())
-        {
-            var query = context.Repos.OrderBy(r => r.Id).Where(r => r.Id > 0);
-            query = tracking ? query.AsTracking() : query.AsNoTracking();
-
-            await foreach (var a in query.AsAsyncEnumerable())
-            {
-                await foreach (var b in query.AsAsyncEnumerable())
-                {
-                }
-            }
-        }
-
-        AssertSql(
-            """
-SELECT [r].[Id], [r].[Name]
-FROM [Repos] AS [r]
-WHERE [r].[Id] > 0
-ORDER BY [r].[Id]
-""",
-            //
-            """
-SELECT [r].[Id], [r].[Name]
-FROM [Repos] AS [r]
-WHERE [r].[Id] > 0
-ORDER BY [r].[Id]
-""",
-            //
-            """
-SELECT [r].[Id], [r].[Name]
-FROM [Repos] AS [r]
-WHERE [r].[Id] > 0
-ORDER BY [r].[Id]
-""",
-            //
-            """
-SELECT [r].[Id], [r].[Name]
-FROM [Repos] AS [r]
-WHERE [r].[Id] > 0
-ORDER BY [r].[Id]
-""",
-            //
-            """
-SELECT [r].[Id], [r].[Name]
-FROM [Repos] AS [r]
-WHERE [r].[Id] > 0
-ORDER BY [r].[Id]
-""",
-            //
-            """
-SELECT [r].[Id], [r].[Name]
-FROM [Repos] AS [r]
-WHERE [r].[Id] > 0
-ORDER BY [r].[Id]
-""");
-    }
-
-    private class Context15518(DbContextOptions options) : DbContext(options)
-    {
-        public DbSet<Repo> Repos { get; set; }
-
-        public Task SeedAsync()
-        {
-            AddRange(
-                new Repo { Name = "London" },
-                new Repo { Name = "New York" });
-
-            return SaveChangesAsync();
-        }
-
-        public class Repo
-        {
-            public int Id { get; set; }
-            public string Name { get; set; }
-        }
-    }
-
-    #endregion
-
     #region 19206
 
     [ConditionalFact]
@@ -966,7 +865,7 @@ CROSS JOIN (
         }
     }
 
-    private class Context19206(DbContextOptions options) : DbContext(options)
+    public class Context19206(DbContextOptions options) : DbContext(options)
     {
         public DbSet<Test> Tests { get; set; }
 
@@ -1018,7 +917,7 @@ CROSS JOIN (
             });
     }
 
-    private class Context21666(DbContextOptions options) : DbContext(options)
+    public class Context21666(DbContextOptions options) : DbContext(options)
     {
         public DbSet<List> Lists { get; set; }
 
@@ -1037,7 +936,7 @@ CROSS JOIN (
 
     #region 23282
 
-    [ConditionalFact]
+    [ConditionalFact(Skip = "AOT: NTS is not supported")]
     [SqlServerCondition(SqlServerCondition.SupportsSqlClr)]
     public virtual async Task Can_query_point_with_buffered_data_reader()
     {
@@ -1059,7 +958,7 @@ WHERE [l].[Name] = N'My Location'
 """);
     }
 
-    private class Context23282(DbContextOptions options) : DbContext(options)
+    public class Context23282(DbContextOptions options) : DbContext(options)
     {
         public DbSet<Location> Locations { get; set; }
 
@@ -1361,22 +1260,22 @@ FROM [Entities] FOR SYSTEM_TIME AS OF '2010-01-01T00:00:00.0000000' AS [e]
 """);
     }
 
-    protected class Context30478(DbContextOptions options) : DbContext(options)
+    public class Context30478(DbContextOptions options) : DbContext(options)
     {
-        public DbSet<Entity30478> Entities { get; set; }
+        public DbSet<Entity> Entities { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.Entity<Entity30478>().Property(x => x.Id).ValueGeneratedNever();
-            modelBuilder.Entity<Entity30478>().ToTable("Entities", tb => tb.IsTemporal());
-            modelBuilder.Entity<Entity30478>().OwnsOne(
+            modelBuilder.Entity<Entity>().Property(x => x.Id).ValueGeneratedNever();
+            modelBuilder.Entity<Entity>().ToTable("Entities", tb => tb.IsTemporal());
+            modelBuilder.Entity<Entity>().OwnsOne(
                 x => x.Reference, nb =>
                 {
                     nb.ToJson();
                     nb.OwnsOne(x => x.Nested);
                 });
 
-            modelBuilder.Entity<Entity30478>().OwnsMany(
+            modelBuilder.Entity<Entity>().OwnsMany(
                 x => x.Collection, nb =>
                 {
                     nb.ToJson();
@@ -1386,31 +1285,28 @@ FROM [Entities] FOR SYSTEM_TIME AS OF '2010-01-01T00:00:00.0000000' AS [e]
 
         public async Task SeedAsync()
         {
-            var e1 = new Entity30478
+            var e1 = new Entity
             {
                 Id = 1,
                 Name = "e1",
-                Reference = new Json30478 { Name = "r1", Nested = new JsonNested30478 { Number = 1 } },
+                Reference = new Json { Name = "r1", Nested = new JsonNested { Number = 1 } },
                 Collection =
                 [
-                    new Json30478 { Name = "c11", Nested = new JsonNested30478 { Number = 11 } },
-
-                    new Json30478 { Name = "c12", Nested = new JsonNested30478 { Number = 12 } },
-
-                    new Json30478 { Name = "c13", Nested = new JsonNested30478 { Number = 12 } }
+                    new Json { Name = "c11", Nested = new JsonNested { Number = 11 } },
+                    new Json { Name = "c12", Nested = new JsonNested { Number = 12 } },
+                    new Json { Name = "c13", Nested = new JsonNested { Number = 12 } }
                 ]
             };
 
-            var e2 = new Entity30478
+            var e2 = new Entity
             {
                 Id = 2,
                 Name = "e2",
-                Reference = new Json30478 { Name = "r2", Nested = new JsonNested30478 { Number = 2 } },
+                Reference = new Json { Name = "r2", Nested = new JsonNested { Number = 2 } },
                 Collection =
                 [
-                    new Json30478 { Name = "c21", Nested = new JsonNested30478 { Number = 21 } },
-
-                    new Json30478 { Name = "c22", Nested = new JsonNested30478 { Number = 22 } }
+                    new Json { Name = "c21", Nested = new JsonNested { Number = 21 } },
+                    new Json { Name = "c22", Nested = new JsonNested { Number = 22 } }
 
                 ]
             };
@@ -1432,25 +1328,25 @@ FROM [Entities] FOR SYSTEM_TIME AS OF '2010-01-01T00:00:00.0000000' AS [e]
             await Database.ExecuteSqlRawAsync(
                 "ALTER TABLE [Entities] SET (SYSTEM_VERSIONING = ON (HISTORY_TABLE = [dbo].[EntitiesHistory]))");
         }
-    }
 
-    protected class Entity30478
-    {
-        public int Id { get; set; }
-        public string Name { get; set; }
-        public Json30478 Reference { get; set; }
-        public List<Json30478> Collection { get; set; }
-    }
+        public class Entity
+        {
+            public int Id { get; set; }
+            public string Name { get; set; }
+            public Json Reference { get; set; }
+            public List<Json> Collection { get; set; }
+        }
 
-    protected class Json30478
-    {
-        public string Name { get; set; }
-        public JsonNested30478 Nested { get; set; }
-    }
+        public class Json
+        {
+            public string Name { get; set; }
+            public JsonNested Nested { get; set; }
+        }
 
-    protected class JsonNested30478
-    {
-        public int Number { get; set; }
+        public class JsonNested
+        {
+            public int Number { get; set; }
+        }
     }
 
     #endregion

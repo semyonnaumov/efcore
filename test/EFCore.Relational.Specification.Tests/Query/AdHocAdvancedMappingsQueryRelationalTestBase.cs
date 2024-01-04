@@ -77,7 +77,7 @@ public abstract class AdHocAdvancedMappingsQueryRelationalTestBase : AdHocAdvanc
         Assert.Equal(new DateTime(2000, 1, 1), query[0].Created);
     }
 
-    protected class Context32911(DbContextOptions options) : DbContext(options)
+    public class Context32911(DbContextOptions options) : DbContext(options)
     {
         public DbSet<Offer> Offers { get; set; }
 

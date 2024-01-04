@@ -41,6 +41,23 @@ public class EntityTypeParameterBinding : ServiceParameterBinding
             : result;
     }
 
+    /// <inheritdoc />
+    public override Expression BindToParameter2(Expression materializationExpression, ParameterBindingInfo bindingInfo)
+    {
+        //throw new InvalidOperationException("no idea what to do here");
+
+        var bindingInfoExpression = (Expression)Expression.Constant(bindingInfo);
+
+        var result = bindingInfoExpression.Type == typeof(IEntityType) || bindingInfoExpression.Type == typeof(IComplexType)
+            ? bindingInfoExpression
+            //: Expression.Property(bindingInfoExpression, nameof(ParameterBindingInfo.StructuralType));
+            : Expression.Constant(bindingInfo.StructuralType);
+
+        return ServiceType != typeof(ITypeBase)
+            ? Expression.Convert(result, ServiceType)
+            : result;
+    }
+
     /// <summary>
     ///     Creates a copy that contains the given consumed properties.
     /// </summary>

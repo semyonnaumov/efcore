@@ -12,10 +12,11 @@ public partial class CosmosShapedQueryCompilingExpressionVisitor
         private readonly SelectExpression _selectExpression;
 
         public CosmosProjectionBindingRemovingExpressionVisitor(
+            CosmosShapedQueryCompilingExpressionVisitor parentVisitor,
             SelectExpression selectExpression,
             ParameterExpression jObjectParameter,
             bool trackQueryResults)
-            : base(jObjectParameter, trackQueryResults)
+            : base(parentVisitor, jObjectParameter, trackQueryResults)
         {
             _selectExpression = selectExpression;
         }

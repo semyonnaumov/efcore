@@ -38,6 +38,7 @@ public partial class CosmosShapedQueryCompilingExpressionVisitor
             = typeof(IClrCollectionAccessor).GetTypeInfo()
                 .GetDeclaredMethod(nameof(IClrCollectionAccessor.GetOrCreate));
 
+        private readonly CosmosShapedQueryCompilingExpressionVisitor _parentVisitor;
         private readonly ParameterExpression _jObjectParameter;
         private readonly bool _trackQueryResults;
 
@@ -61,9 +62,11 @@ public partial class CosmosShapedQueryCompilingExpressionVisitor
                 .GetRuntimeMethods().Single(mi => mi.Name == nameof(SafeToObjectWithSerializer));
 
         protected CosmosProjectionBindingRemovingExpressionVisitorBase(
+            CosmosShapedQueryCompilingExpressionVisitor parentVisitor,
             ParameterExpression jObjectParameter,
             bool trackQueryResults)
         {
+            _parentVisitor = parentVisitor;
             _jObjectParameter = jObjectParameter;
             _trackQueryResults = trackQueryResults;
         }
@@ -271,7 +274,14 @@ public partial class CosmosShapedQueryCompilingExpressionVisitor
                     var navigation = collectionShaperExpression.Navigation;
                     return Call(
                         PopulateCollectionMethodInfo.MakeGenericMethod(navigation.TargetEntityType.ClrType, navigation.ClrType),
-                        Constant(navigation.GetCollectionAccessor()),
+                        //Constant(navigation.GetCollectionAccessor()),
+                        _parentVisitor._cosmosLiftableConstantFactory.CreateLiftableConstant(
+                            Constant(navigation.GetCollectionAccessor()),
+#pragma warning disable EF1001 // Internal EF Core API usage.
+                            LiftableConstantExpressionHelpers.BuildClrCollectionAccessorLambda(navigation),
+#pragma warning restore EF1001 // Internal EF Core API usage.
+                            navigation.Name + "ClrCollectionAccessor",
+                            typeof(IClrCollectionAccessor)),
                         entities);
                 }
 
@@ -368,7 +378,14 @@ public partial class CosmosShapedQueryCompilingExpressionVisitor
             shaperExpressions.Add(
                 IfThen(
                     Call(
-                        Constant(navigation.DeclaringEntityType, typeof(IReadOnlyEntityType)),
+                        //Constant(navigation.DeclaringEntityType, typeof(IReadOnlyEntityType)),
+                        _parentVisitor._cosmosLiftableConstantFactory.CreateLiftableConstant(
+                            Constant(navigation.DeclaringEntityType, typeof(IReadOnlyEntityType)),
+#pragma warning disable EF1001 // Internal EF Core API usage.
+                            LiftableConstantExpressionHelpers.BuildMemberAccessLambdaForEntityOrComplexType(navigation.DeclaringEntityType),
+#pragma warning restore EF1001 // Internal EF Core API usage.
+                            navigation.DeclaringEntityType.Name + "EntityType",
+                            typeof(IReadOnlyEntityType)),
                         IsAssignableFromMethodInfo,
                         Convert(concreteEntityTypeVariable, typeof(IReadOnlyEntityType))),
                     Call(
@@ -377,10 +394,29 @@ public partial class CosmosShapedQueryCompilingExpressionVisitor
                         instanceVariable,
                         concreteEntityTypeVariable,
                         navigationExpression,
-                        Constant(navigation),
-                        Constant(inverseNavigation, typeof(INavigation)),
-                        Constant(fixup),
-                        Constant(initialize, typeof(Action<>).MakeGenericType(includingClrType)),
+                        //Constant(navigation),
+                        _parentVisitor._cosmosLiftableConstantFactory.CreateLiftableConstant(
+                            Constant(navigation),
+#pragma warning disable EF1001 // Internal EF Core API usage.
+                            LiftableConstantExpressionHelpers.BuildNavigationAccessLambda(navigation),
+#pragma warning restore EF1001 // Internal EF Core API usage.
+                            navigation.Name + "Navigation",
+                            typeof(INavigation)),
+
+                        //Constant(inverseNavigation, typeof(INavigation)),
+
+                        inverseNavigation != null
+                        ? _parentVisitor._cosmosLiftableConstantFactory.CreateLiftableConstant(
+                            Constant(inverseNavigation),
+#pragma warning disable EF1001 // Internal EF Core API usage.
+                            LiftableConstantExpressionHelpers.BuildNavigationAccessLambda(inverseNavigation),
+#pragma warning restore EF1001 // Internal EF Core API usage.
+                            inverseNavigation.Name + "Navigation",
+                            typeof(INavigation))
+                        : Default(typeof(INavigation)),
+                        fixup,
+                        //Constant(initialize, typeof(Action<>).MakeGenericType(includingClrType)),
+                        initialize,
 #pragma warning disable EF1001 // Internal EF Core API usage.
                         Constant(includeExpression.SetLoaded))));
 #pragma warning restore EF1001 // Internal EF Core API usage.
@@ -495,7 +531,8 @@ public partial class CosmosShapedQueryCompilingExpressionVisitor
             }
         }
 
-        private static Delegate GenerateFixup(
+        private LambdaExpression GenerateFixup(
+        //private static Delegate GenerateFixup(
             Type entityType,
             Type relatedEntityType,
             INavigation navigation,
@@ -519,28 +556,36 @@ public partial class CosmosShapedQueryCompilingExpressionVisitor
             }
 
             return Lambda(Block(typeof(void), expressions), entityParameter, relatedEntityParameter)
-                .Compile();
+                ;//.Compile();
         }
 
-        private static Delegate GenerateInitialize(
+        private Expression GenerateInitialize(
+        //private static Delegate GenerateInitialize(
             Type entityType,
             INavigation navigation)
         {
             if (!navigation.IsCollection)
             {
-                return null;
+                Constant(null, typeof(Action<>).MakeGenericType(entityType));
             }
 
             var entityParameter = Parameter(entityType);
 
             var getOrCreateExpression = Call(
-                Constant(navigation.GetCollectionAccessor()),
+                //Constant(navigation.GetCollectionAccessor()),
+                _parentVisitor._cosmosLiftableConstantFactory.CreateLiftableConstant(
+                    Constant(navigation.GetCollectionAccessor()),
+#pragma warning disable EF1001 // Internal EF Core API usage.
+                    LiftableConstantExpressionHelpers.BuildClrCollectionAccessorLambda(navigation),
+#pragma warning restore EF1001 // Internal EF Core API usage.
+                    navigation.Name + "ClrCollectionAccessor",
+                    typeof(IClrCollectionAccessor)),
                 CollectionAccessorGetOrCreateMethodInfo,
                 entityParameter,
                 Constant(true));
 
             return Lambda(Block(typeof(void), getOrCreateExpression), entityParameter)
-                .Compile();
+                ;//.Compile();
         }
 
         private static Expression AssignReferenceNavigation(
@@ -549,12 +594,19 @@ public partial class CosmosShapedQueryCompilingExpressionVisitor
             INavigation navigation)
             => entity.MakeMemberAccess(navigation.GetMemberInfo(forMaterialization: true, forSet: true)).Assign(relatedEntity);
 
-        private static Expression AddToCollectionNavigation(
+        private Expression AddToCollectionNavigation(
             ParameterExpression entity,
             ParameterExpression relatedEntity,
             INavigation navigation)
             => Call(
-                Constant(navigation.GetCollectionAccessor()),
+                //Constant(navigation.GetCollectionAccessor()),
+                _parentVisitor._cosmosLiftableConstantFactory.CreateLiftableConstant(
+                    Constant(navigation.GetCollectionAccessor()),
+#pragma warning disable EF1001 // Internal EF Core API usage.
+                    LiftableConstantExpressionHelpers.BuildClrCollectionAccessorLambda(navigation),
+#pragma warning restore EF1001 // Internal EF Core API usage.
+                    navigation.Name + "ClrCollectionAccessor",
+                    typeof(IClrCollectionAccessor)),
                 CollectionAccessorAddMethodInfo,
                 entity,
                 relatedEntity,
@@ -726,7 +778,20 @@ public partial class CosmosShapedQueryCompilingExpressionVisitor
                         Call(
                             jTokenParameter,
                             JTokenToObjectWithSerializerMethodInfo.MakeGenericMethod(converter.ProviderClrType),
-                            Constant(CosmosClientWrapper.Serializer)),
+                            //Constant(CosmosClientWrapper.Serializer)
+                            _parentVisitor._cosmosLiftableConstantFactory.CreateLiftableConstant(
+                                Constant(CosmosClientWrapper.Serializer),
+                                c => Newtonsoft.Json.JsonSerializer.Create(),
+                                "jsonSerializer",
+                                typeof(Newtonsoft.Json.JsonSerializer))
+
+
+
+
+
+
+
+                            ),
                         converter.ConvertFromProviderExpression.Body);
 
                 if (body.Type != type)

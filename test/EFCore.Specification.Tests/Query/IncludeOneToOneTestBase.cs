@@ -266,14 +266,14 @@ public abstract class IncludeOneToOneTestBase<TFixture> : IClassFixture<TFixture
         }
     }
 
-    protected class Person
+    public class Person
     {
         public int Id { get; set; }
         public string Name { get; set; }
         public Address Address { get; set; }
     }
 
-    protected class Address
+    public class Address
     {
         public int Id { get; set; }
         public string Street { get; set; }
@@ -281,7 +281,7 @@ public abstract class IncludeOneToOneTestBase<TFixture> : IClassFixture<TFixture
         public Person Resident { get; set; }
     }
 
-    protected class Person2
+    public class Person2
     {
         public int Id { get; set; }
         public string Name { get; set; }
@@ -290,7 +290,7 @@ public abstract class IncludeOneToOneTestBase<TFixture> : IClassFixture<TFixture
         public Address2 Address { get; set; }
     }
 
-    protected class Address2
+    public class Address2
     {
         public string Id { get; set; }
         public string Street { get; set; }

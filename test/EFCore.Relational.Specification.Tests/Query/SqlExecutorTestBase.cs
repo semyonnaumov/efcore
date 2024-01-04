@@ -306,7 +306,7 @@ public abstract class SqlExecutorTestBase<TFixture> : IClassFixture<TFixture>
         Assert.Equal(-1, actual);
     }
 
-    private static Customer Process(Customer c, ManualResetEventSlim e, SemaphoreSlim s)
+    public static Customer Process(Customer c, ManualResetEventSlim e, SemaphoreSlim s)
     {
         e.Set();
         s.Wait();

@@ -251,4 +251,9 @@ public abstract class ValueConverter
                 ? firstConverter.MappingHints
                 : secondConverter.MappingHints.With(firstConverter.MappingHints))!;
     }
+
+    /// <summary>
+    /// TODO
+    /// </summary>
+    public abstract Expression ConstructorExpression { get; }
 }

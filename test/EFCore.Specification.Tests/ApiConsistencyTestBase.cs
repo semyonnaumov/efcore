@@ -1062,6 +1062,7 @@ public abstract class ApiConsistencyTestBase<TFixture> : IClassFixture<TFixture>
                from method in type.GetMethods(AnyInstance)
                where method.DeclaringType == type
                    && !Fixture.NonVirtualMethods.Contains(method)
+                   && !Fixture.VirtualMethodExceptions.Contains(method)
                    && !method.IsVirtual
                    && !method.Name.StartsWith("add_", StringComparison.Ordinal)
                    && !method.Name.StartsWith("remove_", StringComparison.Ordinal)
@@ -1069,6 +1070,10 @@ public abstract class ApiConsistencyTestBase<TFixture> : IClassFixture<TFixture>
                    && (method.IsPublic || method.IsFamily || method.IsFamilyOrAssembly)
                select type.FullName + "." + method.Name)
             .ToList();
+
+        foreach (var nvm in nonVirtualMethods)
+        {
+        }
 
         Assert.False(
             nonVirtualMethods.Count > 0,
@@ -1273,6 +1278,13 @@ public abstract class ApiConsistencyTestBase<TFixture> : IClassFixture<TFixture>
         public virtual Dictionary<Type, HashSet<MethodInfo>> UnmatchedMirrorMethods { get; } = new();
         public virtual Dictionary<MethodInfo, string> MetadataMethodNameTransformers { get; } = new();
         public virtual HashSet<MethodInfo> MetadataMethodExceptions { get; } = [];
+        public virtual HashSet<MethodInfo> VirtualMethodExceptions { get; } =
+            [
+            // non-sealed record
+            typeof(MaterializerLiftableConstantContext).GetMethod("get_Dependencies"),
+            typeof(MaterializerLiftableConstantContext).GetMethod("set_Dependencies"),
+            typeof(MaterializerLiftableConstantContext).GetMethod("Deconstruct"),
+            ];
 
         public virtual HashSet<PropertyInfo> ComputedDependencyProperties { get; } =
             [

@@ -342,7 +342,7 @@ public abstract class NorthwindGroupByQueryTestBase<TFixture> : QueryTestBase<TF
                 Assert.Equal(e.Count, a.Count);
             });
 
-    private class LongIntDto
+    public class LongIntDto
     {
         public long Id { get; set; }
         public int Count { get; set; }
@@ -698,7 +698,7 @@ public abstract class NorthwindGroupByQueryTestBase<TFixture> : QueryTestBase<TF
                     g =>
                         new { Sum = g.Sum(o => o.EmployeeID), g.Key }));
 
-    protected class NominalType
+    public class NominalType
     {
         public string CustomerID { get; set; }
         public uint? EmployeeID { get; set; }
@@ -737,7 +737,7 @@ public abstract class NorthwindGroupByQueryTestBase<TFixture> : QueryTestBase<TF
                     }),
             e => e.CustomerId + " " + e.EmployeeId);
 
-    protected class CompositeDto
+    public class CompositeDto
     {
         public int Sum { get; set; }
         public int Min { get; set; }
@@ -1019,7 +1019,7 @@ public abstract class NorthwindGroupByQueryTestBase<TFixture> : QueryTestBase<TF
                 Assert.Equal(e.Container.Value, a.Container.Value);
             });
 
-    private class NoGroupByWrapper
+    public class NoGroupByWrapper
     {
         public override bool Equals(object obj)
             => obj != null
@@ -1030,12 +1030,12 @@ public abstract class NorthwindGroupByQueryTestBase<TFixture> : QueryTestBase<TF
             => 0;
     }
 
-    private class NoGroupByAggregationWrapper
+    public class NoGroupByAggregationWrapper
     {
         public LastInChain Container { get; set; }
     }
 
-    protected class LastInChain
+    public class LastInChain
     {
         public string Name { get; set; }
         public object Value { get; set; }
@@ -2662,13 +2662,13 @@ public abstract class NorthwindGroupByQueryTestBase<TFixture> : QueryTestBase<TF
             elementSorter: e => e.Key.City,
             elementAsserter: (e, a) => AssertGrouping(e, a, keyAsserter: (ee, aa) => AssertEqual(ee.City, aa.City)));
 
-    protected class RandomClass
+    public class RandomClass
     {
         public string City { get; set; }
         public int Constant { get; set; }
     }
 
-    protected class RandomClassEqualityComparer : IEqualityComparer<RandomClass>
+    public class RandomClassEqualityComparer : IEqualityComparer<RandomClass>
     {
         public bool Equals(RandomClass x, RandomClass y)
             => x.City == y.City && x.Constant == y.Constant;

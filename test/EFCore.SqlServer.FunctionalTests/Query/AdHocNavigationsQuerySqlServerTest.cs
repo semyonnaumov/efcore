@@ -67,7 +67,7 @@ ORDER BY [b].[Id]
 """);
     }
 
-    protected class Context10447(DbContextOptions options) : DbContext(options)
+    public class Context10447(DbContextOptions options) : DbContext(options)
     {
         public DbSet<Blog> Blogs { get; set; }
 

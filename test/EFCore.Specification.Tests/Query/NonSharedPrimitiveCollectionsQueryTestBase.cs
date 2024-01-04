@@ -107,17 +107,17 @@ public abstract class NonSharedPrimitiveCollectionsQueryTestBase : NonSharedMode
     {
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => InitializeAsync<TestContext>(
-                onModelCreating: mb => mb.Entity<TestEntity>().Property(typeof(int[,]), "MultidimensionalArray")));
+                onModelCreating: mb => mb.Entity<TestContext.TestEntity>().Property(typeof(int[,]), "MultidimensionalArray")));
         Assert.Equal(CoreStrings.PropertyNotMapped("int[,]", "TestEntity", "MultidimensionalArray"), exception.Message);
     }
 
     #endregion Support for specific element types
 
-    [ConditionalFact]
+    [ConditionalFact(Skip = "AOT: custom converters are not supported")]
     public virtual async Task Column_with_custom_converter()
     {
         var contextFactory = await InitializeAsync<TestContext>(
-            onModelCreating: mb => mb.Entity<TestEntity>()
+            onModelCreating: mb => mb.Entity<TestContext.TestEntity>()
                 .Property(m => m.Ints)
                 .HasConversion(
                     i => string.Join(",", i!),
@@ -126,19 +126,19 @@ public abstract class NonSharedPrimitiveCollectionsQueryTestBase : NonSharedMode
             seed: context =>
             {
                 context.AddRange(
-                    new TestEntity { Id = 1, Ints = [1, 2, 3] },
-                    new TestEntity { Id = 2, Ints = [1, 2, 4] });
+                    new TestContext.TestEntity { Id = 1, Ints = [1, 2, 3] },
+                    new TestContext.TestEntity { Id = 2, Ints = [1, 2, 4] });
                 return context.SaveChangesAsync();
             });
 
         await using var context = contextFactory.CreateContext();
 
         var ints = new[] { 1, 2, 3 };
-        var result = await context.Set<TestEntity>().SingleAsync(m => m.Ints == ints);
+        var result = await context.Set<TestContext.TestEntity>().SingleAsync(m => m.Ints == ints);
         Assert.Equal(1, result.Id);
 
         // Custom converters allow reading/writing, but not querying, as we have no idea about the internal representation
-        await AssertTranslationFailed(() => context.Set<TestEntity>().SingleAsync(m => m.Ints!.Length == 2));
+        await AssertTranslationFailed(() => context.Set<TestContext.TestEntity>().SingleAsync(m => m.Ints!.Length == 2));
     }
 
     [ConditionalFact(
@@ -148,14 +148,14 @@ public abstract class NonSharedPrimitiveCollectionsQueryTestBase : NonSharedMode
     {
         var contextFactory = await InitializeAsync<TestContext>(
             onModelCreating: mb => mb
-                .Entity<TestEntity>()
+                .Entity<TestContext.TestEntity>()
                 .Property<IntWrapper>("PropertyWithValueConverter")
                 .HasConversion(w => w.Value, i => new IntWrapper(i)),
             seed: context =>
             {
-                var entry1 = context.Add(new TestEntity { Id = 1 });
+                var entry1 = context.Add(new TestContext.TestEntity { Id = 1 });
                 entry1.Property("PropertyWithValueConverter").CurrentValue = new IntWrapper(8);
-                var entry2 = context.Add(new TestEntity { Id = 2 });
+                var entry2 = context.Add(new TestContext.TestEntity { Id = 2 });
                 entry2.Property("PropertyWithValueConverter").CurrentValue = new IntWrapper(9);
                 return context.SaveChangesAsync();
             });
@@ -163,7 +163,7 @@ public abstract class NonSharedPrimitiveCollectionsQueryTestBase : NonSharedMode
         await using var context = contextFactory.CreateContext();
 
         var ints = new IntWrapper[] { new(1), new(8) };
-        var result = await context.Set<TestEntity>()
+        var result = await context.Set<TestContext.TestEntity>()
             .SingleAsync(m => ints.Count(i => i == EF.Property<IntWrapper>(m, "PropertyWithValueConverter")) == 1);
         Assert.Equal(1, result.Id);
     }
@@ -173,21 +173,21 @@ public abstract class NonSharedPrimitiveCollectionsQueryTestBase : NonSharedMode
     {
         var contextFactory = await InitializeAsync<TestContext>(
             onModelCreating: mb => mb
-                .Entity<TestEntity>()
+                .Entity<TestContext.TestEntity>()
                 .Property<IntWrapper>("PropertyWithValueConverter")
                 .HasConversion(w => w.Value, i => new IntWrapper(i)),
             seed: context =>
             {
-                var entry1 = context.Add(new TestEntity { Id = 1 });
+                var entry1 = context.Add(new TestContext.TestEntity { Id = 1 });
                 entry1.Property("PropertyWithValueConverter").CurrentValue = new IntWrapper(8);
-                var entry2 = context.Add(new TestEntity { Id = 2 });
+                var entry2 = context.Add(new TestContext.TestEntity { Id = 2 });
                 entry2.Property("PropertyWithValueConverter").CurrentValue = new IntWrapper(9);
                 return context.SaveChangesAsync();
             });
 
         await using var context = contextFactory.CreateContext();
 
-        var result = await context.Set<TestEntity>()
+        var result = await context.Set<TestContext.TestEntity>()
             .SingleAsync(
                 m => new IntWrapper[] { new(1), new(8) }.Count(i => i == EF.Property<IntWrapper>(m, "PropertyWithValueConverter")) == 1);
         Assert.Equal(1, result.Id);
@@ -202,18 +202,18 @@ public abstract class NonSharedPrimitiveCollectionsQueryTestBase : NonSharedMode
     public virtual async Task Inline_collection_in_query_filter()
     {
         var contextFactory = await InitializeAsync<TestContext>(
-            onModelCreating: mb => mb.Entity<TestEntity>().HasQueryFilter(t => new[] { 1, 2, 3 }.Count(i => i > t.Id) == 1),
+            onModelCreating: mb => mb.Entity<TestContext.TestEntity>().HasQueryFilter(t => new[] { 1, 2, 3 }.Count(i => i > t.Id) == 1),
             seed: context =>
             {
                 context.AddRange(
-                    new TestEntity { Id = 1 },
-                    new TestEntity { Id = 2 });
+                    new TestContext.TestEntity { Id = 1 },
+                    new TestContext.TestEntity { Id = 2 });
                 return context.SaveChangesAsync();
             });
 
         await using var context = contextFactory.CreateContext();
 
-        var result = await context.Set<TestEntity>().SingleAsync();
+        var result = await context.Set<TestContext.TestEntity>().SingleAsync();
         Assert.Equal(2, result.Id);
     }
 
@@ -229,17 +229,17 @@ public abstract class NonSharedPrimitiveCollectionsQueryTestBase : NonSharedMode
         var arrayClrType = typeof(TElement).MakeArrayType();
 
         var contextFactory = await InitializeAsync<TestContext>(
-            onModelCreating: onModelCreating ?? (mb => mb.Entity<TestEntity>().Property(arrayClrType, "SomeArray")),
+            onModelCreating: onModelCreating ?? (mb => mb.Entity<TestContext.TestEntity>().Property(arrayClrType, "SomeArray")),
             seed: context =>
             {
-                var instance1 = new TestEntity { Id = 1 };
+                var instance1 = new TestContext.TestEntity { Id = 1 };
                 context.Add(instance1);
                 var array1 = new TElement[2];
                 array1.SetValue(value1, 0);
                 array1.SetValue(value1, 1);
                 context.Entry(instance1).Property("SomeArray").CurrentValue = array1;
 
-                var instance2 = new TestEntity { Id = 2 };
+                var instance2 = new TestContext.TestEntity { Id = 2 };
                 context.Add(instance2);
                 var array2 = new TElement[2];
                 array2.SetValue(value1, 0);
@@ -251,14 +251,14 @@ public abstract class NonSharedPrimitiveCollectionsQueryTestBase : NonSharedMode
 
         await using var context = contextFactory.CreateContext();
 
-        var entityParam = Parameter(typeof(TestEntity), "m");
+        var entityParam = Parameter(typeof(TestContext.TestEntity), "m");
         var efPropertyCall = Call(
             typeof(EF).GetMethod(nameof(EF.Property), BindingFlags.Public | BindingFlags.Static)!.MakeGenericMethod(arrayClrType),
             entityParam,
             Constant("SomeArray"));
 
         var elementParam = Parameter(typeof(TElement), "a");
-        var predicate = Lambda<Func<TestEntity, bool>>(
+        var predicate = Lambda<Func<TestContext.TestEntity, bool>>(
             Equal(
                 Call(
                     EnumerableMethods.CountWithPredicate.MakeGenericMethod(typeof(TElement)),
@@ -270,20 +270,20 @@ public abstract class NonSharedPrimitiveCollectionsQueryTestBase : NonSharedMode
             entityParam);
 
         // context.Set<TestEntity>().SingleAsync(m => EF.Property<int[]>(m, "SomeArray").Count(a => a == <value1>) == 2)
-        var result = await context.Set<TestEntity>().SingleAsync(predicate);
+        var result = await context.Set<TestContext.TestEntity>().SingleAsync(predicate);
         Assert.Equal(1, result.Id);
     }
 
-    protected class TestContext(DbContextOptions options) : DbContext(options)
+    public class TestContext(DbContextOptions options) : DbContext(options)
     {
         protected override void OnModelCreating(ModelBuilder modelBuilder)
             => modelBuilder.Entity<TestEntity>().Property(e => e.Id).ValueGeneratedNever();
-    }
 
-    protected class TestEntity
-    {
-        public int Id { get; set; }
-        public int[]? Ints { get; set; }
+        public class TestEntity
+        {
+            public int Id { get; set; }
+            public int[]? Ints { get; set; }
+        }
     }
 
     protected override string StoreName

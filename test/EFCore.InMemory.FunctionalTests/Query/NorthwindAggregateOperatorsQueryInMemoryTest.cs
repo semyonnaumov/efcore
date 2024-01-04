@@ -47,4 +47,9 @@ public class NorthwindAggregateOperatorsQueryInMemoryTest(NorthwindQueryInMemory
         => await Assert.ThrowsAsync<InvalidOperationException>(
             async () =>
                 await base.Contains_with_local_enumerable_inline_closure_mix(async));
+
+
+    [ConditionalTheory(Skip = "AOT exception, issue #33383")]
+    public override Task Contains_with_local_ordered_enumerable_inline(bool async)
+        => base.Contains_with_local_ordered_enumerable_inline(async);
 }

@@ -3,6 +3,7 @@
 
 #nullable disable
 
+using Microsoft.EntityFrameworkCore.Query.Internal;
 using Newtonsoft.Json.Linq;
 using static System.Linq.Expressions.Expression;
 
@@ -18,6 +19,7 @@ public partial class CosmosShapedQueryCompilingExpressionVisitor : ShapedQueryCo
 {
     private readonly ISqlExpressionFactory _sqlExpressionFactory;
     private readonly IQuerySqlGeneratorFactory _querySqlGeneratorFactory;
+    private readonly ICosmosLiftableConstantFactory _cosmosLiftableConstantFactory;
     private readonly Type _contextType;
     private readonly bool _threadSafetyChecksEnabled;
     private readonly string _partitionKeyFromExtension;
@@ -30,17 +32,86 @@ public partial class CosmosShapedQueryCompilingExpressionVisitor : ShapedQueryCo
     /// </summary>
     public CosmosShapedQueryCompilingExpressionVisitor(
         ShapedQueryCompilingExpressionVisitorDependencies dependencies,
+//        CosmosShapedQueryCompilingExpressionVisitorDependencies cosmosDependencies,
         CosmosQueryCompilationContext cosmosQueryCompilationContext,
         ISqlExpressionFactory sqlExpressionFactory,
-        IQuerySqlGeneratorFactory querySqlGeneratorFactory)
+        IQuerySqlGeneratorFactory querySqlGeneratorFactory,
+        ICosmosLiftableConstantFactory cosmosLiftableConstantFactory)
         : base(dependencies, cosmosQueryCompilationContext)
     {
+        //CosmosDependencies = cosmosDependencies;
+
         _sqlExpressionFactory = sqlExpressionFactory;
         _querySqlGeneratorFactory = querySqlGeneratorFactory;
+        _cosmosLiftableConstantFactory = cosmosLiftableConstantFactory;
         _contextType = cosmosQueryCompilationContext.ContextType;
         _threadSafetyChecksEnabled = dependencies.CoreSingletonOptions.AreThreadSafetyChecksEnabled;
         _partitionKeyFromExtension = cosmosQueryCompilationContext.PartitionKeyFromExtension;
     }
+
+    ///// <summary>
+    /////     Cosmos provider-specific dependencies for this service.
+    ///// </summary>
+    //protected virtual CosmosShapedQueryCompilingExpressionVisitorDependencies CosmosDependencies { get; }
+
+    private static readonly ConstructorInfo _readItemExpressionCtor
+        = typeof(ReadItemExpression).GetConstructor([typeof(IEntityType), typeof(IDictionary<IProperty, string>)]);
+
+    private static readonly ConstructorInfo _readItemDictionaryCtor
+        = typeof(Dictionary<IProperty, string>).GetConstructor([]);
+
+    private static readonly MethodInfo _readItemDictionaryAddMethod
+        = typeof(Dictionary<IProperty, string>).GetMethod("Add", [typeof(IProperty), typeof(string)]);
+
+
+    // TODO: add proper quoting infra on expressions themselves?
+    private Expression QuoteReadItemExpression(ReadItemExpression readItemExpression)
+    {
+        var entityTypeExpression = _cosmosLiftableConstantFactory.CreateLiftableConstant(
+            Constant(readItemExpression.EntityType),
+#pragma warning disable EF1001 // Internal EF Core API usage.
+            LiftableConstantExpressionHelpers.BuildMemberAccessLambdaForEntityOrComplexType(readItemExpression.EntityType),
+#pragma warning restore EF1001 // Internal EF Core API usage.
+            readItemExpression.EntityType.Name + "EntityType",
+            typeof(IEntityType));
+
+        var newDictionary = New(_readItemDictionaryCtor);
+        var propertyParameterDictionaryInitializers = new List<ElementInit>();
+        foreach (var element in readItemExpression.PropertyParameters)
+        {
+            propertyParameterDictionaryInitializers.Add(
+                ElementInit(
+                    _readItemDictionaryAddMethod,
+                    _cosmosLiftableConstantFactory.CreateLiftableConstant(
+                        Constant(element.Key),
+#pragma warning disable EF1001 // Internal EF Core API usage.
+                        LiftableConstantExpressionHelpers.BuildMemberAccessLambdaForProperty(element.Key),
+#pragma warning restore EF1001 // Internal EF Core API usage.
+                        element.Key.Name + "Property",
+                        typeof(IProperty)),
+                    Constant(element.Value)));
+        }
+
+        IProperty prop1 = null;
+        IProperty prop2 = null;
+
+
+        Expression<Func<int, Dictionary<IProperty, string>>> wrapper = x => new Dictionary<IProperty, string>
+        {
+            { prop1, "Foo" },
+            { prop2, "Bar" }
+        };
+
+        var body = wrapper.Body;
+
+ 
+        return New(
+            _readItemExpressionCtor,
+            entityTypeExpression,
+            ListInit(
+                New(_readItemDictionaryCtor),
+                propertyParameterDictionaryInitializers));
+    } 
 
     /// <summary>
     ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
@@ -60,7 +131,7 @@ public partial class CosmosShapedQueryCompilingExpressionVisitor : ShapedQueryCo
         {
             case SelectExpression selectExpression:
                 shaperBody = new CosmosProjectionBindingRemovingExpressionVisitor(
-                        selectExpression, jObjectParameter,
+                        this, selectExpression, jObjectParameter,
                         QueryCompilationContext.QueryTrackingBehavior == QueryTrackingBehavior.TrackAll)
                     .Visit(shaperBody);
 
@@ -74,10 +145,20 @@ public partial class CosmosShapedQueryCompilingExpressionVisitor : ShapedQueryCo
                     Convert(
                         QueryCompilationContext.QueryContextParameter,
                         typeof(CosmosQueryContext)),
-                    Constant(_sqlExpressionFactory),
-                    Constant(_querySqlGeneratorFactory),
+                    //Constant(_sqlExpressionFactory),
+                    _cosmosLiftableConstantFactory.CreateLiftableConstant(
+                        Constant(_sqlExpressionFactory),
+                        c => c.SqlExpressionFactory,
+                        "sqlExpressionFactory",
+                        typeof(ISqlExpressionFactory)),
+                    //Constant(_querySqlGeneratorFactory),
+                    _cosmosLiftableConstantFactory.CreateLiftableConstant(
+                        Constant(_querySqlGeneratorFactory),
+                        c => c.QuerySqlGeneratorFactory,
+                        "sqlGeneratorFactory",
+                        typeof(IQuerySqlGeneratorFactory)),
                     Constant(selectExpression),
-                    Constant(shaperLambda.Compile()),
+                    shaperLambda,
                     Constant(_contextType),
                     Constant(_partitionKeyFromExtension, typeof(string)),
                     Constant(
@@ -86,7 +167,7 @@ public partial class CosmosShapedQueryCompilingExpressionVisitor : ShapedQueryCo
 
             case ReadItemExpression readItemExpression:
                 shaperBody = new CosmosProjectionBindingRemovingReadItemExpressionVisitor(
-                        readItemExpression, jObjectParameter,
+                        this, readItemExpression, jObjectParameter,
                         QueryCompilationContext.QueryTrackingBehavior == QueryTrackingBehavior.TrackAll)
                     .Visit(shaperBody);
 
@@ -100,8 +181,9 @@ public partial class CosmosShapedQueryCompilingExpressionVisitor : ShapedQueryCo
                     Convert(
                         QueryCompilationContext.QueryContextParameter,
                         typeof(CosmosQueryContext)),
-                    Constant(readItemExpression),
-                    Constant(shaperReadItemLambda.Compile()),
+                    //Constant(readItemExpression),
+                    QuoteReadItemExpression(readItemExpression),
+                    shaperReadItemLambda,
                     Constant(_contextType),
                     Constant(
                         QueryCompilationContext.QueryTrackingBehavior == QueryTrackingBehavior.NoTrackingWithIdentityResolution),

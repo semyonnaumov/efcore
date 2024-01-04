@@ -107,7 +107,7 @@ public partial class RelationalQueryableMethodTranslatingExpressionVisitor
                     var projection = new StructuralTypeProjectionExpression(
                         entityType, columns, tableMap, nullable: false, discriminatorExpression);
 
-                    return new SelectExpression(tables, projection, identifier, _sqlAliasManager);
+                    return new SelectExpression(tables, projection, identifier, _sqlAliasManager, LiftableConstantFactory);
                 }
 
                 case RelationalAnnotationNames.TpcMappingStrategy:
@@ -141,7 +141,8 @@ public partial class RelationalQueryableMethodTranslatingExpressionVisitor
                             [new TableExpression(alias, table)],
                             new StructuralTypeProjectionExpression(entityType, propertyExpressions, tableMap),
                             identifier,
-                            _sqlAliasManager);
+                            _sqlAliasManager,
+                            LiftableConstantFactory);
                     }
                     else
                     {
@@ -216,7 +217,7 @@ public partial class RelationalQueryableMethodTranslatingExpressionVisitor
                                     discriminatorColumnName));
                             discriminatorValues.Add(concreteEntityType.ShortName());
 
-                            subSelectExpressions.Add(SelectExpression.CreateImmutable(alias: null!, [tableExpression], projections));
+                            subSelectExpressions.Add(SelectExpression.CreateImmutable(alias: null!, [tableExpression], projections, LiftableConstantFactory));
                         }
 
                         var tpcTableAlias = _sqlAliasManager.GenerateTableAlias("union");
@@ -244,7 +245,8 @@ public partial class RelationalQueryableMethodTranslatingExpressionVisitor
                             [tpcTables],
                             new StructuralTypeProjectionExpression(entityType, columns, tableMap, nullable: false, discriminatorColumn),
                             identifier,
-                            _sqlAliasManager);
+                            _sqlAliasManager,
+                            LiftableConstantFactory);
                     }
                 }
 
@@ -324,7 +326,8 @@ public partial class RelationalQueryableMethodTranslatingExpressionVisitor
                         tables,
                         new StructuralTypeProjectionExpression(entityType, columns, tableMap),
                         identifier,
-                        _sqlAliasManager);
+                        _sqlAliasManager,
+                        LiftableConstantFactory);
                 }
             }
 
@@ -354,7 +357,7 @@ public partial class RelationalQueryableMethodTranslatingExpressionVisitor
                     }
                 }
 
-                return new SelectExpression([tableExpression], projection, identifier, _sqlAliasManager);
+                return new SelectExpression([tableExpression], projection, identifier, _sqlAliasManager, LiftableConstantFactory);
             }
 
             static ITableBase GetTableBaseFiltered(IEntityType entityType, Dictionary<ITableBase, string> existingTables)
@@ -401,7 +404,7 @@ public partial class RelationalQueryableMethodTranslatingExpressionVisitor
             }
         }
 
-        var select = new SelectExpression([tableExpressionBase], projection, identifier, _sqlAliasManager);
+        var select = new SelectExpression([tableExpressionBase], projection, identifier, _sqlAliasManager, LiftableConstantFactory);
 
         AddEntitySelectConditions(select, entityType);
 
@@ -555,7 +558,8 @@ public partial class RelationalQueryableMethodTranslatingExpressionVisitor
                     keyPropertiesMap,
                     ownedJsonNavigation.ClrType,
                     ownedJsonNavigation.IsCollection),
-                isNullable);
+                isNullable,
+                Dependencies.LiftableConstantFactory);
 
             projection.AddNavigationBinding(ownedJsonNavigation, entityShaperExpression);
         }
@@ -662,7 +666,8 @@ public partial class RelationalQueryableMethodTranslatingExpressionVisitor
                     newKeyPropertyMap,
                     ownedJsonNavigation.ClrType,
                     ownedJsonNavigation.IsCollection),
-                isNullable);
+                isNullable,
+                Dependencies.LiftableConstantFactory);
 
             projection.AddNavigationBinding(ownedJsonNavigation, entityShaperExpression);
         }
@@ -678,7 +683,8 @@ public partial class RelationalQueryableMethodTranslatingExpressionVisitor
             [tableExpressionBase],
             projection,
             [(identifierColumn, identifierColumnTypeMapping.Comparer)],
-            _sqlAliasManager);
+            _sqlAliasManager,
+            LiftableConstantFactory);
     }
 
     private static ColumnExpression CreateColumnExpression(

@@ -184,7 +184,7 @@ public class StructuralTypeProjectionExpression : Expression
     ///     Makes entity instance in projection nullable.
     /// </summary>
     /// <returns>A new entity projection expression which can project nullable entity.</returns>
-    public virtual StructuralTypeProjectionExpression MakeNullable()
+    public virtual StructuralTypeProjectionExpression MakeNullable(ILiftableConstantFactory liftableConstantFactory)
     {
         var propertyExpressionMap = new Dictionary<IProperty, ColumnExpression>();
         foreach (var (property, columnExpression) in _propertyExpressionMap)
@@ -198,7 +198,7 @@ public class StructuralTypeProjectionExpression : Expression
             complexPropertyCache = new();
             foreach (var (complexProperty, complexShaper) in _complexPropertyCache)
             {
-                complexPropertyCache[complexProperty] = complexShaper.MakeNullable();
+                complexPropertyCache[complexProperty] = complexShaper.MakeNullable(liftableConstantFactory);
             }
         }
 
@@ -219,7 +219,7 @@ public class StructuralTypeProjectionExpression : Expression
                 // initially
                 var jsonQueryExpression = (JsonQueryExpression)shaper.ValueBufferExpression;
                 var newJsonQueryExpression = jsonQueryExpression.MakeNullable();
-                var newShaper = shaper.Update(newJsonQueryExpression).MakeNullable();
+                var newShaper = shaper.Update(newJsonQueryExpression).MakeNullable(liftableConstantFactory);
                 ownedNavigationMap[navigation] = newShaper;
             }
         }
@@ -363,14 +363,15 @@ public class StructuralTypeProjectionExpression : Expression
     ///     Binds a complex property with this structural type projection to get a shaper expression for the target complex type.
     /// </summary>
     /// <param name="complexProperty">A complex property to bind.</param>
+    /// <param name="liftableConstantFactory">TODO</param>
     /// <returns>A shaper expression for the target complex type.</returns>
-    public virtual StructuralTypeShaperExpression BindComplexProperty(IComplexProperty complexProperty)
+    public virtual StructuralTypeShaperExpression BindComplexProperty(IComplexProperty complexProperty, ILiftableConstantFactory liftableConstantFactory)
     {
         if (_complexPropertyCache is null || !_complexPropertyCache.TryGetValue(complexProperty, out var resultShaper))
         {
             _complexPropertyCache ??= new Dictionary<IComplexProperty, StructuralTypeShaperExpression>();
             resultShaper = _complexPropertyCache[complexProperty] =
-                SelectExpression.GenerateComplexPropertyShaperExpression(this, complexProperty);
+                SelectExpression.GenerateComplexPropertyShaperExpression(this, complexProperty, liftableConstantFactory);
         }
 
         return resultShaper;

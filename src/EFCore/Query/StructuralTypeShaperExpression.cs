@@ -2,6 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using JetBrains.Annotations;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using Microsoft.EntityFrameworkCore.Query.Internal;
 
 namespace Microsoft.EntityFrameworkCore.Query;
 
@@ -23,8 +25,11 @@ public class StructuralTypeShaperExpression : Expression, IPrintableExpression
     private static readonly MethodInfo CreateUnableToDiscriminateExceptionMethod
         = typeof(StructuralTypeShaperExpression).GetTypeInfo().GetDeclaredMethod(nameof(CreateUnableToDiscriminateException))!;
 
+    /// <summary>
+    /// TODO
+    /// </summary>
     [UsedImplicitly]
-    private static Exception CreateUnableToDiscriminateException(ITypeBase type, object discriminator)
+    public static Exception CreateUnableToDiscriminateException(ITypeBase type, object discriminator)
         => new InvalidOperationException(CoreStrings.UnableToDiscriminate(type.DisplayName(), discriminator.ToString()));
 
     /// <summary>
@@ -33,11 +38,13 @@ public class StructuralTypeShaperExpression : Expression, IPrintableExpression
     /// <param name="type">The entity or complex type to shape.</param>
     /// <param name="valueBufferExpression">An expression of ValueBuffer to get values for properties of the type.</param>
     /// <param name="nullable">A bool value indicating whether this instance can be null.</param>
+    /// <param name="liftableConstantFactory">TODO</param>
     public StructuralTypeShaperExpression(
         ITypeBase type,
         Expression valueBufferExpression,
-        bool nullable)
-        : this(type, valueBufferExpression, nullable, null)
+        bool nullable,
+        ILiftableConstantFactory liftableConstantFactory)
+        : this(type, valueBufferExpression, nullable, null, liftableConstantFactory)
     {
     }
 
@@ -50,17 +57,43 @@ public class StructuralTypeShaperExpression : Expression, IPrintableExpression
     /// <param name="materializationCondition">
     ///     An expression of <see cref="Func{ValueBuffer, ITypeBase}" /> to determine which structural type to materialize.
     /// </param>
-    protected StructuralTypeShaperExpression(
+    /// <param name="liftableConstantFactory">TODO</param>
+    protected StructuralTypeShaperExpression( // maumar hack - change to public later
         ITypeBase type,
         Expression valueBufferExpression,
         bool nullable,
-        LambdaExpression? materializationCondition)
+        LambdaExpression? materializationCondition,
+        ILiftableConstantFactory liftableConstantFactory)
     {
         if (materializationCondition == null)
         {
-            materializationCondition = GenerateMaterializationCondition(type, nullable);
+            materializationCondition = GenerateMaterializationCondition(type, nullable, liftableConstantFactory);
         }
         else if (materializationCondition.Parameters.Count != 1
+                 || materializationCondition.Parameters[0].Type != typeof(ValueBuffer)
+                 || materializationCondition.ReturnType != (type is IEntityType ? typeof(IEntityType) : typeof(IComplexType)))
+        {
+            throw new InvalidOperationException(CoreStrings.QueryEntityMaterializationConditionWrongShape(type.DisplayName()));
+        }
+
+        StructuralType = type;
+        ValueBufferExpression = valueBufferExpression;
+        IsNullable = nullable;
+        MaterializationCondition = materializationCondition!;
+    }
+
+
+
+    /// <summary>
+    ///     TODO
+    /// </summary>
+    protected StructuralTypeShaperExpression( // maumar giga hack
+        ITypeBase type,
+        Expression valueBufferExpression,
+        bool nullable,
+        LambdaExpression materializationCondition)
+    {
+        if (materializationCondition.Parameters.Count != 1
                  || materializationCondition.Parameters[0].Type != typeof(ValueBuffer)
                  || materializationCondition.ReturnType != (type is IEntityType ? typeof(IEntityType) : typeof(IComplexType)))
         {
@@ -79,15 +112,20 @@ public class StructuralTypeShaperExpression : Expression, IPrintableExpression
     /// </summary>
     /// <param name="type">The entity type for which materialization was requested.</param>
     /// <param name="discriminatorValue">The expression containing value of discriminator.</param>
+    /// <param name="liftableConstantFactory">TODO</param>
     /// <returns>
     ///     An expression of <see cref="Func{ValueBuffer, IEntityType}" /> representing materilization condition for the entity type.
     /// </returns>
-    protected static Expression CreateUnableToDiscriminateExceptionExpression(ITypeBase type, Expression discriminatorValue)
+    protected static Expression CreateUnableToDiscriminateExceptionExpression(ITypeBase type, Expression discriminatorValue, ILiftableConstantFactory liftableConstantFactory)
         => Block(
             Throw(
                 Call(
                     CreateUnableToDiscriminateExceptionMethod,
-                    Constant(type),
+                    //Constant(type),
+                    liftableConstantFactory.CreateLiftableConstant(
+                        x => x.Dependencies.Model.FindEntityType(type.Name)!,
+                        type.Name + "EntityType",
+                        typeof(IEntityType)),
                     Convert(discriminatorValue, typeof(object)))),
             Constant(null, typeof(IEntityType)));
 
@@ -96,16 +134,22 @@ public class StructuralTypeShaperExpression : Expression, IPrintableExpression
     /// </summary>
     /// <param name="type">The type to create materialization condition for.</param>
     /// <param name="nullable">Whether this instance can be null.</param>
+    /// <param name="liftableConstantFactory">TODO</param>
     /// <returns>
     ///     An expression of <see cref="Func{ValueBuffer, ITypeBase}" /> representing materialization condition for the type.
     /// </returns>
-    protected virtual LambdaExpression GenerateMaterializationCondition(ITypeBase type, bool nullable)
+    protected virtual LambdaExpression GenerateMaterializationCondition(ITypeBase type, bool nullable, ILiftableConstantFactory liftableConstantFactory)
     {
         var valueBufferParameter = Parameter(typeof(ValueBuffer));
 
         if (type is IComplexType complexType)
         {
-            return Lambda(Constant(complexType, typeof(IComplexType)), valueBufferParameter);
+            //return Lambda(Constant(complexType, typeof(IComplexType)), valueBufferParameter);
+            return Lambda(
+                liftableConstantFactory.CreateLiftableConstant(
+                    LiftableConstantExpressionHelpers.BuildMemberAccessLambdaForEntityOrComplexType(complexType),
+                    complexType.Name + "ComplexType",
+                    typeof(IComplexType)), valueBufferParameter);
         }
 
         var entityType = (IEntityType)type;
@@ -123,7 +167,7 @@ public class StructuralTypeShaperExpression : Expression, IPrintableExpression
                         discriminatorProperty.ClrType, discriminatorProperty.GetIndex(), discriminatorProperty))
             };
 
-            var exception = CreateUnableToDiscriminateExceptionExpression(entityType, discriminatorValueVariable);
+            var exception = CreateUnableToDiscriminateExceptionExpression(entityType, discriminatorValueVariable, liftableConstantFactory);
 
             var discriminatorComparer = discriminatorProperty.GetKeyValueComparer();
             if (discriminatorComparer.IsDefault())
@@ -132,7 +176,16 @@ public class StructuralTypeShaperExpression : Expression, IPrintableExpression
                 for (var i = 0; i < concreteEntityTypes.Length; i++)
                 {
                     var discriminatorValue = Constant(concreteEntityTypes[i].GetDiscriminatorValue(), discriminatorProperty.ClrType);
-                    switchCases[i] = SwitchCase(Constant(concreteEntityTypes[i], typeof(IEntityType)), discriminatorValue);
+
+                    var concreteEntityTypeName = concreteEntityTypes[i].Name;
+                    switchCases[i] = SwitchCase(
+                        liftableConstantFactory.CreateLiftableConstant(
+                            x => x.Dependencies.Model.FindEntityType(concreteEntityTypeName)!,
+                            //concreteEntityTypes[i].Name + "EntityType",
+                            concreteEntityTypeName + "EntityType",
+                            typeof(IEntityType)),
+                        discriminatorValue);
+                    //switchCases[i] = SwitchCase(Constant(concreteEntityTypes[i], typeof(IEntityType)), discriminatorValue);
                 }
 
                 expressions.Add(Switch(discriminatorValueVariable, exception, switchCases));
@@ -142,13 +195,20 @@ public class StructuralTypeShaperExpression : Expression, IPrintableExpression
                 var conditions = exception;
                 for (var i = concreteEntityTypes.Length - 1; i >= 0; i--)
                 {
+                    var entityTypeName = concreteEntityTypes[i].Name;
+
                     conditions = Condition(
                         discriminatorComparer.ExtractEqualsBody(
                             discriminatorValueVariable,
+                            //maumar: TODO maybe here also? discriminator could be non-primitive, right?
                             Constant(
                                 concreteEntityTypes[i].GetDiscriminatorValue(),
                                 discriminatorProperty.ClrType)),
-                        Constant(concreteEntityTypes[i], typeof(IEntityType)),
+                        //Constant(concreteEntityTypes[i], typeof(IEntityType)),
+                        liftableConstantFactory.CreateLiftableConstant(
+                            LiftableConstantExpressionHelpers.BuildMemberAccessLambdaForEntityOrComplexType(concreteEntityTypes[i]),
+                            concreteEntityTypes[i].Name + "EntityType",
+                            typeof(IEntityType)),
                         conditions);
                 }
 
@@ -159,7 +219,12 @@ public class StructuralTypeShaperExpression : Expression, IPrintableExpression
         }
         else
         {
-            body = Constant(concreteEntityTypes.Length == 1 ? concreteEntityTypes[0] : entityType, typeof(IEntityType));
+            //body = Constant(concreteEntityTypes.Length == 1 ? concreteEntityTypes[0] : entityType, typeof(IEntityType));
+            var targetEntityType = concreteEntityTypes.Length == 1 ? concreteEntityTypes[0] : entityType;
+            body = liftableConstantFactory.CreateLiftableConstant(
+                LiftableConstantExpressionHelpers.BuildMemberAccessLambdaForEntityOrComplexType(targetEntityType),
+                targetEntityType.Name + "EntityType",
+                typeof(IEntityType));
         }
 
         if (entityType.FindPrimaryKey() == null
@@ -213,21 +278,23 @@ public class StructuralTypeShaperExpression : Expression, IPrintableExpression
     ///     Changes the structural type being shaped by this shaper.
     /// </summary>
     /// <param name="type">The new type to use.</param>
+    /// <param name="liftableConstantFactory">TODO</param>
     /// <returns>This expression if the type was not changed, or a new expression with the updated type.</returns>
-    public virtual StructuralTypeShaperExpression WithType(ITypeBase type)
+    public virtual StructuralTypeShaperExpression WithType(ITypeBase type, ILiftableConstantFactory liftableConstantFactory)
         => type != StructuralType
-            ? new StructuralTypeShaperExpression(type, ValueBufferExpression, IsNullable, materializationCondition: null)
+            ? new StructuralTypeShaperExpression(type, ValueBufferExpression, IsNullable, materializationCondition: null, liftableConstantFactory)
             : this;
 
     /// <summary>
     ///     Assigns nullability for this shaper, indicating whether it can shape null instances or not.
     /// </summary>
     /// <param name="nullable">A value indicating if the shaper is nullable.</param>
+    /// <param name="liftableConstantFactory">TODO</param>
     /// <returns>This expression if nullability not changed, or an expression with updated nullability.</returns>
-    public virtual StructuralTypeShaperExpression MakeNullable(bool nullable = true)
+    public virtual StructuralTypeShaperExpression MakeNullable(ILiftableConstantFactory liftableConstantFactory, bool nullable = true)
         => IsNullable != nullable
             // Marking nullable requires re-computation of materialization condition
-            ? new StructuralTypeShaperExpression(StructuralType, ValueBufferExpression, nullable, materializationCondition: null)
+            ? new StructuralTypeShaperExpression(StructuralType, ValueBufferExpression, nullable, materializationCondition: null, liftableConstantFactory)
             : this;
 
     /// <summary>

@@ -46,7 +46,7 @@ public class CosmosQueryableMethodTranslatingExpressionVisitor : QueryableMethod
             _memberTranslatorProvider,
             _methodCallTranslatorProvider);
         _projectionBindingExpressionVisitor =
-            new CosmosProjectionBindingExpressionVisitor(_queryCompilationContext.Model, _sqlTranslator);
+            new CosmosProjectionBindingExpressionVisitor(_queryCompilationContext.Model, _sqlTranslator, LiftableConstantFactory);
     }
 
     /// <summary>
@@ -67,7 +67,7 @@ public class CosmosQueryableMethodTranslatingExpressionVisitor : QueryableMethod
             _memberTranslatorProvider,
             _methodCallTranslatorProvider);
         _projectionBindingExpressionVisitor =
-            new CosmosProjectionBindingExpressionVisitor(_queryCompilationContext.Model, _sqlTranslator);
+            new CosmosProjectionBindingExpressionVisitor(_queryCompilationContext.Model, _sqlTranslator, LiftableConstantFactory);
     }
 
     /// <summary>
@@ -113,7 +113,7 @@ public class CosmosQueryableMethodTranslatingExpressionVisitor : QueryableMethod
 
                                 var readItemExpression = new ReadItemExpression(entityType, propertyParameterList);
 
-                                return CreateShapedQueryExpression(entityType, readItemExpression)
+                                return CreateShapedQueryExpression(entityType, readItemExpression, Dependencies.LiftableConstantFactory)
                                     .UpdateResultCardinality(ResultCardinality.SingleOrDefault);
                             }
                         }
@@ -201,7 +201,8 @@ public class CosmosQueryableMethodTranslatingExpressionVisitor : QueryableMethod
                     _sqlExpressionFactory.Select(
                         fromSqlQueryRootExpression.EntityType,
                         fromSqlQueryRootExpression.Sql,
-                        fromSqlQueryRootExpression.Argument));
+                        fromSqlQueryRootExpression.Argument),
+                    Dependencies.LiftableConstantFactory);
 
             default:
                 return base.VisitExtension(extensionExpression);
@@ -236,16 +237,17 @@ public class CosmosQueryableMethodTranslatingExpressionVisitor : QueryableMethod
     {
         var selectExpression = _sqlExpressionFactory.Select(entityType);
 
-        return CreateShapedQueryExpression(entityType, selectExpression);
+        return CreateShapedQueryExpression(entityType, selectExpression, Dependencies.LiftableConstantFactory);
     }
 
-    private static ShapedQueryExpression CreateShapedQueryExpression(IEntityType entityType, Expression queryExpression)
+    private static ShapedQueryExpression CreateShapedQueryExpression(IEntityType entityType, Expression queryExpression, ILiftableConstantFactory liftableConstantFactory)
         => new(
             queryExpression,
             new StructuralTypeShaperExpression(
                 entityType,
                 new ProjectionBindingExpression(queryExpression, new ProjectionMember(), typeof(ValueBuffer)),
-                false));
+                false,
+                liftableConstantFactory));
 
     /// <summary>
     ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
@@ -663,7 +665,7 @@ public class CosmosQueryableMethodTranslatingExpressionVisitor : QueryableMethod
             var baseType = entityType.GetAllBaseTypes().SingleOrDefault(et => et.ClrType == resultType);
             if (baseType != null)
             {
-                return source.UpdateShaperExpression(entityShaperExpression.WithType(baseType));
+                return source.UpdateShaperExpression(entityShaperExpression.WithType(baseType, Dependencies.LiftableConstantFactory));
             }
 
             var derivedType = entityType.GetDerivedTypes().Single(et => et.ClrType == resultType);
@@ -679,7 +681,7 @@ public class CosmosQueryableMethodTranslatingExpressionVisitor : QueryableMethod
                     { projectionMember, entityProjectionExpression.UpdateEntityType(derivedType) }
                 });
 
-            return source.UpdateShaperExpression(entityShaperExpression.WithType(derivedType));
+            return source.UpdateShaperExpression(entityShaperExpression.WithType(derivedType, Dependencies.LiftableConstantFactory));
         }
 
         return null;

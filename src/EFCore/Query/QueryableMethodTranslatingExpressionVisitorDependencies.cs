@@ -45,7 +45,13 @@ public sealed record QueryableMethodTranslatingExpressionVisitorDependencies
     ///     the constructor at any point in this process.
     /// </remarks>
     [EntityFrameworkInternal]
-    public QueryableMethodTranslatingExpressionVisitorDependencies()
+    public QueryableMethodTranslatingExpressionVisitorDependencies(ILiftableConstantFactory liftableConstantFactory)
     {
+        LiftableConstantFactory = liftableConstantFactory;
     }
+
+    /// <summary>
+    ///     The liftable constant factory.
+    /// </summary>
+    public ILiftableConstantFactory LiftableConstantFactory { get; init; }
 }

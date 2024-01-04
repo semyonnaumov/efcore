@@ -161,11 +161,11 @@ public partial class InMemoryQueryExpression
         }
     }
 
-    private sealed class EntityShaperNullableMarkingExpressionVisitor : ExpressionVisitor
+    private sealed class EntityShaperNullableMarkingExpressionVisitor(ILiftableConstantFactory liftableConstantFactory) : ExpressionVisitor
     {
         protected override Expression VisitExtension(Expression extensionExpression)
             => extensionExpression is StructuralTypeShaperExpression shaper
-                ? shaper.MakeNullable()
+                ? shaper.MakeNullable(liftableConstantFactory)
                 : base.VisitExtension(extensionExpression);
     }
 
@@ -192,7 +192,7 @@ public partial class InMemoryQueryExpression
                     : base.Visit(expression);
     }
 
-    private sealed class CloningExpressionVisitor : ExpressionVisitor
+    private sealed class CloningExpressionVisitor(ILiftableConstantFactory liftableConstantFactory) : ExpressionVisitor
     {
         [return: NotNullIfNotNull("expression")]
         public override Expression? Visit(Expression? expression)
@@ -200,7 +200,7 @@ public partial class InMemoryQueryExpression
             if (expression is InMemoryQueryExpression inMemoryQueryExpression)
             {
                 var clonedInMemoryQueryExpression = new InMemoryQueryExpression(
-                    inMemoryQueryExpression.ServerQueryExpression, inMemoryQueryExpression._valueBufferParameter)
+                    inMemoryQueryExpression.ServerQueryExpression, inMemoryQueryExpression._valueBufferParameter, liftableConstantFactory)
                 {
                     _groupingParameter = inMemoryQueryExpression._groupingParameter,
                     _singleResultMethodInfo = inMemoryQueryExpression._singleResultMethodInfo,
@@ -221,7 +221,7 @@ public partial class InMemoryQueryExpression
 
             if (expression is EntityProjectionExpression entityProjectionExpression)
             {
-                return entityProjectionExpression.Clone();
+                return entityProjectionExpression.Clone(liftableConstantFactory);
             }
 
             return base.Visit(expression);

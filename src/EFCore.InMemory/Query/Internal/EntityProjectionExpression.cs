@@ -154,7 +154,7 @@ public class EntityProjectionExpression : Expression, IPrintableExpression
     ///     any release. You should only use it directly in your code with extreme caution and knowing that
     ///     doing so can result in application failures when updating to a new Entity Framework Core release.
     /// </summary>
-    public virtual EntityProjectionExpression Clone()
+    public virtual EntityProjectionExpression Clone(ILiftableConstantFactory liftableConstantFactory)
     {
         var readExpressionMap = new Dictionary<IProperty, MethodCallExpression>(_readExpressionMap);
         var entityProjectionExpression = new EntityProjectionExpression(EntityType, readExpressionMap);
@@ -162,8 +162,9 @@ public class EntityProjectionExpression : Expression, IPrintableExpression
         {
             entityProjectionExpression._navigationExpressionsCache[navigation] = new StructuralTypeShaperExpression(
                 entityShaperExpression.StructuralType,
-                ((EntityProjectionExpression)entityShaperExpression.ValueBufferExpression).Clone(),
-                entityShaperExpression.IsNullable);
+                ((EntityProjectionExpression)entityShaperExpression.ValueBufferExpression).Clone(liftableConstantFactory),
+                entityShaperExpression.IsNullable,
+                liftableConstantFactory);
         }
 
         return entityProjectionExpression;

@@ -8,11 +8,11 @@ namespace Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 
 public sealed partial class SelectExpression
 {
-    private sealed class EntityShaperNullableMarkingExpressionVisitor : ExpressionVisitor
+    private sealed class EntityShaperNullableMarkingExpressionVisitor(ILiftableConstantFactory liftableConstantFactory) : ExpressionVisitor
     {
         protected override Expression VisitExtension(Expression extensionExpression)
             => extensionExpression is StructuralTypeShaperExpression shaper
-                ? shaper.MakeNullable()
+                ? shaper.MakeNullable(liftableConstantFactory)
                 : base.VisitExtension(extensionExpression);
     }
 
@@ -458,7 +458,7 @@ public sealed partial class SelectExpression
         }
     }
 
-    private sealed class TpcTableExpressionRemovingExpressionVisitor : ExpressionVisitor
+    private sealed class TpcTableExpressionRemovingExpressionVisitor(ILiftableConstantFactory liftableConstantFactory) : ExpressionVisitor
     {
         protected override Expression VisitExtension(Expression expression)
         {
@@ -564,7 +564,7 @@ public sealed partial class SelectExpression
                                 CreateColumnExpression(projection, tpcTablesExpression.Alias), projection.Alias));
                     }
 
-                    result = CreateImmutable(alias: null!, tables: [unionExpression], projections);
+                    result = CreateImmutable(alias: null!, tables: [unionExpression], projections, liftableConstantFactory: liftableConstantFactory);
                 }
 
                 if (identitySelect)

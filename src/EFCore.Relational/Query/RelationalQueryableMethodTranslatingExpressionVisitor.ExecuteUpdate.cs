@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Diagnostics.CodeAnalysis;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.EntityFrameworkCore.Query.Internal;
 using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 
@@ -227,7 +228,7 @@ public partial class RelationalQueryableMethodTranslatingExpressionVisitor
                     // duplicated for every property on the complex type.
                     // TODO: Make this work by using a common table expression (CTE)
 
-                    var nestedShaperExpression = projection.BindComplexProperty(complexProperty);
+                    var nestedShaperExpression = projection.BindComplexProperty(complexProperty, LiftableConstantFactory);
                     var nestedValueExpression = CreateComplexPropertyAccessExpression(valueExpression, complexProperty);
                     if (!TryProcessComplexType(nestedShaperExpression, nestedValueExpression))
                     {
@@ -265,8 +266,14 @@ public partial class RelationalQueryableMethodTranslatingExpressionVisitor
                                     QueryCompilationContext.QueryContextParameter,
                                     Expression.Constant(parameterExpression.Name, typeof(string)),
                                     Expression.Constant(null, typeof(List<IComplexProperty>)),
-                                    Expression.Constant(property, typeof(IProperty))),
-                                QueryCompilationContext.QueryContextParameter);
+                                    //Expression.Constant(property, typeof(IProperty))),
+                                    LiftableConstantFactory.CreateLiftableConstant(
+#pragma warning disable EF1001 // Internal EF Core API usage.
+                                        LiftableConstantExpressionHelpers.BuildMemberAccessLambdaForProperty(property),
+#pragma warning restore EF1001 // Internal EF Core API usage.
+                                        property.Name + "Property",
+                                        typeof(IProperty))),
+                                QueryCompilationContext.QueryContextParameter); 
 
                             var newParameterName =
                                 $"{ExecuteUpdateRuntimeParameterPrefix}"
@@ -283,7 +290,13 @@ public partial class RelationalQueryableMethodTranslatingExpressionVisitor
                                     QueryCompilationContext.QueryContextParameter,
                                     Expression.Constant(chainExpression.ParameterExpression.Name, typeof(string)),
                                     Expression.Constant(chainExpression.ComplexPropertyChain, typeof(List<IComplexProperty>)),
-                                    Expression.Constant(property, typeof(IProperty))),
+                                    //Expression.Constant(property, typeof(IProperty))),
+                                    LiftableConstantFactory.CreateLiftableConstant(
+#pragma warning disable EF1001 // Internal EF Core API usage.
+                                         LiftableConstantExpressionHelpers.BuildMemberAccessLambdaForProperty(property),
+#pragma warning restore EF1001 // Internal EF Core API usage.
+                                        property.Name + "Property",
+                                        typeof(IProperty))),
                                 QueryCompilationContext.QueryContextParameter);
 
                             var newParameterName =
@@ -326,7 +339,7 @@ public partial class RelationalQueryableMethodTranslatingExpressionVisitor
                                 StructuralType: IComplexType,
                                 ValueBufferExpression: StructuralTypeProjectionExpression projection
                             }
-                            => projection.BindComplexProperty(complexProperty),
+                            => projection.BindComplexProperty(complexProperty, LiftableConstantFactory),
 
                         _ => throw new UnreachableException()
                     };

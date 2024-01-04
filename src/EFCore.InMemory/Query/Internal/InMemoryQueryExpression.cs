@@ -38,12 +38,16 @@ public partial class InMemoryQueryExpression : Expression, IPrintableExpression
     private readonly List<Expression> _clientProjections = [];
     private readonly List<Expression> _projectionMappingExpressions = [];
 
+    private readonly ILiftableConstantFactory _liftableConstantFactory;
+
     private InMemoryQueryExpression(
         Expression serverQueryExpression,
-        ParameterExpression valueBufferParameter)
+        ParameterExpression valueBufferParameter,
+        ILiftableConstantFactory liftableConstantFactory)
     {
         ServerQueryExpression = serverQueryExpression;
         _valueBufferParameter = valueBufferParameter;
+        _liftableConstantFactory = liftableConstantFactory;
     }
 
     /// <summary>
@@ -52,9 +56,10 @@ public partial class InMemoryQueryExpression : Expression, IPrintableExpression
     ///     any release. You should only use it directly in your code with extreme caution and knowing that
     ///     doing so can result in application failures when updating to a new Entity Framework Core release.
     /// </summary>
-    public InMemoryQueryExpression(IEntityType entityType)
+    public InMemoryQueryExpression(IEntityType entityType, ILiftableConstantFactory liftableConstantFactory)
     {
         _valueBufferParameter = Parameter(typeof(ValueBuffer), "valueBuffer");
+        _liftableConstantFactory = liftableConstantFactory;
         ServerQueryExpression = new InMemoryTableExpression(entityType);
         var propertyExpressionsMap = new Dictionary<IProperty, MethodCallExpression>();
         var selectorExpressions = new List<Expression>();
@@ -595,7 +600,7 @@ public partial class InMemoryQueryExpression : Expression, IPrintableExpression
             keySelector,
             selector);
 
-        var clonedInMemoryQueryExpression = Clone();
+        var clonedInMemoryQueryExpression = Clone(_liftableConstantFactory);
         clonedInMemoryQueryExpression.UpdateServerQueryExpression(_groupingParameter);
         clonedInMemoryQueryExpression._groupingParameter = null;
 
@@ -617,10 +622,12 @@ public partial class InMemoryQueryExpression : Expression, IPrintableExpression
         LambdaExpression outerKeySelector,
         LambdaExpression innerKeySelector,
         Expression outerShaperExpression,
-        Expression innerShaperExpression)
+        Expression innerShaperExpression,
+        ILiftableConstantFactory liftableConstantFactory)
         => AddJoin(
             innerQueryExpression, outerKeySelector, innerKeySelector, outerShaperExpression, innerShaperExpression,
-            innerNullable: false);
+            innerNullable: false,
+            liftableConstantFactory: liftableConstantFactory);
 
     /// <summary>
     ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
@@ -633,10 +640,12 @@ public partial class InMemoryQueryExpression : Expression, IPrintableExpression
         LambdaExpression outerKeySelector,
         LambdaExpression innerKeySelector,
         Expression outerShaperExpression,
-        Expression innerShaperExpression)
+        Expression innerShaperExpression,
+        ILiftableConstantFactory liftableConstantFactory)
         => AddJoin(
             innerQueryExpression, outerKeySelector, innerKeySelector, outerShaperExpression, innerShaperExpression,
-            innerNullable: true);
+            innerNullable: true,
+            liftableConstantFactory: liftableConstantFactory);
 
     /// <summary>
     ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
@@ -648,8 +657,9 @@ public partial class InMemoryQueryExpression : Expression, IPrintableExpression
         InMemoryQueryExpression innerQueryExpression,
         Expression outerShaperExpression,
         Expression innerShaperExpression,
-        bool innerNullable)
-        => AddJoin(innerQueryExpression, null, null, outerShaperExpression, innerShaperExpression, innerNullable);
+        bool innerNullable,
+        ILiftableConstantFactory liftableConstantFactory)
+        => AddJoin(innerQueryExpression, null, null, outerShaperExpression, innerShaperExpression, innerNullable, liftableConstantFactory);
 
     /// <summary>
     ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
@@ -662,7 +672,8 @@ public partial class InMemoryQueryExpression : Expression, IPrintableExpression
         INavigation navigation,
         InMemoryQueryExpression innerQueryExpression,
         LambdaExpression outerKeySelector,
-        LambdaExpression innerKeySelector)
+        LambdaExpression innerKeySelector,
+        ILiftableConstantFactory liftableConstantFactory)
     {
         Check.DebugAssert(_clientProjections.Count == 0, "Cannot expand weak entity navigation after client projection yet.");
         var outerParameter = Parameter(typeof(ValueBuffer), "outer");
@@ -710,7 +721,7 @@ public partial class InMemoryQueryExpression : Expression, IPrintableExpression
             Constant(new ValueBuffer(Enumerable.Repeat((object?)null, selectorExpressions.Count - outerIndex).ToArray())),
             Constant(null, typeof(IEqualityComparer<>).MakeGenericType(outerKeySelector.ReturnType)));
 
-        var entityShaper = new StructuralTypeShaperExpression(innerEntityProjection.EntityType, innerEntityProjection, nullable: true);
+        var entityShaper = new StructuralTypeShaperExpression(innerEntityProjection.EntityType, innerEntityProjection, nullable: true, liftableConstantFactory: liftableConstantFactory);
         entityProjectionExpression.AddNavigationBinding(navigation, entityShaper);
 
         return entityShaper;
@@ -724,7 +735,7 @@ public partial class InMemoryQueryExpression : Expression, IPrintableExpression
     /// </summary>
     public virtual ShapedQueryExpression Clone(Expression shaperExpression)
     {
-        var clonedInMemoryQueryExpression = Clone();
+        var clonedInMemoryQueryExpression = Clone(_liftableConstantFactory);
 
         return new ShapedQueryExpression(
             clonedInMemoryQueryExpression,
@@ -829,9 +840,9 @@ public partial class InMemoryQueryExpression : Expression, IPrintableExpression
         }
     }
 
-    private InMemoryQueryExpression Clone()
+    private InMemoryQueryExpression Clone(ILiftableConstantFactory liftableConstantFactory)
     {
-        _cloningExpressionVisitor ??= new CloningExpressionVisitor();
+        _cloningExpressionVisitor ??= new CloningExpressionVisitor(liftableConstantFactory);
 
         return (InMemoryQueryExpression)_cloningExpressionVisitor.Visit(this);
     }
@@ -902,7 +913,8 @@ public partial class InMemoryQueryExpression : Expression, IPrintableExpression
         LambdaExpression? innerKeySelector,
         Expression outerShaperExpression,
         Expression innerShaperExpression,
-        bool innerNullable)
+        bool innerNullable,
+        ILiftableConstantFactory liftableConstantFactory)
     {
         var transparentIdentifierType = TransparentIdentifierFactory.Create(outerShaperExpression.Type, innerShaperExpression.Type);
         var outerMemberInfo = transparentIdentifierType.GetTypeInfo().GetDeclaredField("Outer")!;
@@ -1112,7 +1124,7 @@ public partial class InMemoryQueryExpression : Expression, IPrintableExpression
 
         if (innerNullable)
         {
-            innerShaperExpression = new EntityShaperNullableMarkingExpressionVisitor().Visit(innerShaperExpression);
+            innerShaperExpression = new EntityShaperNullableMarkingExpressionVisitor(liftableConstantFactory).Visit(innerShaperExpression);
         }
 
         return New(

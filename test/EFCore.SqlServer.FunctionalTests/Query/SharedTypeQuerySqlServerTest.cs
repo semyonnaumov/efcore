@@ -17,7 +17,7 @@ public class SharedTypeQuerySqlServerTest : SharedTypeQueryRelationalTestBase
         AssertSql(
             """
 SELECT [v].[Value]
-FROM [ViewQuery24601] AS [v]
+FROM [ViewQuery] AS [v]
 WHERE EXISTS (
     SELECT 1
     FROM [STET] AS [s]
@@ -32,7 +32,7 @@ WHERE EXISTS (
         AssertSql(
             """
 SELECT [v].[Value]
-FROM [ViewQuery24601] AS [v]
+FROM [ViewQuery] AS [v]
 WHERE EXISTS (
     SELECT 1
     FROM (

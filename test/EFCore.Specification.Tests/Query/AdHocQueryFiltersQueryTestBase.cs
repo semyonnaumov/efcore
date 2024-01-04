@@ -21,7 +21,7 @@ public abstract class AdHocQueryFiltersQueryTestBase : NonSharedModelTestBase
         Assert.Single(result);
     }
 
-    protected class Context10295(DbContextOptions options) : DbContext(options)
+    public class Context10295(DbContextOptions options) : DbContext(options)
     {
         private readonly List<int> _ids = [1, 7];
 
@@ -66,7 +66,7 @@ public abstract class AdHocQueryFiltersQueryTestBase : NonSharedModelTestBase
         }
     }
 
-    protected class FilterContextBase10301(DbContextOptions options) : DbContext(options)
+    public class FilterContextBase10301(DbContextOptions options) : DbContext(options)
     {
         public int Tenant { get; set; }
 
@@ -109,7 +109,7 @@ public abstract class AdHocQueryFiltersQueryTestBase : NonSharedModelTestBase
         Assert.False(result);
     }
 
-    protected class Context12170(DbContextOptions options) : DbContext(options)
+    public class Context12170(DbContextOptions options) : DbContext(options)
     {
         public virtual DbSet<Definition12170> Definitions { get; set; }
         public virtual DbSet<DefinitionHistory12170> DefinitionHistories { get; set; }
@@ -177,7 +177,7 @@ public abstract class AdHocQueryFiltersQueryTestBase : NonSharedModelTestBase
                 }).Single(p => p.Id == 1);
     }
 
-    protected class Context13517(DbContextOptions options) : DbContext(options)
+    public class Context13517(DbContextOptions options) : DbContext(options)
     {
         public DbSet<Entity13517> Entities { get; set; }
         public DbSet<RefEntity13517> RefEntities { get; set; }
@@ -242,7 +242,7 @@ public abstract class AdHocQueryFiltersQueryTestBase : NonSharedModelTestBase
         }
     }
 
-    protected class Context17253(DbContextOptions options) : DbContext(options)
+    public class Context17253(DbContextOptions options) : DbContext(options)
     {
         public DbSet<EntityWithQueryFilterSelfReference17253> EntitiesWithQueryFilterSelfReference { get; set; }
         public DbSet<EntityReferencingEntityWithQueryFilterSelfReference17253> EntitiesReferencingEntityWithQueryFilterSelfReference { get; set; }
@@ -326,7 +326,7 @@ public abstract class AdHocQueryFiltersQueryTestBase : NonSharedModelTestBase
         Assert.True(query2.All(x => x.TenantId == 2));
     }
 
-    protected class Context18510(DbContextOptions options) : DbContext(options)
+    public class Context18510(DbContextOptions options) : DbContext(options)
     {
         public DbSet<MyEntity18510> Entities { get; set; }
 
@@ -388,7 +388,7 @@ public abstract class AdHocQueryFiltersQueryTestBase : NonSharedModelTestBase
         var people = context.People.ToList();
     }
 
-    protected class Context18759(DbContextOptions options) : DbContext(options)
+    public class Context18759(DbContextOptions options) : DbContext(options)
     {
         public DbSet<Person18759> People { get; set; }
 
@@ -446,7 +446,7 @@ public abstract class AdHocQueryFiltersQueryTestBase : NonSharedModelTestBase
         }
     }
 
-    protected class Context19708(DbContextOptions options) : DbContext(options)
+    public class Context19708(DbContextOptions options) : DbContext(options)
     {
         public DbSet<Customer19708> Customers { get; set; }
         public DbSet<CustomerMembership19708> CustomerMemberships { get; set; }
@@ -556,7 +556,7 @@ public abstract class AdHocQueryFiltersQueryTestBase : NonSharedModelTestBase
         Assert.Single(suppliers.Where(e => e.Location != null));
     }
 
-    protected class Context26428(DbContextOptions options) : DbContext(options)
+    public class Context26428(DbContextOptions options) : DbContext(options)
     {
         public DbSet<Supplier> Suppliers
             => Set<Supplier>();
@@ -598,21 +598,21 @@ public abstract class AdHocQueryFiltersQueryTestBase : NonSharedModelTestBase
 
             SaveChanges();
         }
-    }
 
-    protected class Supplier
-    {
-        public Guid SupplierId { get; set; }
-        public string Name { get; set; } = null!;
-        public Location? Location { get; set; }
-        public bool IsDeleted { get; set; }
-    }
+        public class Supplier
+        {
+            public Guid SupplierId { get; set; }
+            public string Name { get; set; } = null!;
+            public Location? Location { get; set; }
+            public bool IsDeleted { get; set; }
+        }
 
-    protected class Location
-    {
-        public Guid LocationId { get; set; }
-        public string Address { get; set; } = null!;
-        public bool IsDeleted { get; set; }
+        public class Location
+        {
+            public Guid LocationId { get; set; }
+            public string Address { get; set; } = null!;
+            public bool IsDeleted { get; set; }
+        }
     }
 
 #nullable disable
@@ -675,7 +675,7 @@ public abstract class AdHocQueryFiltersQueryTestBase : NonSharedModelTestBase
             : query.ToList();
     }
 
-    protected class Context27163(DbContextOptions options) : DbContext(options)
+    public class Context27163(DbContextOptions options) : DbContext(options)
     {
         public DbSet<Parent> Parents { get; set; }
 
@@ -684,41 +684,41 @@ public abstract class AdHocQueryFiltersQueryTestBase : NonSharedModelTestBase
             modelBuilder.Entity<ChildFilter1>().HasQueryFilter(e => e.Filter1 == "Filter1");
             modelBuilder.Entity<ChildFilter2>().HasQueryFilter(e => e.Filter2 == "Filter2");
         }
-    }
 
-    public class Parent
-    {
-        public int Id { get; set; }
-        public Child1 Child1 { get; set; }
-        public Child2 Child2 { get; set; }
-        public ChildFilter1 ChildFilter1 { get; set; }
-        public ChildFilter2 ChildFilter2 { get; set; }
-    }
+        public class Parent
+        {
+            public int Id { get; set; }
+            public Child1 Child1 { get; set; }
+            public Child2 Child2 { get; set; }
+            public ChildFilter1 ChildFilter1 { get; set; }
+            public ChildFilter2 ChildFilter2 { get; set; }
+        }
 
-    public class Child1
-    {
-        public int Id { get; set; }
-        public string Value1 { get; set; }
-    }
+        public class Child1
+        {
+            public int Id { get; set; }
+            public string Value1 { get; set; }
+        }
 
-    public class Child2
-    {
-        public int Id { get; set; }
-        public string Value2 { get; set; }
-    }
+        public class Child2
+        {
+            public int Id { get; set; }
+            public string Value2 { get; set; }
+        }
 
-    public class ChildFilter1
-    {
-        public int Id { get; set; }
-        public string Filter1 { get; set; }
-        public string Value1 { get; set; }
-    }
+        public class ChildFilter1
+        {
+            public int Id { get; set; }
+            public string Filter1 { get; set; }
+            public string Value1 { get; set; }
+        }
 
-    public class ChildFilter2
-    {
-        public int Id { get; set; }
-        public string Filter2 { get; set; }
-        public string Value2 { get; set; }
+        public class ChildFilter2
+        {
+            public int Id { get; set; }
+            public string Filter2 { get; set; }
+            public string Value2 { get; set; }
+        }
     }
 
     #endregion

@@ -51,12 +51,18 @@ public sealed record ShapedQueryCompilingExpressionVisitorDependencies
         IEntityMaterializerSource entityMaterializerSource,
         ITypeMappingSource typeMappingSource,
         IMemoryCache memoryCache,
-        ICoreSingletonOptions coreSingletonOptions)
+        ICoreSingletonOptions coreSingletonOptions,
+        IModel model,
+        ILiftableConstantFactory liftableConstantFactory,
+        IDiagnosticsLogger<DbLoggerCategory.Query> queryLogger)
     {
         EntityMaterializerSource = entityMaterializerSource;
         TypeMappingSource = typeMappingSource;
         MemoryCache = memoryCache;
         CoreSingletonOptions = coreSingletonOptions;
+        Model = model;
+        LiftableConstantFactory = liftableConstantFactory;
+        QueryLogger = queryLogger;
     }
 
     /// <summary>
@@ -78,4 +84,19 @@ public sealed record ShapedQueryCompilingExpressionVisitorDependencies
     ///     Core singleton options.
     /// </summary>
     public ICoreSingletonOptions CoreSingletonOptions { get; init; }
+
+    /// <summary>
+    ///     The model.
+    /// </summary>
+    public IModel Model { get; init; }
+
+    /// <summary>
+    ///     The liftable constant factory.
+    /// </summary>
+    public ILiftableConstantFactory LiftableConstantFactory { get; init; }
+
+    /// <summary>
+    ///     The query logger.
+    /// </summary>
+    public IDiagnosticsLogger<DbLoggerCategory.Query> QueryLogger { get; init; }
 }

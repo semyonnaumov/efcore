@@ -40,7 +40,7 @@ ORDER BY [u].[Id] DESC
 """);
     }
 
-    protected class Context22054(DbContextOptions options) : DbContext(options)
+    public class Context22054(DbContextOptions options) : DbContext(options)
     {
         protected override void OnModelCreating(ModelBuilder modelBuilder)
             => modelBuilder.Entity<User22054>(
@@ -165,7 +165,7 @@ ORDER BY [s1].[Id], [s1].[MasterTrunk22340Id], [s1].[MasterTrunk22340Id0], [f0].
 """);
     }
 
-    protected class Context22340(DbContextOptions options) : DbContext(options)
+    public class Context22340(DbContextOptions options) : DbContext(options)
     {
         public DbSet<MasterTrunk22340> MasterTrunk { get; set; }
 
@@ -305,7 +305,7 @@ ORDER BY [s1].[Id], [s1].[SecondOwner23211Id]
         }
     }
 
-    protected class Context23211(DbContextOptions options) : DbContext(options)
+    public class Context23211(DbContextOptions options) : DbContext(options)
     {
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -601,7 +601,7 @@ LEFT JOIN (
 @__id_0='6c1ae3e5-30b9-4c77-8d98-f02075974a0a'
 
 SELECT TOP(1) [l].[Id]
-FROM [Location25680] AS [l]
+FROM [Location] AS [l]
 WHERE [l].[Id] = @__id_0
 ORDER BY [l].[Id]
 """);

@@ -44,7 +44,7 @@ public abstract class AdHocNavigationsQueryRelationalTestBase : AdHocNavigations
         }
     }
 
-    private class Context21803(DbContextOptions options) : DbContext(options)
+    public class Context21803(DbContextOptions options) : DbContext(options)
     {
         public DbSet<AppEntity> Entities { get; set; }
 

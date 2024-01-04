@@ -23,8 +23,15 @@ public class StructuralTypeShaperExpression : Expression, IPrintableExpression
     private static readonly MethodInfo CreateUnableToDiscriminateExceptionMethod
         = typeof(StructuralTypeShaperExpression).GetTypeInfo().GetDeclaredMethod(nameof(CreateUnableToDiscriminateException))!;
 
+    /// <summary>
+    ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+    ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+    ///     any release. You should only use it directly in your code with extreme caution and knowing that
+    ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+    /// </summary>
     [UsedImplicitly]
-    private static Exception CreateUnableToDiscriminateException(ITypeBase type, object discriminator)
+    [EntityFrameworkInternal]
+    public static Exception CreateUnableToDiscriminateException(ITypeBase type, object discriminator)
         => new InvalidOperationException(CoreStrings.UnableToDiscriminate(type.DisplayName(), discriminator.ToString()));
 
     /// <summary>
@@ -80,7 +87,7 @@ public class StructuralTypeShaperExpression : Expression, IPrintableExpression
     /// <param name="type">The entity type for which materialization was requested.</param>
     /// <param name="discriminatorValue">The expression containing value of discriminator.</param>
     /// <returns>
-    ///     An expression of <see cref="Func{ValueBuffer, IEntityType}" /> representing materilization condition for the entity type.
+    ///     An expression of <see cref="Func{ValueBuffer, IEntityType}" /> representing materialization condition for the entity type.
     /// </returns>
     protected static Expression CreateUnableToDiscriminateExceptionExpression(ITypeBase type, Expression discriminatorValue)
         => Block(

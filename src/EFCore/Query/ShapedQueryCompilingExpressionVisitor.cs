@@ -4,6 +4,7 @@
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore.ChangeTracking.Internal;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using Microsoft.EntityFrameworkCore.Query.Internal;
 using static System.Linq.Expressions.Expression;
 
 namespace Microsoft.EntityFrameworkCore.Query;
@@ -55,6 +56,7 @@ public abstract class ShapedQueryCompilingExpressionVisitor : ExpressionVisitor
         _entityMaterializerInjectingExpressionVisitor =
             new EntityMaterializerInjectingExpressionVisitor(
                 dependencies.EntityMaterializerSource,
+                dependencies.LiftableConstantFactory,
                 queryCompilationContext.QueryTrackingBehavior);
 
         _constantVerifyingExpressionVisitor = new ConstantVerifyingExpressionVisitor(dependencies.TypeMappingSource);
@@ -128,7 +130,14 @@ public abstract class ShapedQueryCompilingExpressionVisitor : ExpressionVisitor
             .GetDeclaredMethods(nameof(SingleOrDefaultAsync))
             .Single(mi => mi.GetParameters().Length == 2);
 
-    private static async Task<TSource> SingleAsync<TSource>(
+    /// <summary>
+    ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+    ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+    ///     any release. You should only use it directly in your code with extreme caution and knowing that
+    ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+    /// </summary>
+    [EntityFrameworkInternal]
+    public static async Task<TSource> SingleAsync<TSource>(
         IAsyncEnumerable<TSource> asyncEnumerable,
         CancellationToken cancellationToken = default)
     {
@@ -150,7 +159,14 @@ public abstract class ShapedQueryCompilingExpressionVisitor : ExpressionVisitor
         return result;
     }
 
-    private static async Task<TSource?> SingleOrDefaultAsync<TSource>(
+    /// <summary>
+    ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+    ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+    ///     any release. You should only use it directly in your code with extreme caution and knowing that
+    ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+    /// </summary>
+    [EntityFrameworkInternal]
+    public static async Task<TSource?> SingleOrDefaultAsync<TSource>(
         IAsyncEnumerable<TSource> asyncEnumerable,
         CancellationToken cancellationToken = default)
     {
@@ -198,6 +214,35 @@ public abstract class ShapedQueryCompilingExpressionVisitor : ExpressionVisitor
     /// <param name="expression">An expression to verify.</param>
     protected virtual void VerifyNoClientConstant(Expression expression)
         => _constantVerifyingExpressionVisitor.Visit(expression);
+
+    /// <summary>
+    ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+    ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+    ///     any release. You should only use it directly in your code with extreme caution and knowing that
+    ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+    /// </summary>
+    [UsedImplicitly]
+    [EntityFrameworkInternal]
+    public static Exception CreateNullKeyValueInNoTrackingQuery(
+        IEntityType entityType,
+        IReadOnlyList<IProperty> properties,
+        object?[] keyValues)
+    {
+        var index = -1;
+        for (var i = 0; i < keyValues.Length; i++)
+        {
+            if (keyValues[i] == null)
+            {
+                index = i;
+                break;
+            }
+        }
+
+        var property = properties[index];
+
+        throw new InvalidOperationException(
+            CoreStrings.InvalidKeyValue(entityType.DisplayName(), property.Name));
+    }
 
     private sealed class ConstantVerifyingExpressionVisitor : ExpressionVisitor
     {
@@ -289,23 +334,27 @@ public abstract class ShapedQueryCompilingExpressionVisitor : ExpressionVisitor
                 nameof(QueryContext.StartTracking), [typeof(IEntityType), typeof(object), typeof(ISnapshot).MakeByRefType()])!;
 
         private static readonly MethodInfo CreateNullKeyValueInNoTrackingQueryMethod
-            = typeof(EntityMaterializerInjectingExpressionVisitor)
+            = typeof(ShapedQueryCompilingExpressionVisitor)
                 .GetTypeInfo().GetDeclaredMethod(nameof(CreateNullKeyValueInNoTrackingQuery))!;
 
         private readonly IEntityMaterializerSource _entityMaterializerSource;
+        private readonly ILiftableConstantFactory _liftableConstantFactory;
         private readonly QueryTrackingBehavior _queryTrackingBehavior;
         private readonly bool _queryStateManager;
         private readonly ISet<IEntityType> _visitedEntityTypes = new HashSet<IEntityType>();
+        private readonly MaterializationConditionConstantLifter _materializationConditionConstantLifter;
         private int _currentEntityIndex;
 
         public EntityMaterializerInjectingExpressionVisitor(
             IEntityMaterializerSource entityMaterializerSource,
+            ILiftableConstantFactory liftableConstantFactory,
             QueryTrackingBehavior queryTrackingBehavior)
         {
             _entityMaterializerSource = entityMaterializerSource;
+            _liftableConstantFactory = liftableConstantFactory;
             _queryTrackingBehavior = queryTrackingBehavior;
-            _queryStateManager =
-                queryTrackingBehavior is QueryTrackingBehavior.TrackAll or QueryTrackingBehavior.NoTrackingWithIdentityResolution;
+            _queryStateManager = queryTrackingBehavior is QueryTrackingBehavior.TrackAll or QueryTrackingBehavior.NoTrackingWithIdentityResolution;
+            _materializationConditionConstantLifter = new(liftableConstantFactory);
         }
 
         public Expression Inject(Expression expression)
@@ -384,7 +433,12 @@ public abstract class ShapedQueryCompilingExpressionVisitor : ExpressionVisitor
                         Call(
                             QueryCompilationContext.QueryContextParameter,
                             TryGetEntryMethodInfo,
-                            Constant(primaryKey),
+                            // Constant(primaryKey),
+                            _liftableConstantFactory.CreateLiftableConstant(
+                                // TODO: Owned, STET
+                                c => c.Dependencies.Model.FindEntityType(typeBase.Name)!.FindPrimaryKey()!,
+                                typeBase.Name + "Key",
+                                typeof(IKey)),
                             NewArrayInit(
                                 typeof(object),
                                 primaryKey.Properties
@@ -454,8 +508,16 @@ public abstract class ShapedQueryCompilingExpressionVisitor : ExpressionVisitor
                                                     typeof(object), p.GetIndex(), p)))),
                                     Call(
                                         CreateNullKeyValueInNoTrackingQueryMethod,
-                                        Constant(typeBase),
-                                        Constant(primaryKey.Properties),
+                                        //Constant(typeBase),
+                                        _liftableConstantFactory.CreateLiftableConstant(
+                                            LiftableConstantExpressionHelpers.BuildMemberAccessLambdaForEntityOrComplexType(typeBase),
+                                            typeBase.Name + "EntityType",
+                                            typeof(IEntityType)),
+                                        //Constant(primaryKey.Properties),
+                                        _liftableConstantFactory.CreateLiftableConstant(
+                                            x => x.Dependencies.Model.FindEntityType(typeBase.Name)!.FindPrimaryKey()!.Properties,
+                                            typeBase.Name + "PrimaryKeyProperties",
+                                            typeof(IReadOnlyList<IProperty>)),
                                         keyValuesVariable))));
                     }
                 }
@@ -470,6 +532,23 @@ public abstract class ShapedQueryCompilingExpressionVisitor : ExpressionVisitor
 
             expressions.Add(instanceVariable);
             return Block(variables, expressions);
+        }
+
+        private sealed class MaterializationConditionConstantLifter(ILiftableConstantFactory liftableConstantFactory) : ExpressionVisitor
+        {
+            protected override Expression VisitConstant(ConstantExpression constantExpression)
+                => constantExpression switch
+                {
+                    { Value: IEntityType entityTypeValue } => liftableConstantFactory.CreateLiftableConstant(
+                        LiftableConstantExpressionHelpers.BuildMemberAccessLambdaForEntityOrComplexType(entityTypeValue),
+                        entityTypeValue.Name + "EntityType",
+                        constantExpression.Type),
+                    { Value: IComplexType complexTypeValue } => liftableConstantFactory.CreateLiftableConstant(
+                        LiftableConstantExpressionHelpers.BuildMemberAccessLambdaForEntityOrComplexType(complexTypeValue),
+                        complexTypeValue.Name + "ComplexType",
+                        constantExpression.Type),
+                    _ => base.VisitConstant(constantExpression)
+                };
         }
 
         private Expression MaterializeEntity(
@@ -491,18 +570,24 @@ public abstract class ShapedQueryCompilingExpressionVisitor : ExpressionVisitor
             expressions.Add(
                 Assign(
                     shadowValuesVariable,
-                    Constant(Snapshot.Empty)));
+                    // Expression.Constant(Snapshot.Empty),
+                    _liftableConstantFactory.CreateLiftableConstant(
+                        _ => Snapshot.Empty,
+                        "emptySnapshot",
+                        typeof(Snapshot))));
 
             var returnType = typeBase.ClrType;
             var valueBufferExpression = Call(materializationContextVariable, MaterializationContext.GetValueBufferMethod);
+
+            var materializationConditionBody = ReplacingExpressionVisitor.Replace(
+                shaper.MaterializationCondition.Parameters[0],
+                valueBufferExpression,
+                shaper.MaterializationCondition.Body);
+
+            materializationConditionBody = _materializationConditionConstantLifter.Visit(materializationConditionBody);
+
             var expressionContext = (returnType, materializationContextVariable, concreteEntityTypeVariable, shadowValuesVariable);
-            expressions.Add(
-                Assign(
-                    concreteEntityTypeVariable,
-                    ReplacingExpressionVisitor.Replace(
-                        shaper.MaterializationCondition.Parameters[0],
-                        valueBufferExpression,
-                        shaper.MaterializationCondition.Body)));
+            expressions.Add(Assign(concreteEntityTypeVariable, materializationConditionBody));
 
             var (primaryKey, concreteEntityTypes) = typeBase is IEntityType entityType
                 ? (entityType.FindPrimaryKey(), entityType.GetConcreteDerivedTypesInclusive().Cast<ITypeBase>().ToArray())
@@ -511,9 +596,14 @@ public abstract class ShapedQueryCompilingExpressionVisitor : ExpressionVisitor
             var switchCases = new SwitchCase[concreteEntityTypes.Length];
             for (var i = 0; i < concreteEntityTypes.Length; i++)
             {
+                var concreteEntityType = concreteEntityTypes[i];
                 switchCases[i] = SwitchCase(
                     CreateFullMaterializeExpression(concreteEntityTypes[i], expressionContext),
-                    Constant(concreteEntityTypes[i], typeBase is IEntityType ? typeof(IEntityType) : typeof(IComplexType)));
+                    // Constant(concreteEntityTypes[i], typeof(IEntityType))
+                    _liftableConstantFactory.CreateLiftableConstant(
+                        LiftableConstantExpressionHelpers.BuildMemberAccessLambdaForEntityOrComplexType(concreteEntityType),
+                        concreteEntityType.Name + (typeBase is IEntityType ? "EntityType" : "ComplexType"),
+                        typeBase is IEntityType ? typeof(IEntityType) : typeof(IComplexType)));
             }
 
             var materializationExpression = Switch(
@@ -604,28 +694,6 @@ public abstract class ShapedQueryCompilingExpressionVisitor : ExpressionVisitor
             blockExpressions.Add(materializer);
 
             return Block(blockExpressions);
-        }
-
-        [UsedImplicitly]
-        private static Exception CreateNullKeyValueInNoTrackingQuery(
-            IEntityType entityType,
-            IReadOnlyList<IProperty> properties,
-            object?[] keyValues)
-        {
-            var index = -1;
-            for (var i = 0; i < keyValues.Length; i++)
-            {
-                if (keyValues[i] == null)
-                {
-                    index = i;
-                    break;
-                }
-            }
-
-            var property = properties[index];
-
-            throw new InvalidOperationException(
-                CoreStrings.InvalidKeyValue(entityType.DisplayName(), property.Name));
         }
     }
 }

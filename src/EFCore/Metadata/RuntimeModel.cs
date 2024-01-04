@@ -226,6 +226,13 @@ public class RuntimeModel : RuntimeAnnotatableBase, IRuntimeModel
             ? entityType
             : null;
 
+    /// <summary>
+    /// TODO
+    /// </summary>
+    [EntityFrameworkInternal]
+    public virtual RuntimeEntityType? FindAdHocEntityType(string typeName)
+        => _adHocEntityTypes.SingleOrDefault(x => x.Value.Name == typeName).Value;
+
     private RuntimeEntityType? FindEntityType(Type type)
         => FindEntityType(GetDisplayName(type));
 

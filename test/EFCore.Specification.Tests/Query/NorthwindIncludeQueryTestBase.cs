@@ -1269,7 +1269,7 @@ public abstract class NorthwindIncludeQueryTestBase<TFixture> : QueryTestBase<TF
                   orderby e.EmployeeID
                   select e.Manager != null ? "Employee " + ClientMethod(e) : "");
 
-    private static string ClientMethod(Employee e)
+    public static string ClientMethod(Employee e)
         => e.FirstName + " reports to " + e.Manager.FirstName;
 
     // Issue#18672

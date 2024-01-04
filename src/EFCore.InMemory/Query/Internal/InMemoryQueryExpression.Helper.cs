@@ -161,7 +161,7 @@ public partial class InMemoryQueryExpression
         }
     }
 
-    private sealed class EntityShaperNullableMarkingExpressionVisitor : ExpressionVisitor
+    private sealed class EntityShaperNullableMarkingExpressionVisitor() : ExpressionVisitor
     {
         protected override Expression VisitExtension(Expression extensionExpression)
             => extensionExpression is StructuralTypeShaperExpression shaper
@@ -192,7 +192,7 @@ public partial class InMemoryQueryExpression
                     : base.Visit(expression);
     }
 
-    private sealed class CloningExpressionVisitor : ExpressionVisitor
+    private sealed class CloningExpressionVisitor() : ExpressionVisitor
     {
         [return: NotNullIfNotNull("expression")]
         public override Expression? Visit(Expression? expression)

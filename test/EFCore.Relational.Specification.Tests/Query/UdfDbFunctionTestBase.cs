@@ -104,7 +104,7 @@ public abstract class UdfDbFunctionTestBase<TFixture> : IClassFixture<TFixture>
         public string LastName { get; set; }
     }
 
-    protected class UDFSqlContext(DbContextOptions options) : PoolableDbContext(options)
+    public class UDFSqlContext(DbContextOptions options) : PoolableDbContext(options)
     {
         #region DbSets
 

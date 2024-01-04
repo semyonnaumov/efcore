@@ -1249,7 +1249,7 @@ public abstract class NorthwindSelectQueryTestBase<TFixture> : QueryTestBase<TFi
             async,
             ss => ss.Set<Customer>().Where(c => c.CustomerID.StartsWith("A")).Select(c => ClientMethod(c)));
 
-    private static string ClientMethod(Customer c)
+    public static string ClientMethod(Customer c)
         => c.CustomerID;
 
     [ConditionalTheory]
@@ -1604,7 +1604,7 @@ public abstract class NorthwindSelectQueryTestBase<TFixture> : QueryTestBase<TFi
             elementSorter: e => e.Customer.CustomerID,
             elementAsserter: (e, a) => Assert.Equal(e.Customer, a.Customer));
 
-    private class CustomerWrapper(Customer customer)
+    public class CustomerWrapper(Customer customer)
     {
         public string City { get; set; }
         public Customer Customer { get; } = customer;
@@ -1681,7 +1681,7 @@ public abstract class NorthwindSelectQueryTestBase<TFixture> : QueryTestBase<TFi
                 Assert.Equal(e.Name, a.Name);
             });
 
-    private class IdName<T>
+    public class IdName<T>
     {
         public T Id { get; set; }
         public string Name { get; set; }
@@ -2084,7 +2084,7 @@ public abstract class NorthwindSelectQueryTestBase<TFixture> : QueryTestBase<TFi
                 AssertEqual(e.OrderDate2, a.OrderDate2);
             });
 
-    private static string ClientMethod(string s)
+    public static string ClientMethod(string s)
         => s;
 
     [ConditionalTheory]
@@ -2252,7 +2252,7 @@ public abstract class NorthwindSelectQueryTestBase<TFixture> : QueryTestBase<TFi
                 Assert.Equal(e.OrderCount, a.OrderCount);
             });
 
-    private class CustomerDetailsWithCount(string customerID, string city, List<OrderInfo> orderInfos, int orderCount)
+    public class CustomerDetailsWithCount(string customerID, string city, List<OrderInfo> orderInfos, int orderCount)
     {
         public string CustomerID { get; } = customerID;
         public string City { get; } = city;
@@ -2260,7 +2260,7 @@ public abstract class NorthwindSelectQueryTestBase<TFixture> : QueryTestBase<TFi
         public int OrderCount { get; } = orderCount;
     }
 
-    private class OrderInfo(int orderID, DateTime? orderDate)
+    public class OrderInfo(int orderID, DateTime? orderDate)
     {
         public int OrderID { get; } = orderID;
         public DateTime? OrderDate { get; } = orderDate;
@@ -2315,7 +2315,7 @@ public abstract class NorthwindSelectQueryTestBase<TFixture> : QueryTestBase<TFi
                 AssertCollection(e.Collection, a.Collection, ordered: true);
             });
 
-    private class OrderDto;
+    public class OrderDto;
 
     [ConditionalTheory]
     [MemberData(nameof(IsAsyncData))]

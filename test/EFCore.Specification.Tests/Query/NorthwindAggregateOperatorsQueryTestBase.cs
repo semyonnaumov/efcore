@@ -2072,12 +2072,12 @@ public abstract class NorthwindAggregateOperatorsQueryTestBase<TFixture> : Query
             ss => ss.Set<OrderDetail>(),
             x => (decimal)x.Discount);
 
-    private class CustomerIdDto
+    public class CustomerIdDto
     {
         public string CustomerId { get; set; }
     }
 
-    private class CustomerIdAndCityDto : CustomerIdDto
+    public class CustomerIdAndCityDto : CustomerIdDto
     {
         public string City { get; set; }
     }

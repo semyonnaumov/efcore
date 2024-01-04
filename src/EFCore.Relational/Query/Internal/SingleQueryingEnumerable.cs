@@ -7,6 +7,34 @@ using Microsoft.EntityFrameworkCore.Internal;
 namespace Microsoft.EntityFrameworkCore.Query.Internal;
 
 /// <summary>
+/// TODO
+/// </summary>
+public static class SingleQueryingEnumerable
+{
+    /// <summary>
+    /// TODO
+    /// </summary>
+    public static SingleQueryingEnumerable<T> Create<T>(
+        RelationalQueryContext relationalQueryContext,
+        RelationalCommandCache relationalCommandCache,
+        IReadOnlyList<ReaderColumn?>? readerColumns,
+        Func<QueryContext, DbDataReader, ResultContext, SingleQueryResultCoordinator, T> shaper,
+        Type contextType,
+        bool standAloneStateManager,
+        bool detailedErrorsEnabled,
+        bool threadSafetyChecksEnabled)
+        => new(
+            relationalQueryContext,
+            relationalCommandCache,
+            readerColumns,
+            shaper,
+            contextType,
+            standAloneStateManager,
+            detailedErrorsEnabled,
+            threadSafetyChecksEnabled);
+}
+
+/// <summary>
 ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
 ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
 ///     any release. You should only use it directly in your code with extreme caution and knowing that

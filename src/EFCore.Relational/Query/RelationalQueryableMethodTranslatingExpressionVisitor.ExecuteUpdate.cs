@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Diagnostics.CodeAnalysis;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.EntityFrameworkCore.Query.Internal;
 using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 
@@ -226,7 +227,6 @@ public partial class RelationalQueryableMethodTranslatingExpressionVisitor
                     // opposed to a parameter); this ensures that we don't generate an efficient translation where the subquery is
                     // duplicated for every property on the complex type.
                     // TODO: Make this work by using a common table expression (CTE)
-
                     var nestedShaperExpression = projection.BindComplexProperty(complexProperty);
                     var nestedValueExpression = CreateComplexPropertyAccessExpression(valueExpression, complexProperty);
                     if (!TryProcessComplexType(nestedShaperExpression, nestedValueExpression))
@@ -266,7 +266,7 @@ public partial class RelationalQueryableMethodTranslatingExpressionVisitor
                                     Expression.Constant(parameterExpression.Name, typeof(string)),
                                     Expression.Constant(null, typeof(List<IComplexProperty>)),
                                     Expression.Constant(property, typeof(IProperty))),
-                                QueryCompilationContext.QueryContextParameter);
+                                QueryCompilationContext.QueryContextParameter); 
 
                             var newParameterName =
                                 $"{ExecuteUpdateRuntimeParameterPrefix}"

@@ -80,6 +80,7 @@ public class RelationalStructuralTypeShaperExpression : StructuralTypeShaperExpr
                 switchCases[i] = SwitchCase(Constant(derivedConcreteEntityTypes[i], typeof(IEntityType)), discriminatorValue);
             }
 
+            var entityTypeName = entityType.Name;
             var defaultBlock = entityType.IsAbstract()
                 ? CreateUnableToDiscriminateExceptionExpression(entityType, discriminatorValueVariable)
                 : Constant(entityType, typeof(IEntityType));

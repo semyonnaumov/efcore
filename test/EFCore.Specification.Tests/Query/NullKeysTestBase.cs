@@ -143,14 +143,14 @@ public abstract class NullKeysTestBase<TFixture> : IClassFixture<TFixture>
         Assert.Null(results[5].Self);
     }
 
-    protected class WithStringKey
+    public class WithStringKey
     {
         public string Id { get; set; }
 
         public ICollection<WithStringFk> Dependents { get; set; }
     }
 
-    protected class WithStringFk
+    public class WithStringFk
     {
         public string Id { get; set; }
 
@@ -161,14 +161,14 @@ public abstract class NullKeysTestBase<TFixture> : IClassFixture<TFixture>
         public WithStringFk Self { get; set; }
     }
 
-    protected class WithIntKey
+    public class WithIntKey
     {
         public int Id { get; set; }
 
         public ICollection<WithNullableIntFk> Dependents { get; set; }
     }
 
-    protected class WithNullableIntFk
+    public class WithNullableIntFk
     {
         public int Id { get; set; }
 
@@ -176,14 +176,14 @@ public abstract class NullKeysTestBase<TFixture> : IClassFixture<TFixture>
         public WithIntKey Principal { get; set; }
     }
 
-    protected class WithNullableIntKey
+    public class WithNullableIntKey
     {
         public int? Id { get; set; }
 
         public ICollection<WithIntFk> Dependents { get; set; }
     }
 
-    protected class WithIntFk
+    public class WithIntFk
     {
         public int Id { get; set; }
 
@@ -191,14 +191,14 @@ public abstract class NullKeysTestBase<TFixture> : IClassFixture<TFixture>
         public WithNullableIntKey Principal { get; set; }
     }
 
-    protected class WithAllNullableIntKey
+    public class WithAllNullableIntKey
     {
         public int? Id { get; set; }
 
         public ICollection<WithAllNullableIntFk> Dependents { get; set; }
     }
 
-    protected class WithAllNullableIntFk
+    public class WithAllNullableIntFk
     {
         public int Id { get; set; }
 

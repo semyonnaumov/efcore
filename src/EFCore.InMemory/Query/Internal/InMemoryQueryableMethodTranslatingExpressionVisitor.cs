@@ -1135,7 +1135,8 @@ public class InMemoryQueryableMethodTranslatingExpressionVisitor : QueryableMeth
 
         private InMemoryQueryExpression _queryExpression;
 
-        public SharedTypeEntityExpandingExpressionVisitor(InMemoryExpressionTranslatingExpressionVisitor expressionTranslator)
+        public SharedTypeEntityExpandingExpressionVisitor(
+            InMemoryExpressionTranslatingExpressionVisitor expressionTranslator)
         {
             _expressionTranslator = expressionTranslator;
             _queryExpression = null!;

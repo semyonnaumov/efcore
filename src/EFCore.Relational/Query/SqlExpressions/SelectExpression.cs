@@ -2152,14 +2152,14 @@ public sealed partial class SelectExpression : TableExpressionBase
                         }
                     }
 
-                    foreach (var complexProperty in GetAllComplexPropertiesInHierarchy(type))
-                    {
-                        var complexPropertyShaper1 = structuralProjection1.BindComplexProperty(complexProperty);
+                foreach (var complexProperty in GetAllComplexPropertiesInHierarchy(type))
+                {
+                    var complexPropertyShaper1 = structuralProjection1.BindComplexProperty(complexProperty);
                     var complexPropertyShaper2 = structuralProjection2.BindComplexProperty(complexProperty);
 
                     var resultComplexProjection = ProcessStructuralType(
                         (StructuralTypeProjectionExpression)complexPropertyShaper1.ValueBufferExpression,
-                            (StructuralTypeProjectionExpression)complexPropertyShaper2.ValueBufferExpression);
+                        (StructuralTypeProjectionExpression)complexPropertyShaper2.ValueBufferExpression);
 
                     var resultComplexShaper = new RelationalStructuralTypeShaperExpression(
                         complexProperty.ComplexType,

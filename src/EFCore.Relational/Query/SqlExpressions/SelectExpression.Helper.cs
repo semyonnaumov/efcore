@@ -8,7 +8,7 @@ namespace Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 
 public sealed partial class SelectExpression
 {
-    private sealed class EntityShaperNullableMarkingExpressionVisitor : ExpressionVisitor
+    private sealed class EntityShaperNullableMarkingExpressionVisitor() : ExpressionVisitor
     {
         protected override Expression VisitExtension(Expression extensionExpression)
             => extensionExpression is StructuralTypeShaperExpression shaper
@@ -458,7 +458,7 @@ public sealed partial class SelectExpression
         }
     }
 
-    private sealed class TpcTableExpressionRemovingExpressionVisitor : ExpressionVisitor
+    private sealed class TpcTableExpressionRemovingExpressionVisitor() : ExpressionVisitor
     {
         protected override Expression VisitExtension(Expression expression)
         {

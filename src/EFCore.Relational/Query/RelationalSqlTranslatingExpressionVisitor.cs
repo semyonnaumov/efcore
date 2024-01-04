@@ -4,6 +4,7 @@
 using System.Collections;
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using Microsoft.EntityFrameworkCore.Query.Internal;
 using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 
 namespace Microsoft.EntityFrameworkCore.Query;
@@ -2041,6 +2042,10 @@ public class RelationalSqlTranslatingExpressionVisitor : ExpressionVisitor
             case SqlParameterExpression sqlParameterExpression
                 when sqlParameterExpression.Name.StartsWith(QueryCompilationContext.QueryParameterPrefix, StringComparison.Ordinal):
             {
+#pragma warning disable EF1001 // Internal EF Core API usage.
+                var liftableConstantLambda =   LiftableConstantExpressionHelpers.BuildMemberAccessLambdaForProperty(property);
+#pragma warning restore EF1001 // Internal EF Core API usage.
+
                 var lambda = Expression.Lambda(
                     Expression.Call(
                         ParameterValueExtractorMethod.MakeGenericMethod(property.ClrType.MakeNullable()),
@@ -2059,6 +2064,9 @@ public class RelationalSqlTranslatingExpressionVisitor : ExpressionVisitor
 
             case ParameterBasedComplexPropertyChainExpression chainExpression:
             {
+                var entityTypeName = property.DeclaringType.Name;
+
+
                 var lambda = Expression.Lambda(
                     Expression.Call(
                         ParameterValueExtractorMethod.MakeGenericMethod(property.ClrType.MakeNullable()),
@@ -2107,7 +2115,11 @@ public class RelationalSqlTranslatingExpressionVisitor : ExpressionVisitor
             _ => throw new UnreachableException()
         };
 
-    private static T? ParameterValueExtractor<T>(
+    /// <summary>
+    /// TODO
+    /// </summary>
+    [EntityFrameworkInternal]
+    public static T? ParameterValueExtractor<T>(
         QueryContext context,
         string baseParameterName,
         List<IComplexProperty>? complexPropertyChain,
@@ -2131,7 +2143,11 @@ public class RelationalSqlTranslatingExpressionVisitor : ExpressionVisitor
         return baseValue == null ? (T?)(object?)null : (T?)property.GetGetter().GetClrValue(baseValue);
     }
 
-    private static List<TProperty?>? ParameterListValueExtractor<TEntity, TProperty>(
+    /// <summary>
+    /// TODO
+    /// </summary>
+    [EntityFrameworkInternal]
+    public static List<TProperty?>? ParameterListValueExtractor<TEntity, TProperty>(
         QueryContext context,
         string baseParameterName,
         IProperty property)

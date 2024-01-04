@@ -540,7 +540,7 @@ public abstract class QueryableMethodTranslatingExpressionVisitor : ExpressionVi
             : throw new InvalidOperationException(CoreStrings.TranslationFailed(methodCallExpression.Print()));
     }
 
-    private sealed class EntityShaperNullableMarkingExpressionVisitor : ExpressionVisitor
+    private sealed class EntityShaperNullableMarkingExpressionVisitor() : ExpressionVisitor
     {
         protected override Expression VisitExtension(Expression extensionExpression)
             => extensionExpression is StructuralTypeShaperExpression shaper

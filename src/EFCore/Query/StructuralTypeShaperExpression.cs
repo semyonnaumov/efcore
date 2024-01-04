@@ -23,8 +23,11 @@ public class StructuralTypeShaperExpression : Expression, IPrintableExpression
     private static readonly MethodInfo CreateUnableToDiscriminateExceptionMethod
         = typeof(StructuralTypeShaperExpression).GetTypeInfo().GetDeclaredMethod(nameof(CreateUnableToDiscriminateException))!;
 
+    /// <summary>
+    /// TODO
+    /// </summary>
     [UsedImplicitly]
-    private static Exception CreateUnableToDiscriminateException(ITypeBase type, object discriminator)
+    public static Exception CreateUnableToDiscriminateException(ITypeBase type, object discriminator)
         => new InvalidOperationException(CoreStrings.UnableToDiscriminate(type.DisplayName(), discriminator.ToString()));
 
     /// <summary>
@@ -80,7 +83,7 @@ public class StructuralTypeShaperExpression : Expression, IPrintableExpression
     /// <param name="type">The entity type for which materialization was requested.</param>
     /// <param name="discriminatorValue">The expression containing value of discriminator.</param>
     /// <returns>
-    ///     An expression of <see cref="Func{ValueBuffer, IEntityType}" /> representing materilization condition for the entity type.
+    ///     An expression of <see cref="Func{ValueBuffer, IEntityType}" /> representing materialization condition for the entity type.
     /// </returns>
     protected static Expression CreateUnableToDiscriminateExceptionExpression(ITypeBase type, Expression discriminatorValue)
         => Block(
@@ -132,6 +135,8 @@ public class StructuralTypeShaperExpression : Expression, IPrintableExpression
                 for (var i = 0; i < concreteEntityTypes.Length; i++)
                 {
                     var discriminatorValue = Constant(concreteEntityTypes[i].GetDiscriminatorValue(), discriminatorProperty.ClrType);
+
+                    var concreteEntityTypeName = concreteEntityTypes[i].Name;
                     switchCases[i] = SwitchCase(Constant(concreteEntityTypes[i], typeof(IEntityType)), discriminatorValue);
                 }
 
@@ -142,6 +147,8 @@ public class StructuralTypeShaperExpression : Expression, IPrintableExpression
                 var conditions = exception;
                 for (var i = concreteEntityTypes.Length - 1; i >= 0; i--)
                 {
+                    var entityTypeName = concreteEntityTypes[i].Name;
+
                     conditions = Condition(
                         discriminatorComparer.ExtractEqualsBody(
                             discriminatorValueVariable,

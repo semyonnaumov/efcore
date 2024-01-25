@@ -134,6 +134,23 @@ public abstract class QueryableMethodTranslatingExpressionVisitor : ExpressionVi
     protected override Expression VisitMethodCall(MethodCallExpression methodCallExpression)
     {
         var method = methodCallExpression.Method;
+
+        if (method.MethodIsClosedFormOf(EntityFrameworkQueryableExtensions.IncludeMethodInfo))
+        {
+            var source = Visit(methodCallExpression.Arguments[0]);
+            if (source is ShapedQueryExpression shapedQueryExpression)
+            {
+                var lambdaExpression = methodCallExpression.Arguments[1].UnwrapLambdaFromQuote();
+
+                return TranslateInclude(shapedQueryExpression, lambdaExpression) ?? QueryCompilationContext.NotTranslatedExpression;
+            }
+
+        }
+
+
+
+
+
         if (method.DeclaringType == typeof(Queryable)
             || method.DeclaringType == typeof(QueryableExtensions))
         {
@@ -585,6 +602,11 @@ public abstract class QueryableMethodTranslatingExpressionVisitor : ExpressionVi
     /// <param name="entityType">The entity type.</param>
     /// <returns>A shaped query expression for the given entity type.</returns>
     protected abstract ShapedQueryExpression CreateShapedQueryExpression(IEntityType entityType);
+
+    /// <summary>
+    /// TODO
+    /// </summary>
+    protected abstract ShapedQueryExpression? TranslateInclude(ShapedQueryExpression source, LambdaExpression lambda);
 
     /// <summary>
     ///     Translates <see cref="Queryable.All{TSource}(IQueryable{TSource}, Expression{Func{TSource,bool}})" /> method over the given source.

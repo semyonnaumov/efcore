@@ -8519,6 +8519,34 @@ public abstract class GearsOfWarQueryTestBase<TFixture> : QueryTestBase<TFixture
             ss => ss.Set<Weapon>().Where(x => keys.Contains(ammoTypes.Contains(x.AmmunitionType) ? key : key)));
     }
 
+    [ConditionalTheory]
+    [MemberData(nameof(IsAsyncData))]
+    public virtual Task Basic_nav_expansion_in_projection(bool async)
+        => AssertQuery(
+            async,
+            ss => ss.Set<Weapon>().Select(x => x.Owner));
+
+    [ConditionalTheory]
+    [MemberData(nameof(IsAsyncData))]
+    public virtual Task Basic_nav_expansion_in_predicate(bool async)
+        => AssertQuery(
+            async,
+            ss => ss.Set<Weapon>().Where(w => w.Owner.SquadId == 1));
+
+    [ConditionalTheory]
+    [MemberData(nameof(IsAsyncData))]
+    public virtual Task Basic_include_reference(bool async)
+        => AssertQuery(
+            async,
+            ss => ss.Set<Gear>().Include(x => x.Tag));
+
+    [ConditionalTheory]
+    [MemberData(nameof(IsAsyncData))]
+    public virtual Task Basic_select_join(bool async)
+        => AssertQuery(
+            async,
+            ss => ss.Set<Gear>().Join(ss.Set<CogTag>(), o => o.Nickname, i => i.GearNickName, (o, i) => new { o, i }));
+
     protected GearsOfWarContext CreateContext()
         => Fixture.CreateContext();
 

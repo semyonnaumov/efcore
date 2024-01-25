@@ -10412,6 +10412,51 @@ END IN (
 """);
     }
 
+    public override async Task Basic_nav_expansion_in_projection(bool async)
+    {
+        await base.Basic_nav_expansion_in_projection(async);
+
+        AssertSql(
+"""
+SELECT [g].[Nickname], [g].[SquadId], [g].[AssignedCityName], [g].[CityOfBirthName], [g].[Discriminator], [g].[FullName], [g].[HasSoulPatch], [g].[LeaderNickname], [g].[LeaderSquadId], [g].[Rank]
+FROM [Weapons] AS [w]
+LEFT JOIN [Gears] AS [g] ON [w].[OwnerFullName] = [g].[FullName]
+""");
+    }
+
+    public override async Task Basic_nav_expansion_in_predicate(bool async)
+    {
+        await base.Basic_nav_expansion_in_predicate(async);
+
+        AssertSql(
+"""
+SELECT [w].[Id], [w].[AmmunitionType], [w].[IsAutomatic], [w].[Name], [w].[OwnerFullName], [w].[SynergyWithId]
+FROM [Weapons] AS [w]
+LEFT JOIN [Gears] AS [g] ON [w].[OwnerFullName] = [g].[FullName]
+WHERE [g].[SquadId] = 1
+""");
+    }
+
+    public override async Task Basic_include_reference(bool async)
+    {
+        await base.Basic_include_reference(async);
+
+        AssertSql(
+"""
+LEFT JOIN [Gears] AS [g] ON [w].[OwnerFullName] = [g].[FullName]
+""");
+    }
+
+    public override async Task Basic_select_join(bool async)
+    {
+        await base.Basic_select_join(async);
+
+        AssertSql(
+"""
+LEFT JOIN [Gears] AS [g] ON [w].[OwnerFullName] = [g].[FullName]
+""");
+    }
+
     private void AssertSql(params string[] expected)
         => Fixture.TestSqlLoggerFactory.AssertBaseline(expected);
 }

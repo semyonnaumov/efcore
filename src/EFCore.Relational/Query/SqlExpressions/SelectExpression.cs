@@ -2281,6 +2281,283 @@ public sealed partial class SelectExpression : TableExpressionBase
     ///     doing so can result in application failures when updating to a new Entity Framework Core release.
     /// </summary>
     [EntityFrameworkInternal]
+    public StructuralTypeShaperExpression MaumarNewStuff(
+        StructuralTypeProjectionExpression sourceEntityProjection,
+        INavigation navigation,
+        ISqlExpressionFactory sqlExpressionFactory,
+        SqlAliasManager sqlAliasManager)
+    {
+        var targetEntityType = navigation.TargetEntityType;
+        var targetTables = targetEntityType.GetViewOrTableMappings().Select(e => e.Table).ToList();
+        var targetMainTable = targetTables[0];
+
+        var identifyingColumn = sourceEntityProjection.BindProperty(
+            navigation.DeclaringEntityType.FindPrimaryKey()!.Properties.First());
+
+        var sourceTableExpressionBase = GetTable(identifyingColumn).UnwrapJoin();
+        var sourceTableAlias = sourceTableExpressionBase.GetRequiredAlias();
+
+        //var sourceBaseTableIndex = _tables.FindIndex(teb => ReferenceEquals(teb.UnwrapJoin(), sourceTableExpressionBase));
+
+
+        var sourceEntityType = sourceEntityProjection.StructuralType;
+        var sourceMappings = sourceEntityType.GetViewOrTableMappings().Select(e => e.Table);
+        var sourceTables = sourceMappings.ToList();
+        var sourceMainTable = sourceTables[0];
+
+        var parentNullable = identifyingColumn.IsNullable;
+        var pkColumnsNullable = parentNullable;
+        //|| (derivedType && ownerType.GetMappingStrategy() != RelationalAnnotationNames.TphMappingStrategy);
+
+
+
+        //var odDependent = navigation.IsOnDependent;
+
+
+        //var targetType = onDependent ? foreignKey.PrincipalEntityType : foreignKey.DeclaringEntityType;
+
+        var sourceKeyProperties = (navigation.IsOnDependent ? navigation.ForeignKey.Properties : navigation.ForeignKey.PrincipalKey.Properties).ToList();
+        var targetKeyProperties = (navigation.IsOnDependent ? navigation.ForeignKey.PrincipalKey.Properties : navigation.ForeignKey.Properties).ToList();
+
+        //var targetKeyProperties = navigation.ForeignKey.PrincipalKey.Properties;
+
+        var sourceJoinColumns = new List<ColumnExpression>();
+        foreach (var property in sourceKeyProperties)
+        {
+            var sourceColumnBase = sourceTables.Select(e => e.FindColumn(property)).First(e => e != null)!;
+            var sourceColumnExpression = CreateColumnExpression(property, sourceColumnBase, sourceTableAlias, pkColumnsNullable);
+            sourceJoinColumns.Add(sourceColumnExpression);
+        }
+
+        var targetTableAlias = sqlAliasManager.GenerateTableAlias(targetMainTable);
+        TableExpressionBase targetTable = new TableExpression(targetTableAlias, targetMainTable);
+
+        var targetTableMap = new Dictionary<ITableBase, string>();
+        targetTableMap[targetMainTable] = targetTableAlias;
+
+
+
+        //foreach (var annotation in sourceTableForAnnotations.GetAnnotations())
+        //{
+        //    ownedTable = ownedTable.AddAnnotation(annotation.Name, annotation.Value);
+        //}
+
+        var outerJoinPredicate = sourceJoinColumns
+            .Zip(targetKeyProperties.Select(p => CreateColumnExpression(p, targetMainTable, targetTableAlias, nullable: false)))
+            .Select(i => sqlExpressionFactory.Equal(i.First, i.Second))
+            .Aggregate(sqlExpressionFactory.AndAlso);
+
+
+        // TODO: add identifiers
+        //foreach (var targetKeyProperty in targetKeyProperties)
+        //{
+        //}
+
+
+
+
+
+
+        //foreach (var property in targetEntityType.GetProperties())
+        //{
+        //    //if (property.IsPrimaryKey()
+        //    //    && dependentTables.Count > 1)
+        //    //{
+        //    //    continue;
+        //    //}
+
+        //    var columnBase = dependentTables.Count == 1
+        //        ? dependentMainTable.FindColumn(property)!
+        //        : dependentTables.Select(e => e.FindColumn(property)).First(e => e != null)!;
+        //    propertyExpressions[property] = CreateColumnExpression(
+        //        property, columnBase, tableMap[columnBase.Table],
+        //        nullable: newColumnsNullable);
+        //}
+
+        //foreach (var property in keyProperties)
+        //{
+        //    selectExpression._identifier.Add((propertyExpressions[property], property.GetKeyValueComparer()));
+        //}
+
+
+
+
+
+
+
+        var targetPropertyExpressionMap = new Dictionary<IProperty, ColumnExpression>();
+
+
+        foreach (var targetProperty in targetEntityType.GetProperties())
+        {
+        //    if (targetProperty.IsPrimaryKey())
+        ////        && dependentTables.Count > 1)
+        //    {
+        //        continue;
+        //    }
+
+            var columnBase = targetTables.Count == 1
+                ? targetMainTable.FindColumn(targetProperty)!
+                : targetTables.Select(e => e.FindColumn(targetProperty)).First(e => e != null)!;
+
+
+            //    var columnBase = dependentTables.Count == 1
+            //        ? dependentMainTable.FindColumn(property)!
+            //        : dependentTables.Select(e => e.FindColumn(property)).First(e => e != null)!;
+            targetPropertyExpressionMap[targetProperty] = CreateColumnExpression(
+                targetProperty, columnBase, targetTableMap[columnBase.Table],
+                nullable: true /*newColumnsNullable*/);
+        }
+
+        //foreach (var property in keyProperties)
+        //{
+        //    selectExpression._identifier.Add((propertyExpressions[property], property.GetKeyValueComparer()));
+        //}
+
+        //return propertyExpressions;
+
+
+
+
+
+
+        /*selectExpression.*/
+        _tables.Add(new LeftJoinExpression(targetTable, outerJoinPredicate));
+
+
+
+
+
+
+
+
+
+
+
+        var entityShaper = new RelationalStructuralTypeShaperExpression(
+            navigation.TargetEntityType,
+            new StructuralTypeProjectionExpression(
+                navigation.TargetEntityType,
+                targetPropertyExpressionMap,
+                sourceEntityProjection.TableMap),
+            identifyingColumn.IsNullable || navigation.DeclaringEntityType.BaseType != null || !navigation.ForeignKey.IsRequiredDependent);
+
+
+        // TODO: need some kind of map here?
+        //principalEntityProjection.AddNavigationBinding(navigation, entityShaper);
+
+        return entityShaper;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        //tableMap[dependentMainTable] = ownedTableAlias;
+        //if (dependentTables.Count > 1)
+        //{
+        //    var joinColumns = new List<ColumnExpression>();
+        //    foreach (var property in keyProperties)
+        //    {
+        //        var columnExpression = CreateColumnExpression(
+        //            property, dependentMainTable.FindColumn(property)!, ownedTableAlias, newColumnsNullable);
+        //        propertyExpressions[property] = columnExpression;
+        //        joinColumns.Add(columnExpression);
+        //    }
+
+        //    for (var i = 1; i < dependentTables.Count; i++)
+        //    {
+        //        var table = dependentTables[i];
+        //        var alias = sqlAliasManager.GenerateTableAlias(table);
+        //        TableExpressionBase tableExpression = new TableExpression(alias, table);
+        //        foreach (var annotation in sourceTableForAnnotations.GetAnnotations())
+        //        {
+        //            tableExpression = tableExpression.AddAnnotation(annotation.Name, annotation.Value);
+        //        }
+
+        //        tableMap[table] = alias;
+
+        //        var innerColumns = keyProperties.Select(
+        //            p => CreateColumnExpression(p, table, alias, nullable: false));
+        //        var joinPredicate = joinColumns
+        //            .Zip(innerColumns, sqlExpressionFactory.Equal)
+        //            .Aggregate(sqlExpressionFactory.AndAlso);
+
+        //        selectExpression._tables.Add(new LeftJoinExpression(tableExpression, joinPredicate, prunable: true));
+        //    }
+        //}
+
+        //foreach (var property in entityType.GetProperties())
+        //{
+        //    if (property.IsPrimaryKey()
+        //        && dependentTables.Count > 1)
+        //    {
+        //        continue;
+        //    }
+
+        //    var columnBase = dependentTables.Count == 1
+        //        ? dependentMainTable.FindColumn(property)!
+        //        : dependentTables.Select(e => e.FindColumn(property)).First(e => e != null)!;
+        //    propertyExpressions[property] = CreateColumnExpression(
+        //        property, columnBase, tableMap[columnBase.Table],
+        //        nullable: newColumnsNullable);
+        //}
+
+        //foreach (var property in keyProperties)
+        //{
+        //    selectExpression._identifier.Add((propertyExpressions[property], property.GetKeyValueComparer()));
+        //}
+
+        //return propertyExpressions;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        //return null!;
+    }
+
+    /// <summary>
+    ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+    ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+    ///     any release. You should only use it directly in your code with extreme caution and knowing that
+    ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+    /// </summary>
+    [EntityFrameworkInternal]
     public StructuralTypeShaperExpression GenerateOwnedReferenceEntityProjectionExpression(
         StructuralTypeProjectionExpression principalEntityProjection,
         INavigation navigation,

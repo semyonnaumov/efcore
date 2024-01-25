@@ -463,6 +463,34 @@ public partial class RelationalQueryableMethodTranslatingExpressionVisitor : Que
                 false));
 
     /// <inheritdoc />
+    protected override ShapedQueryExpression? TranslateInclude(ShapedQueryExpression source, LambdaExpression lambda)
+    {
+        var lambdaBody = ReplacingExpressionVisitor.Replace(
+            lambda.Parameters.Single(), source.ShaperExpression, lambda.Body);
+
+        var targetShaper = ExpandSharedTypeEntities((SelectExpression)source.QueryExpression, lambdaBody);
+
+        // TODO: hack
+        var entity = (IEntityType)((RelationalStructuralTypeShaperExpression)source.ShaperExpression).StructuralType;
+        var member = ((MemberExpression)lambdaBody).Member;
+        var navigation = entity.FindNavigation(member.Name)!;
+
+        var resultShaper = new IncludeExpression(
+            source.ShaperExpression,
+            targetShaper,
+            navigation);
+
+        var selectExpression = (SelectExpression)source.QueryExpression;
+
+        source.UpdateShaperExpression(_projectionBindingExpressionVisitor.Translate(selectExpression, resultShaper));
+
+        return new ShapedQueryExpression(source.QueryExpression, resultShaper);
+
+
+        //return source;
+    }
+
+    /// <inheritdoc />
     protected override ShapedQueryExpression? TranslateAll(ShapedQueryExpression source, LambdaExpression predicate)
     {
         var translation = TranslateLambdaExpression(source, predicate);
@@ -1618,7 +1646,30 @@ public partial class RelationalQueryableMethodTranslatingExpressionVisitor : Que
                 return ExpandOwnedNavigation(navigation);
             }
 
+            if (navigation is { TargetEntityType: IEntityType } && !navigation.IsCollection)
+            {
+                return ExpandReference(navigation);
+            }
+
             return null;
+
+
+            Expression ExpandReference(INavigation navigation)
+            {
+                var targetEntityType = navigation.TargetEntityType;
+                var entityProjectionExpression = GetEntityProjectionExpression(shaper);
+                var foreignKey = navigation.ForeignKey;
+
+                var result = _selectExpression.MaumarNewStuff(entityProjectionExpression, navigation, queryableTranslator._sqlExpressionFactory, _sqlAliasManager);
+
+                return result;
+
+
+                //var targetTables = targetEntityType.GetViewOrTableMappings().Select(e => e.Table).ToList();
+
+                //var baseTableIndex = _selectExpression._tables.FindIndex(teb => ReferenceEquals(teb.UnwrapJoin(), tableExpressionBase));
+
+            }
 
             Expression ExpandOwnedNavigation(INavigation navigation)
             {

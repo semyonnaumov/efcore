@@ -57,7 +57,7 @@ public class RelationalProjectionBindingExpressionVisitor : ExpressionVisitor
         _selectExpression = selectExpression;
         _indexBasedBinding = false;
 
-        _projectionMembers.Push(new ProjectionMember());
+         _projectionMembers.Push(new ProjectionMember());
 
         var result = Visit(expression);
 

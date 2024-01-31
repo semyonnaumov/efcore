@@ -55,12 +55,12 @@ public class QueryTranslationPreprocessor
         query = new CallForwardingExpressionVisitor().Visit(query);
         query = new NullCheckRemovingExpressionVisitor().Visit(query);
         query = new SubqueryMemberPushdownExpressionVisitor(QueryCompilationContext.Model).Visit(query);
-        query = new NavigationExpandingExpressionVisitor(
-                this,
-                QueryCompilationContext,
-                Dependencies.EvaluatableExpressionFilter,
-                Dependencies.NavigationExpansionExtensibilityHelper)
-            .Expand(query);
+        //query = new NavigationExpandingExpressionVisitor(
+        //        this,
+        //        QueryCompilationContext,
+        //        Dependencies.EvaluatableExpressionFilter,
+        //        Dependencies.NavigationExpansionExtensibilityHelper)
+        //    .Expand(query);
         query = new QueryOptimizingExpressionVisitor().Visit(query);
         query = new NullCheckRemovingExpressionVisitor().Visit(query);
 

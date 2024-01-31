@@ -376,6 +376,10 @@ public class RelationalProjectionBindingExpressionVisitor : ExpressionVisitor
             {
                 if (_indexBasedBinding)
                 {
+                    //AddClientProjection(includeExpression.EntityExpression, typeof(ValueBuffer));
+                    //AddClientProjection(includeExpression.NavigationExpression, typeof(ValueBuffer));
+
+
                     // we prune nested json includes - we only need the first level of include so that we know the json column
                     // and the json entity that is the start of the include chain - the rest will be added in the shaper phase
                     return includeExpression.Navigation.DeclaringEntityType.IsMappedToJson()

@@ -8538,14 +8538,35 @@ public abstract class GearsOfWarQueryTestBase<TFixture> : QueryTestBase<TFixture
     public virtual Task Basic_include_reference(bool async)
         => AssertQuery(
             async,
-            ss => ss.Set<Gear>().Include(x => x.Tag));
+            ss => ss.Set<Gear>().Include(x => x.Tag));//.Include(x => x.CityOfBirth));
 
     [ConditionalTheory]
     [MemberData(nameof(IsAsyncData))]
     public virtual Task Basic_select_join(bool async)
         => AssertQuery(
             async,
-            ss => ss.Set<Gear>().Join(ss.Set<CogTag>(), o => o.Nickname, i => i.GearNickName, (o, i) => new { o, i }));
+            ss => ss.Set<Gear>().Join(ss.Set<CogTag>(), o => o.Nickname, i => i.GearNickName, (o, i) => new { o, i }),
+            elementSorter: e => (e.o.Nickname, e.i.Id),
+            elementAsserter: (e, a) =>
+            {
+                AssertEqual(e.o, a.o);
+                AssertEqual(e.i, a.i);
+            });
+
+    [ConditionalTheory]
+    [MemberData(nameof(IsAsyncData))]
+    public virtual Task Reference_navigation_repeated(bool async)
+        => AssertQuery(
+            async,
+            ss => ss.Set<CogTag>().Where(x => x.Gear != null).OrderBy(x => x.Gear.FullName),
+            assertOrder: true);
+
+    [ConditionalTheory]
+    [MemberData(nameof(IsAsyncData))]
+    public virtual Task Reference_on_inheritance(bool async)
+        => AssertQuery(
+            async,
+            ss => ss.Set<Faction>().Where(x => (x as LocustHorde).Commander.Name != "Foo"));
 
     protected GearsOfWarContext CreateContext()
         => Fixture.CreateContext();

@@ -482,9 +482,13 @@ public partial class RelationalQueryableMethodTranslatingExpressionVisitor : Que
 
         var selectExpression = (SelectExpression)source.QueryExpression;
 
-        source.UpdateShaperExpression(_projectionBindingExpressionVisitor.Translate(selectExpression, resultShaper));
+        var boundResultShaper = _projectionBindingExpressionVisitor.Translate(selectExpression, resultShaper);
 
-        return new ShapedQueryExpression(source.QueryExpression, resultShaper);
+        return new ShapedQueryExpression(source.QueryExpression, boundResultShaper);
+
+        //source.UpdateShaperExpression(_projectionBindingExpressionVisitor.Translate(selectExpression, resultShaper));
+
+        //return new ShapedQueryExpression(source.QueryExpression, resultShaper);
 
 
         //return source;

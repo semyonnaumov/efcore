@@ -5235,11 +5235,11 @@ INNER JOIN (
         await base.Join_on_entity_qsre_keys_outer_key_is_navigation(async);
 
         AssertSql(
-            """
-SELECT [w].[Name] AS [Name1], [w1].[Name] AS [Name2]
+"""
+SELECT [w].[Name] AS [Name1], [w0].[Name] AS [Name2]
 FROM [Weapons] AS [w]
-LEFT JOIN [Weapons] AS [w0] ON [w].[SynergyWithId] = [w0].[Id]
-INNER JOIN [Weapons] AS [w1] ON [w0].[Id] = [w1].[Id]
+LEFT JOIN [Weapons] AS [w1] ON [w].[SynergyWithId] = [w1].[Id]
+INNER JOIN [Weapons] AS [w0] ON [w1].[Id] = [w0].[Id]
 """);
     }
 
@@ -8410,19 +8410,19 @@ ORDER BY [g].[Nickname], [g].[SquadId], [c].[Name]
         await base.FirstOrDefault_on_empty_collection_of_DateTime_in_subquery(async);
 
         AssertSql(
-            """
+"""
 SELECT [g].[Nickname], COALESCE((
-    SELECT TOP(1) [t1].[IssueDate]
-    FROM [Tags] AS [t1]
-    WHERE [t1].[GearNickName] = [g].[FullName]
-    ORDER BY [t1].[Id]), '0001-01-01T00:00:00.0000000') AS [invalidTagIssueDate]
+    SELECT TOP(1) [t].[IssueDate]
+    FROM [Tags] AS [t]
+    WHERE [t].[GearNickName] = [g].[FullName]
+    ORDER BY [t].[Id]), '0001-01-01T00:00:00.0000000') AS [invalidTagIssueDate]
 FROM [Gears] AS [g]
-LEFT JOIN [Tags] AS [t] ON [g].[Nickname] = [t].[GearNickName] AND [g].[SquadId] = [t].[GearSquadId]
-WHERE [t].[IssueDate] > COALESCE((
-    SELECT TOP(1) [t0].[IssueDate]
-    FROM [Tags] AS [t0]
-    WHERE [t0].[GearNickName] = [g].[FullName]
-    ORDER BY [t0].[Id]), '0001-01-01T00:00:00.0000000')
+LEFT JOIN [Tags] AS [t0] ON [g].[Nickname] = [t0].[GearNickName] AND [g].[SquadId] = [t0].[GearSquadId]
+WHERE [t0].[IssueDate] > COALESCE((
+    SELECT TOP(1) [t].[IssueDate]
+    FROM [Tags] AS [t]
+    WHERE [t].[GearNickName] = [g].[FullName]
+    ORDER BY [t].[Id]), '0001-01-01T00:00:00.0000000')
 """);
     }
 
@@ -10443,7 +10443,9 @@ WHERE [g].[SquadId] = 1
 
         AssertSql(
 """
-LEFT JOIN [Gears] AS [g] ON [w].[OwnerFullName] = [g].[FullName]
+SELECT [g].[Nickname], [g].[SquadId], [g].[AssignedCityName], [g].[CityOfBirthName], [g].[Discriminator], [g].[FullName], [g].[HasSoulPatch], [g].[LeaderNickname], [g].[LeaderSquadId], [g].[Rank], [t].[Id], [t].[GearNickName], [t].[GearSquadId], [t].[IssueDate], [t].[Note]
+FROM [Gears] AS [g]
+LEFT JOIN [Tags] AS [t] ON [g].[Nickname] = [t].[GearNickName] AND [g].[SquadId] = [t].[GearSquadId]
 """);
     }
 
@@ -10453,7 +10455,33 @@ LEFT JOIN [Gears] AS [g] ON [w].[OwnerFullName] = [g].[FullName]
 
         AssertSql(
 """
-LEFT JOIN [Gears] AS [g] ON [w].[OwnerFullName] = [g].[FullName]
+SELECT [g].[Nickname], [g].[SquadId], [g].[AssignedCityName], [g].[CityOfBirthName], [g].[Discriminator], [g].[FullName], [g].[HasSoulPatch], [g].[LeaderNickname], [g].[LeaderSquadId], [g].[Rank], [t].[Id], [t].[GearNickName], [t].[GearSquadId], [t].[IssueDate], [t].[Note]
+FROM [Gears] AS [g]
+INNER JOIN [Tags] AS [t] ON [g].[Nickname] = [t].[GearNickName]
+""");
+    }
+
+    public override async Task Reference_navigation_repeated(bool async)
+    {
+        await base.Reference_navigation_repeated(async);
+
+        AssertSql(
+"""
+SELECT [t].[Id], [t].[GearNickName], [t].[GearSquadId], [t].[IssueDate], [t].[Note]
+FROM [Tags] AS [t]
+LEFT JOIN [Gears] AS [g] ON [t].[GearNickName] = [g].[Nickname] AND [t].[GearSquadId] = [g].[SquadId]
+WHERE [g].[Nickname] IS NOT NULL AND [g].[SquadId] IS NOT NULL
+ORDER BY [g].[FullName]
+""");
+    }
+
+    public override async Task Reference_on_inheritance(bool async)
+    {
+        await base.Reference_on_inheritance(async);
+
+        AssertSql(
+"""
+ORDER BY [g].[FullName]
 """);
     }
 

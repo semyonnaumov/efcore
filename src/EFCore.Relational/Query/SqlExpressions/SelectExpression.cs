@@ -2274,6 +2274,9 @@ public sealed partial class SelectExpression : TableExpressionBase
         _projectionMapping = projectionMapping;
     }
 
+    private readonly Dictionary<INavigation, StructuralTypeShaperExpression> _expandedReferences
+        = new Dictionary<INavigation, StructuralTypeShaperExpression>();
+
     /// <summary>
     ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
     ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
@@ -2287,6 +2290,11 @@ public sealed partial class SelectExpression : TableExpressionBase
         ISqlExpressionFactory sqlExpressionFactory,
         SqlAliasManager sqlAliasManager)
     {
+        if (_expandedReferences.TryGetValue(navigation, out var cached))
+        {
+            return cached;
+        }
+
         var targetEntityType = navigation.TargetEntityType;
         var targetTables = targetEntityType.GetViewOrTableMappings().Select(e => e.Table).ToList();
         var targetMainTable = targetTables[0];
@@ -2445,6 +2453,8 @@ public sealed partial class SelectExpression : TableExpressionBase
 
         // TODO: need some kind of map here?
         //principalEntityProjection.AddNavigationBinding(navigation, entityShaper);
+
+        _expandedReferences[navigation] = entityShaper;
 
         return entityShaper;
 

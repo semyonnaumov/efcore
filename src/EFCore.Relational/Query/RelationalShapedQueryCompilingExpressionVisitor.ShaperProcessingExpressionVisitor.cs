@@ -28,6 +28,9 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
         private static readonly MethodInfo IsDbNullMethod =
             typeof(DbDataReader).GetRuntimeMethod(nameof(DbDataReader.IsDBNull), [typeof(int)])!;
 
+        /// <summary>
+        /// TODO
+        /// </summary>
         public static readonly MethodInfo GetFieldValueMethod =
             typeof(DbDataReader).GetRuntimeMethod(nameof(DbDataReader.GetFieldValue), [typeof(int)])!;
 
@@ -169,6 +172,9 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
         /// </summary>
         private readonly Dictionary<int, ParameterExpression> _jsonArrayNonConstantElementAccessMap = new();
 
+        /// <summary>
+        /// TODO
+        /// </summary>
         public ShaperProcessingExpressionVisitor(
             RelationalShapedQueryCompilingExpressionVisitor parentVisitor,
             SelectExpression selectExpression,
@@ -256,6 +262,9 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
             _selectExpression.ApplyTags(_tags);
         }
 
+        /// <summary>
+        /// TODO
+        /// </summary>
         public LambdaExpression ProcessRelationalGroupingResult(
             RelationalGroupByResultExpression relationalGroupByResultExpression,
             out Expression relationalCommandCache,
@@ -287,6 +296,9 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                 ref collectionId);
         }
 
+        /// <summary>
+        /// TODO
+        /// </summary>
         public LambdaExpression ProcessShaper(
             Expression shaperExpression,
             out Expression relationalCommandCache,
@@ -424,6 +436,9 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
             }
         }
 
+        /// <summary>
+        /// TODO
+        /// </summary>
         protected override Expression VisitBinary(BinaryExpression binaryExpression)
         {
             switch (binaryExpression)
@@ -500,6 +515,9 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
             return base.VisitBinary(binaryExpression);
         }
 
+        /// <summary>
+        /// TODO
+        /// </summary>
         protected override Expression VisitExtension(Expression extensionExpression)
         {
             switch (extensionExpression)
@@ -1231,6 +1249,9 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
             }
         }
 
+        /// <summary>
+        /// TODO
+        /// </summary>
         protected override Expression VisitMethodCall(MethodCallExpression methodCallExpression)
         {
             if (methodCallExpression.Method.IsGenericMethod

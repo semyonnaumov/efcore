@@ -3,4 +3,7 @@
 
 namespace Microsoft.EntityFrameworkCore.Query;
 
+/// <summary>
+/// TODO
+/// </summary>
 public record MaterializerLiftableConstantContext(ShapedQueryCompilingExpressionVisitorDependencies Dependencies);

@@ -248,6 +248,9 @@ public class ValueComparer
         return v1Null || v2Null ? v1Null && v2Null : Equals((T?)left, (T?)right);
     }
 
+    /// <summary>
+    /// TODO
+    /// </summary>
     public override LambdaExpression ObjectEqualsExpression
     {
         get

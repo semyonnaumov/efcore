@@ -281,6 +281,34 @@ public abstract class ShapedQueryCompilingExpressionVisitor : ExpressionVisitor
         }
     }
 
+
+
+
+    /// <summary>
+    /// TODO
+    /// </summary>
+    [UsedImplicitly]
+    public static Exception CreateNullKeyValueInNoTrackingQuery(
+        IEntityType entityType,
+        IReadOnlyList<IProperty> properties,
+        object?[] keyValues)
+    {
+        var index = -1;
+        for (var i = 0; i < keyValues.Length; i++)
+        {
+            if (keyValues[i] == null)
+            {
+                index = i;
+                break;
+            }
+        }
+
+        var property = properties[index];
+
+        throw new InvalidOperationException(
+            CoreStrings.InvalidKeyValue(entityType.DisplayName(), property.Name));
+    }
+
     private sealed class EntityMaterializerInjectingExpressionVisitor : ExpressionVisitor
     {
         private static readonly ConstructorInfo MaterializationContextConstructor
@@ -303,8 +331,12 @@ public abstract class ShapedQueryCompilingExpressionVisitor : ExpressionVisitor
             = typeof(QueryContext).GetMethod(
                 nameof(QueryContext.StartTracking), [typeof(IEntityType), typeof(object), typeof(ISnapshot).MakeByRefType()])!;
 
+        //private static readonly MethodInfo CreateNullKeyValueInNoTrackingQueryMethod
+        //    = typeof(EntityMaterializerInjectingExpressionVisitor)
+        //        .GetTypeInfo().GetDeclaredMethod(nameof(CreateNullKeyValueInNoTrackingQuery))!;
+
         private static readonly MethodInfo CreateNullKeyValueInNoTrackingQueryMethod
-            = typeof(EntityMaterializerInjectingExpressionVisitor)
+            = typeof(ShapedQueryCompilingExpressionVisitor)
                 .GetTypeInfo().GetDeclaredMethod(nameof(CreateNullKeyValueInNoTrackingQuery))!;
 
         private readonly IEntityMaterializerSource _entityMaterializerSource;
@@ -649,26 +681,29 @@ public abstract class ShapedQueryCompilingExpressionVisitor : ExpressionVisitor
             return Block(blockExpressions);
         }
 
-        [UsedImplicitly]
-        private static Exception CreateNullKeyValueInNoTrackingQuery(
-            IEntityType entityType,
-            IReadOnlyList<IProperty> properties,
-            object?[] keyValues)
-        {
-            var index = -1;
-            for (var i = 0; i < keyValues.Length; i++)
-            {
-                if (keyValues[i] == null)
-                {
-                    index = i;
-                    break;
-                }
-            }
+        ///// <summary>
+        ///// TODO
+        ///// </summary>
+        //[UsedImplicitly]
+        //public static Exception CreateNullKeyValueInNoTrackingQuery(
+        //    IEntityType entityType,
+        //    IReadOnlyList<IProperty> properties,
+        //    object?[] keyValues)
+        //{
+        //    var index = -1;
+        //    for (var i = 0; i < keyValues.Length; i++)
+        //    {
+        //        if (keyValues[i] == null)
+        //        {
+        //            index = i;
+        //            break;
+        //        }
+        //    }
 
-            var property = properties[index];
+        //    var property = properties[index];
 
-            throw new InvalidOperationException(
-                CoreStrings.InvalidKeyValue(entityType.DisplayName(), property.Name));
-        }
+        //    throw new InvalidOperationException(
+        //        CoreStrings.InvalidKeyValue(entityType.DisplayName(), property.Name));
+        //}
     }
 }

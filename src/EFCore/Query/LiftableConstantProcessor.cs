@@ -11,7 +11,7 @@ namespace Microsoft.EntityFrameworkCore.Query.Internal;
 public class LiftableConstantProcessor : ExpressionVisitor, ILiftableConstantProcessor
 {
     private bool _inline;
-    private MaterializerLiftableConstantContext _materializerLiftableConstantContext;
+    private readonly MaterializerLiftableConstantContext _materializerLiftableConstantContext;
 
     /// <summary>
     ///     Exposes all constants that have been lifted during the last invocation of <see cref="LiftedConstants" />.

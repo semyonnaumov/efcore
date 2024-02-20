@@ -578,6 +578,9 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
             }
         }
 
+        /// <summary>
+        /// TODO
+        /// </summary>
         [EntityFrameworkInternal]
         public static TCollection InitializeCollection<TElement, TCollection>(
             int collectionId,
@@ -601,6 +604,9 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
             return (TCollection)collection;
         }
 
+        /// <summary>
+        /// TODO
+        /// </summary>
         [EntityFrameworkInternal]
         public static void PopulateCollection<TCollection, TElement, TRelatedEntity>(
             int collectionId,

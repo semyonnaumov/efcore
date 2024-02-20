@@ -654,6 +654,9 @@ public class RelationalProjectionBindingExpressionVisitor : ExpressionVisitor
     }
 
     // Public because can get referenced by precompiled shaper code
+    /// <summary>
+    /// TODO
+    /// </summary>
     public static T GetParameterValue<T>(QueryContext queryContext, string parameterName)
 #pragma warning restore IDE0052 // Remove unread private members
         => (T)queryContext.ParameterValues[parameterName]!;

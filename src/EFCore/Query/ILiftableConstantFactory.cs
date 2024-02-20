@@ -3,8 +3,14 @@
 
 namespace Microsoft.EntityFrameworkCore.Query;
 
+/// <summary>
+/// TODO
+/// </summary>
 public interface ILiftableConstantFactory
 {
+    /// <summary>
+    /// TODO
+    /// </summary>
     LiftableConstantExpression CreateLiftableConstant(
         Expression<Func<MaterializerLiftableConstantContext, object>> resolverExpression,
         string variableName,

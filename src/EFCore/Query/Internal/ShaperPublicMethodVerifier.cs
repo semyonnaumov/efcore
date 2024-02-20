@@ -77,6 +77,9 @@ public sealed class ShaperPublicMethodVerifier : ExpressionVisitor
     }
 
     // Ignore liftable constant nodes - they contain literals only (not method/constructor invocations) and cause exceptions.
+    /// <summary>
+    /// TODO
+    /// </summary>
     protected override Expression VisitExtension(Expression node)
         => node is LiftableConstantExpression ? node : base.VisitExtension(node);
 }

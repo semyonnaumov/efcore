@@ -19,6 +19,9 @@ namespace Microsoft.EntityFrameworkCore.Query;
 [DebuggerDisplay("{Microsoft.EntityFrameworkCore.Query.ExpressionPrinter.Print(this), nq}")]
 public class LiftableConstantExpression : Expression, IPrintableExpression
 {
+    /// <summary>
+    /// TODO
+    /// </summary>
     public LiftableConstantExpression(
         LambdaExpression resolverExpression,
         string variableName,
@@ -29,12 +32,24 @@ public class LiftableConstantExpression : Expression, IPrintableExpression
         Type = type;
     }
 
+    /// <summary>
+    /// TODO
+    /// </summary>
     public LambdaExpression ResolverExpression { get; }
 
+    /// <summary>
+    /// TODO
+    /// </summary>
     public string VariableName { get; }
 
+    /// <summary>
+    /// TODO
+    /// </summary>
     public override Type Type { get; }
 
+    /// <summary>
+    /// TODO
+    /// </summary>
     public override ExpressionType NodeType
         => ExpressionType.Extension;
 

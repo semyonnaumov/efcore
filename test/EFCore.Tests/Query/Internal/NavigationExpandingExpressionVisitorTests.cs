@@ -27,6 +27,7 @@ public class NavigationExpandingExpressionVisitorTests
                         null,
                         null,
                         null,
+                        null,
                         new ExecutionStrategyTest.TestExecutionStrategy(new MyDemoContext()),
                         new CurrentDbContext(new MyDemoContext()),
                         null,

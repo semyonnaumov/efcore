@@ -23,8 +23,11 @@ public class StructuralTypeShaperExpression : Expression, IPrintableExpression
     private static readonly MethodInfo CreateUnableToDiscriminateExceptionMethod
         = typeof(StructuralTypeShaperExpression).GetTypeInfo().GetDeclaredMethod(nameof(CreateUnableToDiscriminateException))!;
 
+    /// <summary>
+    /// TODO
+    /// </summary>
     [UsedImplicitly]
-    private static Exception CreateUnableToDiscriminateException(ITypeBase type, object discriminator)
+    public static Exception CreateUnableToDiscriminateException(ITypeBase type, object discriminator)
         => new InvalidOperationException(CoreStrings.UnableToDiscriminate(type.DisplayName(), discriminator.ToString()));
 
     /// <summary>

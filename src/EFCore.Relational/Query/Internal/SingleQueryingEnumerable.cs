@@ -6,8 +6,14 @@ using Microsoft.EntityFrameworkCore.Internal;
 
 namespace Microsoft.EntityFrameworkCore.Query.Internal;
 
+/// <summary>
+/// TODO
+/// </summary>
 public static class SingleQueryingEnumerable
 {
+    /// <summary>
+    /// TODO
+    /// </summary>
     public static SingleQueryingEnumerable<T> Create<T>(
         RelationalQueryContext relationalQueryContext,
         RelationalCommandCache relationalCommandCache,

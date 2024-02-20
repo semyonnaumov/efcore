@@ -3,6 +3,9 @@
 
 namespace Microsoft.EntityFrameworkCore.Query;
 
+/// <summary>
+/// TODO
+/// </summary>
 public record RelationalMaterializerLiftableConstantContext(
         ShapedQueryCompilingExpressionVisitorDependencies Dependencies,
         RelationalShapedQueryCompilingExpressionVisitorDependencies RelationalDependencies)

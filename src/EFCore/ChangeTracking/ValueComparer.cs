@@ -155,6 +155,9 @@ public abstract class ValueComparer : IEqualityComparer, IEqualityComparer<objec
     /// </summary>
     public virtual LambdaExpression EqualsExpression { get; }
 
+    /// <summary>
+    /// TODO
+    /// </summary>
     public abstract LambdaExpression ObjectEqualsExpression { get; }
 
     /// <summary>

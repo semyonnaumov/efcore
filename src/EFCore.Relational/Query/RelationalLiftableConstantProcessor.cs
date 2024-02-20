@@ -7,16 +7,23 @@ namespace Microsoft.EntityFrameworkCore.Query;
 
 #pragma warning disable EF1001 // LiftableConstantProcessor is internal
 
+/// <summary>
+/// TODO
+/// </summary>
 public class RelationalLiftableConstantProcessor : LiftableConstantProcessor
 {
-    private RelationalMaterializerLiftableConstantContext _relationalMaterializerLiftableConstantContext;
+    private readonly RelationalMaterializerLiftableConstantContext _relationalMaterializerLiftableConstantContext;
 
+    /// <summary>
+    /// TODO
+    /// </summary>
     public RelationalLiftableConstantProcessor(
         ShapedQueryCompilingExpressionVisitorDependencies dependencies,
         RelationalShapedQueryCompilingExpressionVisitorDependencies relationalDependencies)
         : base(dependencies)
         => _relationalMaterializerLiftableConstantContext = new(dependencies, relationalDependencies);
 
+    /// <inheritdoc/>
     protected override ConstantExpression InlineConstant(LiftableConstantExpression liftableConstant)
     {
         if (liftableConstant.ResolverExpression is Expression<Func<RelationalMaterializerLiftableConstantContext, object>>

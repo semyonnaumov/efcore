@@ -12,12 +12,12 @@ public class AdHocJsonQuerySqlServerTest : AdHocJsonQueryTestBase
     protected override ITestStoreFactory TestStoreFactory
         => SqlServerTestStoreFactory.Instance;
 
-    protected override void Seed29219(MyContext29219 ctx)
+    protected override void Seed29219(Context29219 ctx)
     {
-        var entity1 = new MyEntity29219
+        var entity1 = new Context29219.MyEntity
         {
             Id = 1,
-            Reference = new MyJsonEntity29219 { NonNullableScalar = 10, NullableScalar = 11 },
+            Reference = new Context29219.MyJsonEntity { NonNullableScalar = 10, NullableScalar = 11 },
             Collection =
             [
                 new() { NonNullableScalar = 100, NullableScalar = 101 },
@@ -26,10 +26,10 @@ public class AdHocJsonQuerySqlServerTest : AdHocJsonQueryTestBase
             ]
         };
 
-        var entity2 = new MyEntity29219
+        var entity2 = new Context29219.MyEntity
         {
             Id = 2,
-            Reference = new MyJsonEntity29219 { NonNullableScalar = 20, NullableScalar = null },
+            Reference = new Context29219.MyJsonEntity { NonNullableScalar = 20, NullableScalar = null },
             Collection = [new() { NonNullableScalar = 1001, NullableScalar = null }]
         };
 
@@ -43,7 +43,7 @@ VALUES(3, N'{ "NonNullableScalar" : 30 }', N'[{ "NonNullableScalar" : 10001 }]')
 """);
     }
 
-    protected override void Seed30028(MyContext30028 ctx)
+    protected override void Seed30028(Context30028 ctx)
     {
         // complete
         ctx.Database.ExecuteSql(
@@ -89,12 +89,12 @@ INSERT INTO [Reviews] ([Rounds], [Id])
 VALUES(N'[{"RoundNumber":11,"SubRounds":[{"SubRoundNumber":111},{"SubRoundNumber":112}]}]', 1)
 """);
 
-    protected override void SeedArrayOfPrimitives(MyContextArrayOfPrimitives ctx)
+    protected override void SeedArrayOfPrimitives(ContextArrayOfPrimitives ctx)
     {
-        var entity1 = new MyEntityArrayOfPrimitives
+        var entity1 = new ContextArrayOfPrimitives.MyEntity
         {
             Id = 1,
-            Reference = new MyJsonEntityArrayOfPrimitives
+            Reference = new ContextArrayOfPrimitives.MyJsonEntity
             {
                 IntArray = [1, 2, 3],
                 ListOfString =
@@ -111,10 +111,10 @@ VALUES(N'[{"RoundNumber":11,"SubRounds":[{"SubRoundNumber":111},{"SubRoundNumber
             ]
         };
 
-        var entity2 = new MyEntityArrayOfPrimitives
+        var entity2 = new ContextArrayOfPrimitives.MyEntity
         {
             Id = 2,
-            Reference = new MyJsonEntityArrayOfPrimitives
+            Reference = new ContextArrayOfPrimitives.MyJsonEntity
             {
                 IntArray = [10, 20, 30],
                 ListOfString =
@@ -135,7 +135,7 @@ VALUES(N'[{"RoundNumber":11,"SubRounds":[{"SubRoundNumber":111},{"SubRoundNumber
         ctx.SaveChanges();
     }
 
-    protected override void SeedJunkInJson(MyContextJunkInJson ctx)
+    protected override void SeedJunkInJson(ContextJunkInJson ctx)
         => ctx.Database.ExecuteSql(
             $$$$"""
 INSERT INTO [Entities] ([Collection], [CollectionWithCtor], [Reference], [ReferenceWithCtor], [Id])
@@ -147,7 +147,7 @@ N'{"MyBool":true,"JunkCollection":[{"Foo":"junk value"}],"Name":"r1 ctor","JunkR
 1)
 """);
 
-    protected override void SeedTrickyBuffering(MyContextTrickyBuffering ctx)
+    protected override void SeedTrickyBuffering(ContextTrickyBuffering ctx)
         => ctx.Database.ExecuteSql(
             $$$"""
 INSERT INTO [Entities] ([Reference], [Id])
@@ -155,7 +155,7 @@ VALUES(
 N'{"Name": "r1", "Number": 7, "JunkReference":{"Something": "SomeValue" }, "JunkCollection": [{"Foo": "junk value"}], "NestedReference": {"DoB": "2000-01-01T00:00:00"}, "NestedCollection": [{"DoB": "2000-02-01T00:00:00", "JunkReference": {"Something": "SomeValue"}}, {"DoB": "2000-02-02T00:00:00"}]}',1)
 """);
 
-    protected override void SeedShadowProperties(MyContextShadowProperties ctx)
+    protected override void SeedShadowProperties(ContextShadowProperties ctx)
         => ctx.Database.ExecuteSql(
             $$"""
 INSERT INTO [Entities] ([Collection], [CollectionWithCtor], [Reference], [ReferenceWithCtor], [Id], [Name])
@@ -168,7 +168,7 @@ N'{"ShadowInt":143,"Name":"e1_r ctor"}',
 N'e1')
 """);
 
-    protected override void SeedNotICollection(MyContextNotICollection ctx)
+    protected override void SeedNotICollection(ContextNotICollection ctx)
     {
         ctx.Database.ExecuteSql(
             $$"""
@@ -193,7 +193,7 @@ N'{"Collection":[{"Bar":21,"Foo":"c21"},{"Bar":22,"Foo":"c22"}]}',
     [MemberData(nameof(IsAsyncData))]
     public virtual async Task Read_enum_property_with_legacy_values(bool async)
     {
-        var contextFactory = await InitializeAsync<MyContextEnumLegacyValues>(
+        var contextFactory = await InitializeAsync<ContextEnumLegacyValues>(
             seed: SeedEnumLegacyValues);
 
         using (var context = contextFactory.CreateContext())
@@ -220,7 +220,7 @@ N'{"Collection":[{"Bar":21,"Foo":"c21"},{"Bar":22,"Foo":"c22"}]}',
     [MemberData(nameof(IsAsyncData))]
     public virtual async Task Read_json_entity_with_enum_properties_with_legacy_values(bool async)
     {
-        var contextFactory = await InitializeAsync<MyContextEnumLegacyValues>(
+        var contextFactory = await InitializeAsync<ContextEnumLegacyValues>(
             seed: SeedEnumLegacyValues,
             shouldLogCategory: c => c == DbLoggerCategory.Query.Name);
 
@@ -233,33 +233,33 @@ N'{"Collection":[{"Bar":21,"Foo":"c21"},{"Bar":22,"Foo":"c22"}]}',
                 : query.ToList();
 
             Assert.Equal(1, result.Count);
-            Assert.Equal(ByteEnumLegacyValues.Redmond, result[0].ByteEnum);
-            Assert.Equal(IntEnumLegacyValues.Foo, result[0].IntEnum);
-            Assert.Equal(LongEnumLegacyValues.Three, result[0].LongEnum);
-            Assert.Equal(ULongEnumLegacyValues.Three, result[0].ULongEnum);
-            Assert.Equal(IntEnumLegacyValues.Bar, result[0].NullableEnum);
+            Assert.Equal(ContextEnumLegacyValues.ByteEnum.Redmond, result[0].ByteEnum);
+            Assert.Equal(ContextEnumLegacyValues.IntEnum.Foo, result[0].IntEnum);
+            Assert.Equal(ContextEnumLegacyValues.LongEnum.Three, result[0].LongEnum);
+            Assert.Equal(ContextEnumLegacyValues.ULongEnum.Three, result[0].ULongEnum);
+            Assert.Equal(ContextEnumLegacyValues.IntEnum.Bar, result[0].NullableEnum);
         }
 
         var testLogger = new TestLogger<SqlServerLoggingDefinitions>();
         Assert.Single(
             ListLoggerFactory.Log.Where(
-                l => l.Message == CoreResources.LogStringEnumValueInJson(testLogger).GenerateMessage(nameof(ByteEnumLegacyValues))));
+                l => l.Message == CoreResources.LogStringEnumValueInJson(testLogger).GenerateMessage(nameof(ContextEnumLegacyValues.ByteEnum))));
         Assert.Single(
             ListLoggerFactory.Log.Where(
-                l => l.Message == CoreResources.LogStringEnumValueInJson(testLogger).GenerateMessage(nameof(IntEnumLegacyValues))));
+                l => l.Message == CoreResources.LogStringEnumValueInJson(testLogger).GenerateMessage(nameof(ContextEnumLegacyValues.IntEnum))));
         Assert.Single(
             ListLoggerFactory.Log.Where(
-                l => l.Message == CoreResources.LogStringEnumValueInJson(testLogger).GenerateMessage(nameof(LongEnumLegacyValues))));
+                l => l.Message == CoreResources.LogStringEnumValueInJson(testLogger).GenerateMessage(nameof(ContextEnumLegacyValues.LongEnum))));
         Assert.Single(
             ListLoggerFactory.Log.Where(
-                l => l.Message == CoreResources.LogStringEnumValueInJson(testLogger).GenerateMessage(nameof(ULongEnumLegacyValues))));
+                l => l.Message == CoreResources.LogStringEnumValueInJson(testLogger).GenerateMessage(nameof(ContextEnumLegacyValues.ULongEnum))));
     }
 
     [ConditionalTheory]
     [MemberData(nameof(IsAsyncData))]
     public virtual async Task Read_json_entity_collection_with_enum_properties_with_legacy_values(bool async)
     {
-        var contextFactory = await InitializeAsync<MyContextEnumLegacyValues>(
+        var contextFactory = await InitializeAsync<ContextEnumLegacyValues>(
             seed: SeedEnumLegacyValues,
             shouldLogCategory: c => c == DbLoggerCategory.Query.Name);
 
@@ -273,34 +273,34 @@ N'{"Collection":[{"Bar":21,"Foo":"c21"},{"Bar":22,"Foo":"c22"}]}',
 
             Assert.Equal(1, result.Count);
             Assert.Equal(2, result[0].Count);
-            Assert.Equal(ByteEnumLegacyValues.Bellevue, result[0][0].ByteEnum);
-            Assert.Equal(IntEnumLegacyValues.Foo, result[0][0].IntEnum);
-            Assert.Equal(LongEnumLegacyValues.One, result[0][0].LongEnum);
-            Assert.Equal(ULongEnumLegacyValues.One, result[0][0].ULongEnum);
-            Assert.Equal(IntEnumLegacyValues.Bar, result[0][0].NullableEnum);
-            Assert.Equal(ByteEnumLegacyValues.Seattle, result[0][1].ByteEnum);
-            Assert.Equal(IntEnumLegacyValues.Baz, result[0][1].IntEnum);
-            Assert.Equal(LongEnumLegacyValues.Two, result[0][1].LongEnum);
-            Assert.Equal(ULongEnumLegacyValues.Two, result[0][1].ULongEnum);
+            Assert.Equal(ContextEnumLegacyValues.ByteEnum.Bellevue, result[0][0].ByteEnum);
+            Assert.Equal(ContextEnumLegacyValues.IntEnum.Foo, result[0][0].IntEnum);
+            Assert.Equal(ContextEnumLegacyValues.LongEnum.One, result[0][0].LongEnum);
+            Assert.Equal(ContextEnumLegacyValues.ULongEnum.One, result[0][0].ULongEnum);
+            Assert.Equal(ContextEnumLegacyValues.IntEnum.Bar, result[0][0].NullableEnum);
+            Assert.Equal(ContextEnumLegacyValues.ByteEnum.Seattle, result[0][1].ByteEnum);
+            Assert.Equal(ContextEnumLegacyValues.IntEnum.Baz, result[0][1].IntEnum);
+            Assert.Equal(ContextEnumLegacyValues.LongEnum.Two, result[0][1].LongEnum);
+            Assert.Equal(ContextEnumLegacyValues.ULongEnum.Two, result[0][1].ULongEnum);
             Assert.Null(result[0][1].NullableEnum);
         }
 
         var testLogger = new TestLogger<SqlServerLoggingDefinitions>();
         Assert.Single(
             ListLoggerFactory.Log.Where(
-                l => l.Message == CoreResources.LogStringEnumValueInJson(testLogger).GenerateMessage(nameof(ByteEnumLegacyValues))));
+                l => l.Message == CoreResources.LogStringEnumValueInJson(testLogger).GenerateMessage(nameof(ContextEnumLegacyValues.ByteEnum))));
         Assert.Single(
             ListLoggerFactory.Log.Where(
-                l => l.Message == CoreResources.LogStringEnumValueInJson(testLogger).GenerateMessage(nameof(IntEnumLegacyValues))));
+                l => l.Message == CoreResources.LogStringEnumValueInJson(testLogger).GenerateMessage(nameof(ContextEnumLegacyValues.IntEnum))));
         Assert.Single(
             ListLoggerFactory.Log.Where(
-                l => l.Message == CoreResources.LogStringEnumValueInJson(testLogger).GenerateMessage(nameof(LongEnumLegacyValues))));
+                l => l.Message == CoreResources.LogStringEnumValueInJson(testLogger).GenerateMessage(nameof(ContextEnumLegacyValues.LongEnum))));
         Assert.Single(
             ListLoggerFactory.Log.Where(
-                l => l.Message == CoreResources.LogStringEnumValueInJson(testLogger).GenerateMessage(nameof(ULongEnumLegacyValues))));
+                l => l.Message == CoreResources.LogStringEnumValueInJson(testLogger).GenerateMessage(nameof(ContextEnumLegacyValues.ULongEnum))));
     }
 
-    private void SeedEnumLegacyValues(MyContextEnumLegacyValues ctx)
+    private void SeedEnumLegacyValues(ContextEnumLegacyValues ctx)
         => ctx.Database.ExecuteSql(
             $$"""
 INSERT INTO [Entities] ([Collection], [Reference], [Id], [Name])
@@ -311,71 +311,71 @@ N'{"ByteEnum":"Redmond","IntEnum":"Foo","LongEnum":"Three","ULongEnum":"Three","
 N'e1')
 """);
 
-    private class MyContextEnumLegacyValues(DbContextOptions options) : DbContext((new DbContextOptionsBuilder(options)).ConfigureWarnings(b => b.Log(CoreEventId.StringEnumValueInJson)).Options)
+    public class ContextEnumLegacyValues(DbContextOptions options) : DbContext((new DbContextOptionsBuilder(options)).ConfigureWarnings(b => b.Log(CoreEventId.StringEnumValueInJson)).Options)
     {
 
         // ReSharper disable once UnusedAutoPropertyAccessor.Local
-        public DbSet<MyEntityEnumLegacyValues> Entities { get; set; }
+        public DbSet<MyEntity> Entities { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.Entity<MyEntityEnumLegacyValues>().Property(x => x.Id).ValueGeneratedNever();
-            modelBuilder.Entity<MyEntityEnumLegacyValues>().OwnsOne(x => x.Reference, b => b.ToJson());
-            modelBuilder.Entity<MyEntityEnumLegacyValues>().OwnsMany(x => x.Collection, b => b.ToJson());
+            modelBuilder.Entity<MyEntity>().Property(x => x.Id).ValueGeneratedNever();
+            modelBuilder.Entity<MyEntity>().OwnsOne(x => x.Reference, b => b.ToJson());
+            modelBuilder.Entity<MyEntity>().OwnsMany(x => x.Collection, b => b.ToJson());
         }
-    }
 
-    private class MyEntityEnumLegacyValues
-    {
-        public int Id { get; set; }
-        public string Name { get; set; }
+        public class MyEntity
+        {
+            public int Id { get; set; }
+            public string Name { get; set; }
 
-        public MyJsonEntityEnumLegacyValues Reference { get; set; }
-        public List<MyJsonEntityEnumLegacyValues> Collection { get; set; }
-    }
+            public MyJsonEntity Reference { get; set; }
+            public List<MyJsonEntity> Collection { get; set; }
+        }
 
-    private class MyJsonEntityEnumLegacyValues
-    {
-        public string Name { get; set; }
+        public class MyJsonEntity
+        {
+            public string Name { get; set; }
 
-        // ReSharper disable once UnusedAutoPropertyAccessor.Local
-        public IntEnumLegacyValues IntEnum { get; set; }
-        // ReSharper disable once UnusedAutoPropertyAccessor.Local
-        public ByteEnumLegacyValues ByteEnum { get; set; }
-        // ReSharper disable once UnusedAutoPropertyAccessor.Local
-        public LongEnumLegacyValues LongEnum { get; set; }
-        // ReSharper disable once UnusedAutoPropertyAccessor.Local
-        public ULongEnumLegacyValues ULongEnum { get; set; }
-        // ReSharper disable once UnusedAutoPropertyAccessor.Local
-        public IntEnumLegacyValues? NullableEnum { get; set; }
-    }
+            // ReSharper disable once UnusedAutoPropertyAccessor.Local
+            public IntEnum IntEnum { get; set; }
+            // ReSharper disable once UnusedAutoPropertyAccessor.Local
+            public ByteEnum ByteEnum { get; set; }
+            // ReSharper disable once UnusedAutoPropertyAccessor.Local
+            public LongEnum LongEnum { get; set; }
+            // ReSharper disable once UnusedAutoPropertyAccessor.Local
+            public ULongEnum ULongEnum { get; set; }
+            // ReSharper disable once UnusedAutoPropertyAccessor.Local
+            public IntEnum? NullableEnum { get; set; }
+        }
 
-    private enum IntEnumLegacyValues
-    {
-        Foo = int.MinValue,
-        Bar,
-        Baz = int.MaxValue,
-    }
+        public enum IntEnum
+        {
+            Foo = int.MinValue,
+            Bar,
+            Baz = int.MaxValue,
+        }
 
-    private enum ByteEnumLegacyValues : byte
-    {
-        Seattle,
-        Redmond,
-        Bellevue = 255,
-    }
+        public enum ByteEnum : byte
+        {
+            Seattle,
+            Redmond,
+            Bellevue = 255,
+        }
 
-    private enum LongEnumLegacyValues : long
-    {
-        One = long.MinValue,
-        Two = 1,
-        Three = long.MaxValue,
-    }
+        public enum LongEnum : long
+        {
+            One = long.MinValue,
+            Two = 1,
+            Three = long.MaxValue,
+        }
 
-    private enum ULongEnumLegacyValues : ulong
-    {
-        One = ulong.MinValue,
-        Two = 1,
-        Three = ulong.MaxValue,
+        public enum ULongEnum : ulong
+        {
+            One = ulong.MinValue,
+            Two = 1,
+            Three = ulong.MaxValue,
+        }
     }
 
     #endregion

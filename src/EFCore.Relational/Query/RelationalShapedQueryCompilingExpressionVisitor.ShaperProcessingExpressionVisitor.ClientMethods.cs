@@ -1,6 +1,7 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Collections;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore.Internal;
@@ -987,7 +988,11 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
             return result;
         }
 
-        private static TResult? MaterializeJsonEntityCollection<TEntity, TResult>(
+        /// <summary>
+        /// TODO
+        /// </summary>
+        [EntityFrameworkInternal]
+        public static TResult? MaterializeJsonEntityCollection<TEntity, TResult>(
             QueryContext queryContext,
             object[] keyPropertyValues,
             JsonReaderData? jsonReaderData,
@@ -1054,7 +1059,11 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
             return result;
         }
 
-        private static void IncludeJsonEntityReference<TIncludingEntity, TIncludedEntity>(
+        /// <summary>
+        /// TODO
+        /// </summary>
+        [EntityFrameworkInternal]
+        public static void IncludeJsonEntityReference<TIncludingEntity, TIncludedEntity>(
             QueryContext queryContext,
             object[] keyPropertyValues,
             JsonReaderData? jsonReaderData,
@@ -1078,7 +1087,11 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
             }
         }
 
-        private static void IncludeJsonEntityCollection<TIncludingEntity, TIncludedCollectionElement>(
+        /// <summary>
+        /// TODO
+        /// </summary>
+        [EntityFrameworkInternal]
+        public static void IncludeJsonEntityCollection<TIncludingEntity, TIncludedCollectionElement>(
             QueryContext queryContext,
             object[] keyPropertyValues,
             JsonReaderData? jsonReaderData,
@@ -1143,6 +1156,20 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
             }
 
             manager.CaptureState();
+        }
+
+        /// <summary>
+        ///     TODO
+        /// </summary>
+        [EntityFrameworkInternal]
+        public static bool Any(IEnumerable source)
+        {
+            foreach (var _ in source)
+            {
+                return true;
+            }
+
+            return false;
         }
 
         /// <summary>

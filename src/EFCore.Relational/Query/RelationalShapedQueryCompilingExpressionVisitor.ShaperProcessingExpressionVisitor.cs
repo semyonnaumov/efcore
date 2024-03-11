@@ -482,7 +482,14 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                         _jsonMaterializationContextToJsonReaderDataAndKeyValuesParameterMapping[parameterExpression] = mappedParameter;
 
                         var updatedExpression = newExpression.Update(
-                            new[] { Constant(ValueBuffer.Empty), newExpression.Arguments[1] });
+                            new[]
+                            {
+                                _parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
+                                    _ => ValueBuffer.Empty,
+                                    "emptyValueBuffer",
+                                    typeof(ValueBuffer)),
+                                newExpression.Arguments[1]
+                            });
 
                         return Assign(binaryExpression.Left, updatedExpression);
                     }
@@ -1601,7 +1608,7 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                                     ReferenceEqual(Constant(null), shaperCollectionParameter),
                                     IsFalse(
                                         Call(
-                                            typeof(EnumerableExtensions).GetMethod(nameof(EnumerableExtensions.Any))!,
+                                            typeof(ShaperProcessingExpressionVisitor).GetMethod(nameof(ShaperProcessingExpressionVisitor.Any))!,
                                             shaperCollectionParameter))),
                                 shaperEntityParameter
                                     .MakeMemberAccess(ownedNavigation.GetMemberInfo(forMaterialization: true, forSet: true))
@@ -1668,7 +1675,8 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                 innerShapersMap,
                 innerFixupMap,
                 trackingInnerFixupMap,
-                _queryLogger).Rewrite(entityShaperMaterializer);
+                _queryLogger,
+                _parentVisitor.Dependencies.LiftableConstantFactory).Rewrite(entityShaperMaterializer);
 
             var entityShaperMaterializerVariable = Variable(
                 entityShaperMaterializer.Type,
@@ -1758,6 +1766,10 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
             if (navigation is { IsCollection: true })
             {
                 var collectionClrType = navigation.GetMemberInfo(forMaterialization: true, forSet: true).GetMemberType();
+
+                var declaringEntityTypeName = navigation.DeclaringEntityType.Name;
+                var navigationName = navigation.Name;
+
                 var materializeJsonEntityCollectionMethodCall =
                     Call(
                         MaterializeJsonEntityCollectionMethodInfo.MakeGenericMethod(
@@ -1766,7 +1778,12 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                         QueryCompilationContext.QueryContextParameter,
                         keyValuesParameter,
                         jsonReaderDataParameter,
-                        Constant(navigation),
+                        //Constant(navigation),
+                        // TODO: skip navigations in the future?
+                        _parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
+                            c => c.Dependencies.Model.FindEntityType(declaringEntityTypeName)!.FindDeclaredNavigation(navigationName)!,
+                            navigationName + "Navigation",
+                            typeof(INavigation)),
                         shaperLambda);
 
                 return materializeJsonEntityCollectionMethodCall;
@@ -1792,6 +1809,7 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
             private readonly IDictionary<string, LambdaExpression> _innerFixupMap;
             private readonly IDictionary<string, LambdaExpression> _trackingInnerFixupMap;
             private readonly IDiagnosticsLogger<DbLoggerCategory.Query> _queryLogger;
+            private readonly ILiftableConstantFactory _liftableConstantFactory;
 
             private static readonly PropertyInfo JsonEncodedTextEncodedUtf8BytesProperty
                 = typeof(JsonEncodedText).GetProperty(nameof(JsonEncodedText.EncodedUtf8Bytes))!;
@@ -1807,7 +1825,8 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                 IDictionary<string, Expression> innerShapersMap,
                 IDictionary<string, LambdaExpression> innerFixupMap,
                 IDictionary<string, LambdaExpression> trackingInnerFixupMap,
-                IDiagnosticsLogger<DbLoggerCategory.Query> queryLogger)
+                IDiagnosticsLogger<DbLoggerCategory.Query> queryLogger,
+                ILiftableConstantFactory liftableConstantFactory)
             {
                 _entityType = entityType;
                 _isTracking = isTracking;
@@ -1816,6 +1835,7 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                 _innerFixupMap = innerFixupMap;
                 _trackingInnerFixupMap = trackingInnerFixupMap;
                 _queryLogger = queryLogger;
+                _liftableConstantFactory = liftableConstantFactory;
             }
 
             public BlockExpression Rewrite(BlockExpression jsonEntityShaperMaterializer)
@@ -2024,197 +2044,6 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                     }
                 }
 
-
-//                if (switchExpression.SwitchValue.Type == typeof(IEntityType)
-//                    && switchExpression is
-//                    {
-//                        Cases: [{ TestValues: [ConstantExpression onlyValue], Body: BlockExpression body }]
-//                    }
-//                    && onlyValue.Value == _entityType
-//                    && body.Expressions.Count > 0)
-//                {
-//                    var valueBufferTryReadValueMethodsToProcess =
-//                        new ValueBufferTryReadValueMethodsFinder(_entityType).FindValueBufferTryReadValueMethods(body);
-
-//                    BlockExpression jsonEntityTypeInitializerBlock;
-//                    //sometimes we have shadow snapshot and sometimes not, but type initializer always comes last
-//                    switch (body.Expressions[^1])
-//                    {
-//                        case UnaryExpression { Operand: BlockExpression innerBlock } jsonEntityTypeInitializerUnary
-//                            when jsonEntityTypeInitializerUnary.NodeType is ExpressionType.Convert or ExpressionType.ConvertChecked:
-//                        {
-//                            // in case of proxies, the entity initializer block is wrapped around Convert node
-//                            // that converts from the proxy type to the actual entity type.
-//                            // We normalize that into a block by pushing the convert inside the inner block. Rather than:
-//                            //
-//                            // return (MyEntity)
-//                            // {
-//                            //     ProxyEntity instance;
-//                            //     (...)
-//                            //     return instance;
-//                            // }
-//                            //
-//                            // we produce:
-//                            // return
-//                            // {
-//                            //     ProxyEntity instance;
-//                            //     MyEntity actualInstance;
-//                            //     (...)
-//                            //     actualInstance = (MyEntity)instance;
-//                            //     return actualInstance;
-//                            // }
-//                            var newVariables = innerBlock.Variables.ToList();
-//                            var proxyConversionVariable = Variable(jsonEntityTypeInitializerUnary.Type);
-//                            newVariables.Add(proxyConversionVariable);
-//                            var newExpressions = innerBlock.Expressions.ToList()[..^1];
-//                            newExpressions.Add(
-//                                Assign(proxyConversionVariable, jsonEntityTypeInitializerUnary.Update(innerBlock.Expressions[^1])));
-//                            newExpressions.Add(proxyConversionVariable);
-//                            jsonEntityTypeInitializerBlock = Block(newVariables, newExpressions);
-//                            break;
-//                        }
-
-//                        case BlockExpression b:
-//                            jsonEntityTypeInitializerBlock = b;
-//                            break;
-//                        // case where we don't use block but rather return construction directly, as in:
-//                        // return new MyEntity(...)
-//                        //
-//                        // rather than:
-//                        // return
-//                        // {
-//                        //    MyEntity instance;
-//                        //    instance = new MyEntity(...)
-//                        //    (...)
-//                        // }
-//                        // we normalize this into block, since we are going to be adding extra statements (i.e. loop extracting JSON
-//                        // property values) there anyway
-//                        case NewExpression jsonEntityTypeInitializerCtor:
-//                            var newInstanceVariable = Variable(jsonEntityTypeInitializerCtor.Type, "instance");
-//                            jsonEntityTypeInitializerBlock = Block(
-//                                new[] { newInstanceVariable },
-//                                Assign(newInstanceVariable, jsonEntityTypeInitializerCtor),
-//                                newInstanceVariable);
-//                            break;
-//                        default:
-//                            throw new UnreachableException();
-//                    }
-
-//                    var managerVariable = Variable(typeof(Utf8JsonReaderManager), "jsonReaderManager");
-//                    var tokenTypeVariable = Variable(typeof(JsonTokenType), "tokenType");
-//                    var jsonEntityTypeVariable = (ParameterExpression)jsonEntityTypeInitializerBlock.Expressions[^1];
-
-//                    Debug.Assert(jsonEntityTypeVariable.Type == _entityType.ClrType);
-
-//                    var finalBlockVariables = new List<ParameterExpression>
-//                    {
-//                        managerVariable, tokenTypeVariable,
-//                    };
-
-//                    finalBlockVariables.AddRange(jsonEntityTypeInitializerBlock.Variables);
-
-//                    var finalBlockExpressions = new List<Expression>
-//                    {
-//                        // jsonReaderManager = new Utf8JsonReaderManager(jsonReaderData))
-//                        Assign(
-//                            managerVariable,
-//                            New(
-//                                JsonReaderManagerConstructor,
-//                                _jsonReaderDataParameter,
-//                                Constant(_queryLogger))),
-//                        // tokenType = jsonReaderManager.CurrentReader.TokenType
-//                        Assign(
-//                            tokenTypeVariable,
-//                            Property(
-//                                Field(
-//                                    managerVariable,
-//                                    Utf8JsonReaderManagerCurrentReaderField),
-//                                Utf8JsonReaderTokenTypeProperty)),
-//                    };
-
-//                    var (loop, propertyAssignmentMap) = GenerateJsonPropertyReadLoop(
-//                        managerVariable,
-//                        tokenTypeVariable,
-//                        finalBlockVariables,
-//                        valueBufferTryReadValueMethodsToProcess);
-
-//                    finalBlockExpressions.Add(loop);
-
-//                    var finalCaptureState = Call(managerVariable, Utf8JsonReaderManagerCaptureStateMethod);
-//                    finalBlockExpressions.Add(finalCaptureState);
-
-//                    // we have the loop, now we can add code that generate the entity instance
-//                    // will have to replace ValueBufferTryReadValue method calls with the parameters that store the value
-//                    // we can't use simple ExpressionReplacingVisitor, because there could be multiple instances of MethodCallExpression for given property
-//                    // using dedicated mini-visitor that looks for MCEs with a given shape and compare the IProperty inside
-//                    // order is:
-//                    // - shadow snapshot (if there was one)
-//                    // - entity construction / property assignments
-//                    // - navigation fixups
-//                    // - entity instance variable that is returned as end result
-//                    var propertyAssignmentReplacer = new ValueBufferTryReadValueMethodsReplacer(
-//                        jsonEntityTypeVariable, propertyAssignmentMap);
-
-//                    if (body.Expressions[0] is BinaryExpression
-//                        {
-//                            NodeType: ExpressionType.Assign,
-//                            Right: UnaryExpression
-//                            {
-//                                NodeType: ExpressionType.Convert,
-//                                Operand: NewExpression
-//                            }
-//                        } shadowSnapshotAssignment
-//#pragma warning disable EF1001 // Internal EF Core API usage.
-//                        && shadowSnapshotAssignment.Type == typeof(ISnapshot))
-//#pragma warning restore EF1001 // Internal EF Core API usage.
-//                    {
-//                        finalBlockExpressions.Add(propertyAssignmentReplacer.Visit(shadowSnapshotAssignment));
-//                    }
-
-//                    foreach (var jsonEntityTypeInitializerBlockExpression in jsonEntityTypeInitializerBlock.Expressions.ToArray()[..^1])
-//                    {
-//                        finalBlockExpressions.Add(propertyAssignmentReplacer.Visit(jsonEntityTypeInitializerBlockExpression));
-//                    }
-
-//                    // Fixup is only needed for non-tracking queries, in case of tracking - ChangeTracker does the job
-//                    // or for empty/null collections of a tracking queries.
-//                    if (_isTracking)
-//                    {
-//                        ProcessFixup(_trackingInnerFixupMap);
-//                    }
-//                    else
-//                    {
-//                        ProcessFixup(_innerFixupMap);
-//                    }
-
-//                    finalBlockExpressions.Add(jsonEntityTypeVariable);
-
-//                    return Block(
-//                        finalBlockVariables,
-//                        finalBlockExpressions);
-
-//                    void ProcessFixup(IDictionary<string, LambdaExpression> fixupMap)
-//                    {
-//                        foreach (var fixup in fixupMap)
-//                        {
-//                            var navigationEntityParameter = _navigationVariableMap[fixup.Key];
-
-//                            // we need to add null checks before we run fixup logic. For regular entities, whose fixup is done as part of the "Materialize*" method
-//                            // the checks are done there (same will be done for the "optimized" scenario, where we populate properties directly rather than store in variables)
-//                            // but in this case fixups are standalone, so the null safety must be added by us directly
-//                            finalBlockExpressions.Add(
-//                                IfThen(
-//                                    NotEqual(
-//                                        jsonEntityTypeVariable,
-//                                        Constant(null, jsonEntityTypeVariable.Type)),
-//                                    Invoke(
-//                                        fixup.Value,
-//                                        jsonEntityTypeVariable,
-//                                        _navigationVariableMap[fixup.Key])));
-//                        }
-//                    }
-//                }
-
                 return base.VisitSwitch(switchExpression);
 
                 // builds a loop that extracts values of JSON properties and assigns them into variables
@@ -2242,7 +2071,11 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                                     Utf8JsonReaderManagerCurrentReaderField),
                                 Utf8JsonReaderValueTextEqualsMethod,
                                 Property(
-                                    Constant(JsonEncodedText.Encode(property.GetJsonPropertyName()!)),
+                                    //Constant(JsonEncodedText.Encode(property.GetJsonPropertyName()!)),
+                                    _liftableConstantFactory.CreateLiftableConstant(
+                                        _ => JsonEncodedText.Encode(property.GetJsonPropertyName()!, null),
+                                        property.Name + "EncodedProperty",
+                                        typeof(JsonEncodedText)),
                                     JsonEncodedTextEncodedUtf8BytesProperty)));
 
                         var propertyVariable = Variable(valueBufferTryReadValueMethodToProcess.Type);
@@ -2268,6 +2101,7 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
 
                     foreach (var innerShaperMapElement in _innerShapersMap)
                     {
+                        var innerShaperMapElementKey = innerShaperMapElement.Key;
                         testExpressions.Add(
                             Call(
                                 Field(
@@ -2275,7 +2109,11 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                                     Utf8JsonReaderManagerCurrentReaderField),
                                 Utf8JsonReaderValueTextEqualsMethod,
                                 Property(
-                                    Constant(JsonEncodedText.Encode(innerShaperMapElement.Key)),
+                                    //Constant(JsonEncodedText.Encode(innerShaperMapElement.Key)),
+                                    _liftableConstantFactory.CreateLiftableConstant(
+                                        _ => JsonEncodedText.Encode(innerShaperMapElementKey, null),
+                                        innerShaperMapElementKey + "EncodedNavigation",
+                                        typeof(JsonEncodedText)),
                                     JsonEncodedTextEncodedUtf8BytesProperty)));
 
                         var propertyVariable = Variable(innerShaperMapElement.Value.Type);
@@ -2320,13 +2158,21 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                         switchCases.Add(
                             SwitchCase(
                                 testExpression,
-                                Constant(JsonTokenType.PropertyName)));
+                                //Constant(JsonTokenType.PropertyName)));
+                                _liftableConstantFactory.CreateLiftableConstant(
+                                    _ => JsonTokenType.PropertyName,
+                                    "PropertyNameJsonToken",
+                                    typeof(JsonTokenType))));
                     }
 
                     switchCases.Add(
                         SwitchCase(
                             Break(breakLabel),
-                            Constant(JsonTokenType.EndObject)));
+                            //Constant(JsonTokenType.EndObject)));
+                            _liftableConstantFactory.CreateLiftableConstant(
+                                _ => JsonTokenType.EndObject,
+                                "PropertyNameJsonToken",
+                                typeof(JsonTokenType))));
 
                     var loopBody = Block(
                         Assign(tokenTypeVariable, Call(managerVariable, Utf8JsonReaderManagerMoveNextMethod)),
@@ -2894,7 +2740,11 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
             return Lambda(Block(typeof(void), expressions), entityParameter, relatedEntityParameter);
         }
 
-        private static void InverseCollectionFixup<TCollectionElement, TEntity>(
+        /// <summary>
+        /// TODO
+        /// </summary>
+        [EntityFrameworkInternal]
+        public static void InverseCollectionFixup<TCollectionElement, TEntity>(
             ICollection<TCollectionElement> collection,
             TEntity entity,
             Action<TCollectionElement, TEntity> elementFixup)
@@ -2911,7 +2761,7 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
             INavigationBase navigation)
             => entity.MakeMemberAccess(navigation.GetMemberInfo(forMaterialization: true, forSet: true)).Assign(relatedEntity);
 
-        private static Expression GetOrCreateCollectionObjectLambda(
+        private Expression GetOrCreateCollectionObjectLambda(
             Type entityType,
             INavigationBase navigation)
         {
@@ -2921,7 +2771,18 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                 Block(
                     typeof(void),
                     Call(
-                        Constant(navigation.GetCollectionAccessor()),
+                        //Constant(navigation.GetCollectionAccessor()),
+
+                        // TODO: Very temporary hack. This is bad for perf.
+                        navigation is ISkipNavigation
+                        ? _parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
+                            c => c.Dependencies.Model.FindEntityType(navigation.DeclaringEntityType.Name)!.FindSkipNavigation(navigation.Name)!.GetCollectionAccessor()!,
+                            navigation.Name + "NavigationCollectionAccessor33",
+                            typeof(IClrCollectionAccessor))
+                        : _parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
+                            c => c.Dependencies.Model.FindEntityType(navigation.DeclaringEntityType.Name)!.FindNavigation(navigation.Name)!.GetCollectionAccessor()!,
+                            navigation.Name + "NavigationCollectionAccessor34",
+                            typeof(IClrCollectionAccessor)),
                         CollectionAccessorGetOrCreateMethodInfo,
                         prm,
                         Constant(true))),
@@ -3100,8 +2961,20 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
             var nullable = property.IsNullable;
             var typeMapping = property.GetTypeMapping();
 
-            var jsonReaderWriterExpression = Constant(
-                property.GetJsonValueReaderWriter() ?? property.GetTypeMapping().JsonValueReaderWriter!);
+            var jsonReaderWriter = property.GetJsonValueReaderWriter() ?? property.GetTypeMapping().JsonValueReaderWriter!;
+
+            //var jsonReaderWriterExpression = Constant(
+            //    property.GetJsonValueReaderWriter() ?? property.GetTypeMapping().JsonValueReaderWriter!);
+
+            // complex types are not supported in JSON for now, so property is guaranteed to be on an entity type
+            var declaringEntityTypeName = property.DeclaringType.Name;
+            var propertyName = property.Name;
+
+            var jsonReaderWriterExpression = _parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
+                c => c.Dependencies.Model.FindEntityType(declaringEntityTypeName)!.FindProperty(propertyName)!.GetJsonValueReaderWriter()
+                    ?? c.Dependencies.Model.FindEntityType(declaringEntityTypeName)!.FindProperty(propertyName)!.GetTypeMapping().JsonValueReaderWriter!,
+                propertyName + "PropertyName",
+                jsonReaderWriter.GetType());
 
             var fromJsonMethod = jsonReaderWriterExpression.Type.GetMethod(
                 nameof(JsonValueReaderWriter<object>.FromJsonTyped),

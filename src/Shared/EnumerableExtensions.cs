@@ -11,6 +11,7 @@ namespace Microsoft.EntityFrameworkCore.Utilities;
 [DebuggerStepThrough]
 internal static class EnumerableExtensions
 {
+
     public static IOrderedEnumerable<TSource> OrderByOrdinal<TSource>(
         this IEnumerable<TSource> source,
         Func<TSource, string> keySelector)

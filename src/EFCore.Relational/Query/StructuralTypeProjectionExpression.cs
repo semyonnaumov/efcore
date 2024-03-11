@@ -198,7 +198,7 @@ public class StructuralTypeProjectionExpression : Expression
             complexPropertyCache = new();
             foreach (var (complexProperty, complexShaper) in _complexPropertyCache)
             {
-                complexPropertyCache[complexProperty] = complexShaper.MakeNullable();
+                complexPropertyCache[complexProperty] = complexShaper.MakeNullable(liftableConstantFactory);
             }
         }
 

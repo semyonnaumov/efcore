@@ -2150,13 +2150,13 @@ public sealed partial class SelectExpression : TableExpressionBase
 
                 foreach (var complexProperty in GetAllComplexPropertiesInHierarchy(type))
                 {
-                    var complexPropertyShaper1 = structuralProjection1.BindComplexProperty(complexProperty);
-                    var complexPropertyShaper2 = structuralProjection2.BindComplexProperty(complexProperty);
-   rong                 ProcessStructuralType(
-   rong                     (StructuralTypeProjectionExpression)nestedProjection1.BindComplexProperty(complexProperty, _liftableConstantFactory).ValueBufferExpression,
-   rong                     (StructuralTypeProjectionExpression)nestedProjection2.BindComplexProperty(complexProperty, _liftableConstantFactory).ValueBufferExpression);
-                }
-            }
+                    var complexPropertyShaper1 = structuralProjection1.BindComplexProperty(complexProperty, _liftableConstantFactory);
+                    var complexPropertyShaper2 = structuralProjection2.BindComplexProperty(complexProperty, _liftableConstantFactory);
+   //rong                 ProcessStructuralType(
+   //rong                     (StructuralTypeProjectionExpression)nestedProjection1.BindComplexProperty(complexProperty, _liftableConstantFactory).ValueBufferExpression,
+   //rong                     (StructuralTypeProjectionExpression)nestedProjection2.BindComplexProperty(complexProperty, _liftableConstantFactory).ValueBufferExpression);
+            //    }
+            //}
 
                     var resultComplexProjection = ProcessStructuralType(
                         (StructuralTypeProjectionExpression)complexPropertyShaper1.ValueBufferExpression,
@@ -2165,7 +2165,8 @@ public sealed partial class SelectExpression : TableExpressionBase
                     var resultComplexShaper = new RelationalStructuralTypeShaperExpression(
                         complexProperty.ComplexType,
                         resultComplexProjection,
-                        resultComplexProjection.IsNullable);
+                        resultComplexProjection.IsNullable,
+                        _liftableConstantFactory);
 
                     complexPropertyCache[complexProperty] = resultComplexShaper;
                 }
@@ -3578,7 +3579,7 @@ public sealed partial class SelectExpression : TableExpressionBase
 
             foreach (var complexProperty in GetAllComplexPropertiesInHierarchy(projection.StructuralType))
             {
-                var complexPropertyShaper = projection.BindComplexProperty(complexProperty);
+                var complexPropertyShaper = projection.BindComplexProperty(complexProperty, _liftableConstantFactory);
 
                 var complexTypeProjectionExpression = LiftEntityProjectionFromSubquery(
                     (StructuralTypeProjectionExpression)complexPropertyShaper.ValueBufferExpression,

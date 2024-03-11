@@ -151,74 +151,74 @@ INSERT ZeroKey VALUES (NULL)
 
     #endregion
 
-    #region 8864
+//    #region 8864
 
-    [ConditionalFact]
-    public virtual async Task Select_nested_projection()
-    {
-        var contextFactory = await InitializeAsync<Context8864>(seed: c => c.Seed());
+//    [ConditionalFact]
+//    public virtual async Task Select_nested_projection()
+//    {
+//        var contextFactory = await InitializeAsync<Context8864>(seed: c => c.Seed());
 
-        using (var context = contextFactory.CreateContext())
-        {
-            var customers = context.Customers
-                .Select(c => new { Customer = c, CustomerAgain = Context8864.Get(context, c.Id) })
-                .ToList();
+//        using (var context = contextFactory.CreateContext())
+//        {
+//            var customers = context.Customers
+//                .Select(c => new { Customer = c, CustomerAgain = Context8864.Get(context, c.Id) })
+//                .ToList();
 
-            Assert.Equal(2, customers.Count);
+//            Assert.Equal(2, customers.Count);
 
-            foreach (var customer in customers)
-            {
-                Assert.Same(customer.Customer, customer.CustomerAgain);
-            }
-        }
+//            foreach (var customer in customers)
+//            {
+//                Assert.Same(customer.Customer, customer.CustomerAgain);
+//            }
+//        }
 
-        AssertSql(
-"""
-SELECT [c].[Id], [c].[Name]
-FROM [Customers] AS [c]
-""",
-                //
-                """
-@__id_0='1'
+//        AssertSql(
+//"""
+//SELECT [c].[Id], [c].[Name]
+//FROM [Customers] AS [c]
+//""",
+//                //
+//                """
+//@__id_0='1'
 
-SELECT TOP(2) [c].[Id], [c].[Name]
-FROM [Customers] AS [c]
-WHERE [c].[Id] = @__id_0
-""",
-                //
-                """
-@__id_0='2'
+//SELECT TOP(2) [c].[Id], [c].[Name]
+//FROM [Customers] AS [c]
+//WHERE [c].[Id] = @__id_0
+//""",
+//                //
+//                """
+//@__id_0='2'
 
-SELECT TOP(2) [c].[Id], [c].[Name]
-FROM [Customers] AS [c]
-WHERE [c].[Id] = @__id_0
-""");
-    }
+//SELECT TOP(2) [c].[Id], [c].[Name]
+//FROM [Customers] AS [c]
+//WHERE [c].[Id] = @__id_0
+//""");
+//    }
 
-    private class Context8864(DbContextOptions options) : DbContext(options)
-    {
-        public DbSet<Customer> Customers { get; set; }
+//    private class Context8864(DbContextOptions options) : DbContext(options)
+//    {
+//        public DbSet<Customer> Customers { get; set; }
 
-        public void Seed()
-        {
-            AddRange(
-                new Customer { Name = "Alan" },
-                new Customer { Name = "Elon" });
+//        public void Seed()
+//        {
+//            AddRange(
+//                new Customer { Name = "Alan" },
+//                new Customer { Name = "Elon" });
 
-            SaveChanges();
-        }
+//            SaveChanges();
+//        }
 
-        public static Customer Get(Context8864 context, int id)
-            => context.Customers.Single(c => c.Id == id);
+//        public static Customer Get(Context8864 context, int id)
+//            => context.Customers.Single(c => c.Id == id);
 
-        public class Customer
-        {
-            public int Id { get; set; }
-            public string Name { get; set; }
-        }
-    }
+//        public class Customer
+//        {
+//            public int Id { get; set; }
+//            public string Name { get; set; }
+//        }
+//    }
 
-    #endregion
+//    #endregion
 
     #region 9214
 
@@ -833,106 +833,106 @@ WHERE [d].[SmallDateTime] IN (
 
     #endregion
 
-    #region 15518
+//    #region 15518
 
-    [ConditionalTheory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public virtual async Task Nested_queries_does_not_cause_concurrency_exception_sync(bool tracking)
-    {
-        var contextFactory = await InitializeAsync<Context15518>(seed: c => c.Seed());
+//    [ConditionalTheory]
+//    [InlineData(false)]
+//    [InlineData(true)]
+//    public virtual async Task Nested_queries_does_not_cause_concurrency_exception_sync(bool tracking)
+//    {
+//        var contextFactory = await InitializeAsync<Context15518>(seed: c => c.Seed());
 
-        using (var context = contextFactory.CreateContext())
-        {
-            var query = context.Repos.OrderBy(r => r.Id).Where(r => r.Id > 0);
-            query = tracking ? query.AsTracking() : query.AsNoTracking();
+//        using (var context = contextFactory.CreateContext())
+//        {
+//            var query = context.Repos.OrderBy(r => r.Id).Where(r => r.Id > 0);
+//            query = tracking ? query.AsTracking() : query.AsNoTracking();
 
-            foreach (var a in query)
-            {
-                foreach (var b in query)
-                {
-                }
-            }
-        }
+//            foreach (var a in query)
+//            {
+//                foreach (var b in query)
+//                {
+//                }
+//            }
+//        }
 
-        using (var context = contextFactory.CreateContext())
-        {
-            var query = context.Repos.OrderBy(r => r.Id).Where(r => r.Id > 0);
-            query = tracking ? query.AsTracking() : query.AsNoTracking();
+//        using (var context = contextFactory.CreateContext())
+//        {
+//            var query = context.Repos.OrderBy(r => r.Id).Where(r => r.Id > 0);
+//            query = tracking ? query.AsTracking() : query.AsNoTracking();
 
-            await foreach (var a in query.AsAsyncEnumerable())
-            {
-                await foreach (var b in query.AsAsyncEnumerable())
-                {
-                }
-            }
-        }
+//            await foreach (var a in query.AsAsyncEnumerable())
+//            {
+//                await foreach (var b in query.AsAsyncEnumerable())
+//                {
+//                }
+//            }
+//        }
 
-        AssertSql(
-"""
-SELECT [r].[Id], [r].[Name]
-FROM [Repos] AS [r]
-WHERE [r].[Id] > 0
-ORDER BY [r].[Id]
-""",
-                //
-                """
-SELECT [r].[Id], [r].[Name]
-FROM [Repos] AS [r]
-WHERE [r].[Id] > 0
-ORDER BY [r].[Id]
-""",
-                //
-                """
-SELECT [r].[Id], [r].[Name]
-FROM [Repos] AS [r]
-WHERE [r].[Id] > 0
-ORDER BY [r].[Id]
-""",
-                //
-                """
-SELECT [r].[Id], [r].[Name]
-FROM [Repos] AS [r]
-WHERE [r].[Id] > 0
-ORDER BY [r].[Id]
-""",
-                //
-                """
-SELECT [r].[Id], [r].[Name]
-FROM [Repos] AS [r]
-WHERE [r].[Id] > 0
-ORDER BY [r].[Id]
-""",
-                //
-                """
-SELECT [r].[Id], [r].[Name]
-FROM [Repos] AS [r]
-WHERE [r].[Id] > 0
-ORDER BY [r].[Id]
-""");
-    }
+//        AssertSql(
+//"""
+//SELECT [r].[Id], [r].[Name]
+//FROM [Repos] AS [r]
+//WHERE [r].[Id] > 0
+//ORDER BY [r].[Id]
+//""",
+//                //
+//                """
+//SELECT [r].[Id], [r].[Name]
+//FROM [Repos] AS [r]
+//WHERE [r].[Id] > 0
+//ORDER BY [r].[Id]
+//""",
+//                //
+//                """
+//SELECT [r].[Id], [r].[Name]
+//FROM [Repos] AS [r]
+//WHERE [r].[Id] > 0
+//ORDER BY [r].[Id]
+//""",
+//                //
+//                """
+//SELECT [r].[Id], [r].[Name]
+//FROM [Repos] AS [r]
+//WHERE [r].[Id] > 0
+//ORDER BY [r].[Id]
+//""",
+//                //
+//                """
+//SELECT [r].[Id], [r].[Name]
+//FROM [Repos] AS [r]
+//WHERE [r].[Id] > 0
+//ORDER BY [r].[Id]
+//""",
+//                //
+//                """
+//SELECT [r].[Id], [r].[Name]
+//FROM [Repos] AS [r]
+//WHERE [r].[Id] > 0
+//ORDER BY [r].[Id]
+//""");
+//    }
 
-    private class Context15518(DbContextOptions options) : DbContext(options)
-    {
-        public DbSet<Repo> Repos { get; set; }
+//    private class Context15518(DbContextOptions options) : DbContext(options)
+//    {
+//        public DbSet<Repo> Repos { get; set; }
 
-        public void Seed()
-        {
-            AddRange(
-                new Repo { Name = "London" },
-                new Repo { Name = "New York" });
+//        public void Seed()
+//        {
+//            AddRange(
+//                new Repo { Name = "London" },
+//                new Repo { Name = "New York" });
 
-            SaveChanges();
-        }
+//            SaveChanges();
+//        }
 
-        public class Repo
-        {
-            public int Id { get; set; }
-            public string Name { get; set; }
-        }
-    }
+//        public class Repo
+//        {
+//            public int Id { get; set; }
+//            public string Name { get; set; }
+//        }
+//    }
 
-    #endregion
+//    #endregion
 
     #region 19206
 

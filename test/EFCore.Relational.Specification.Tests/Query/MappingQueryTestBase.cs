@@ -61,6 +61,9 @@ public abstract class MappingQueryTestBase<TFixture> : IClassFixture<TFixture>
         Assert.Equal(830, orders.Count);
     }
 
+    protected virtual DbContext CreateContext()
+        => Fixture.CreateContext();
+
     public class MappedCustomer : Customer
     {
         public string CompanyName2 { get; set; }

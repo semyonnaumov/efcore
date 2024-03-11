@@ -944,7 +944,11 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
             dataReaderContext.HasNext = false;
         }
 
-        private static TEntity? MaterializeJsonEntity<TEntity>(
+        /// <summary>
+        ///     TODO
+        /// </summary>
+        [EntityFrameworkInternal]
+        public static TEntity? MaterializeJsonEntity<TEntity>(
             QueryContext queryContext,
             object[] keyPropertyValues,
             JsonReaderData? jsonReaderData,

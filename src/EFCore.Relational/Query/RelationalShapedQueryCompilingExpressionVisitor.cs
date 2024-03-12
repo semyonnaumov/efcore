@@ -286,13 +286,19 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor : ShapedQue
 
             if (splitQuery)
             {
-                var relatedDataLoadersParameter = Constant(
-                    QueryCompilationContext.IsAsync ? null : relatedDataLoaders?.Compile(),
-                    typeof(Action<QueryContext, IExecutionStrategy, SplitQueryResultCoordinator>));
+                //var relatedDataLoadersParameter = Constant(
+                //    QueryCompilationContext.IsAsync ? null : relatedDataLoaders?.Compile(),
+                //    typeof(Action<QueryContext, IExecutionStrategy, SplitQueryResultCoordinator>));
+                var relatedDataLoadersParameter = QueryCompilationContext.IsAsync || relatedDataLoaders == null
+                    ? (Expression)Constant(null, typeof(Action<QueryContext, IExecutionStrategy, SplitQueryResultCoordinator>))
+                    : relatedDataLoaders;
 
-                var relatedDataLoadersAsyncParameter = Constant(
-                    QueryCompilationContext.IsAsync ? relatedDataLoaders?.Compile() : null,
-                    typeof(Func<QueryContext, IExecutionStrategy, SplitQueryResultCoordinator, Task>));
+                //var relatedDataLoadersAsyncParameter = Constant(
+                //    QueryCompilationContext.IsAsync ? relatedDataLoaders?.Compile() : null,
+                //    typeof(Func<QueryContext, IExecutionStrategy, SplitQueryResultCoordinator, Task>));
+                var relatedDataLoadersAsyncParameter = QueryCompilationContext.IsAsync && relatedDataLoaders != null
+                    ? relatedDataLoaders!
+                    : (Expression)Constant(null, typeof(Func<QueryContext, IExecutionStrategy, SplitQueryResultCoordinator, Task>));
 
                 return New(
                     typeof(GroupBySplitQueryingEnumerable<,>).MakeGenericType(
@@ -301,19 +307,20 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor : ShapedQue
                     Convert(QueryCompilationContext.QueryContextParameter, typeof(RelationalQueryContext)),
                     //Constant(relationalCommandCache),
                     relationalCommandCache,
-                    Constant(readerColumns, typeof(IReadOnlyList<ReaderColumn?>)),
+                    //Constant(readerColumns, typeof(IReadOnlyList<ReaderColumn?>)),
+                    readerColumns(),
                     //Constant(keySelector.Compile()),
                     //Constant(keyIdentifier.Compile()),
                     keySelector,
                     keyIdentifier,
-                    Constant(relationalGroupByResultExpression.KeyIdentifierValueComparers, typeof(IReadOnlyList<ValueComparer>)),
+                    //Constant(relationalGroupByResultExpression.KeyIdentifierValueComparers, typeof(IReadOnlyList<ValueComparer>)),
+                    NewArrayInit(typeof(Func<object, object, bool>), relationalGroupByResultExpression.KeyIdentifierValueComparers.Select(vc => vc.ObjectEqualsExpression)),
                     //Constant(elementSelector.Compile()),
                     elementSelector,
                     relatedDataLoadersParameter,
                     relatedDataLoadersAsyncParameter,
                     Constant(_contextType),
-                    Constant(
-                        QueryCompilationContext.QueryTrackingBehavior == QueryTrackingBehavior.NoTrackingWithIdentityResolution),
+                    Constant(QueryCompilationContext.QueryTrackingBehavior == QueryTrackingBehavior.NoTrackingWithIdentityResolution),
                     Constant(_detailedErrorsEnabled),
                     Constant(_threadSafetyChecksEnabled));
             }
@@ -331,7 +338,6 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor : ShapedQue
                 //Constant(keyIdentifier.Compile()),
                 keySelector,
                 keyIdentifier,
-
                 //Constant(relationalGroupByResultExpression.KeyIdentifierValueComparers, typeof(IReadOnlyList<ValueComparer>)),
                 NewArrayInit(typeof(Func<object, object, bool>), relationalGroupByResultExpression.KeyIdentifierValueComparers.Select(vc => vc.ObjectEqualsExpression)),
 

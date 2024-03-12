@@ -1356,9 +1356,6 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                                 Constant(_valuesArrayInitializers.Count - 1)),
                             relationalSplitCollectionShaperExpression.Type);
 
-
-                        var rc = readerColumns();
-
                         _collectionPopulatingExpressions!.Add(
                             Call(
                                 (_isAsync ? PopulateSplitCollectionAsyncMethodInfo : PopulateSplitCollectionMethodInfo)
@@ -2901,6 +2898,8 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                     converter.ConvertFromProviderExpression.Parameters.Single(),
                     valueExpression,
                     converter.ConvertFromProviderExpression.Body);
+
+                //throw new InvalidOperationException("need to fix this SOMEHOW");
             }
 
             if (valueExpression.Type != type)
@@ -3021,8 +3020,76 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
             return resultExpression;
         }
 
-        // TODO: No, this must be a lifted constant, otherwise we re-instantiate on each query
         private Func<Expression> CreateReaderColumnsExpression()
+            => () =>
+            {
+                if (_readerColumns is null)
+                {
+                    return Expression.Constant(null, typeof(ReaderColumn?[]));
+                }
+
+                var materializerLiftableConstantContextParameter = Expression.Parameter(typeof(MaterializerLiftableConstantContext));
+
+                var initializers = new List<Expression>();
+
+
+                foreach (var readerColumn in _readerColumns)
+                {
+                    //if (foo != 6) continue;
+
+                    var currentReaderColumn = readerColumn;
+                    if (currentReaderColumn is null)
+                    {
+                        initializers.Add(Expression.Constant(null, typeof(ReaderColumn)));
+                        continue;
+                    }
+
+                    var propertyExpression = default(Expression);
+                    var property = currentReaderColumn.Property;
+                    if (property is null)
+                    {
+                        propertyExpression = Expression.Constant(null, typeof(IProperty));
+                    }
+                    else
+                    {
+                        if (property.DeclaringType is not IEntityType) continue;
+
+                        var entityTypeName = property.DeclaringType.Name;
+                        var propertyName = property.Name;
+                        Expression<Func<MaterializerLiftableConstantContext, string, string, object?>> wrapper = (c, etn, pn)
+                            => c.Dependencies.Model
+                                .FindEntityType(etn)!
+                                .FindProperty(pn)!;
+
+                        propertyExpression = ReplacingExpressionVisitor.Replace(
+                            wrapper.Parameters.ToArray<Expression>(),
+                            new Expression[] { materializerLiftableConstantContextParameter, Expression.Constant(entityTypeName), Expression.Constant(propertyName) },
+                            wrapper.Body);
+                    }
+
+                    initializers.Add(
+                        Expression.New(
+                            ReaderColumn.GetConstructor(currentReaderColumn.Type),
+                            Expression.Constant(currentReaderColumn.IsNullable),
+                            Expression.Constant(currentReaderColumn.Name, typeof(string)),
+                            propertyExpression,//GetPropertyExpression(rc),
+                            currentReaderColumn.GetFieldValueExpression));
+                }
+
+                var result = _parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
+                    Expression.Lambda<Func<MaterializerLiftableConstantContext, object>>(
+                        Expression.NewArrayInit(
+                            typeof(ReaderColumn),
+                            initializers),
+                        materializerLiftableConstantContextParameter),
+                    "readerColumns",
+                    typeof(ReaderColumn[]));
+
+                return result;
+            };
+
+        // TODO: No, this must be a lifted constant, otherwise we re-instantiate on each query
+        private Func<Expression> CreateReaderColumnsExpression2()
             => () =>
             {
                 if (_readerColumns is null)

@@ -1366,21 +1366,21 @@ FROM [Entities] FOR SYSTEM_TIME AS OF '2010-01-01T00:00:00.0000000' AS [e]
 """);
     }
 
-    protected class Context30478(DbContextOptions options) : DbContext(options)
+    public class Context30478(DbContextOptions options) : DbContext(options)
     {
-        public DbSet<Entity30478> Entities { get; set; }
+        public DbSet<Entity> Entities { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.Entity<Entity30478>().Property(x => x.Id).ValueGeneratedNever();
-            modelBuilder.Entity<Entity30478>().ToTable("Entities", tb => tb.IsTemporal());
-            modelBuilder.Entity<Entity30478>().OwnsOne(x => x.Reference, nb =>
+            modelBuilder.Entity<Entity>().Property(x => x.Id).ValueGeneratedNever();
+            modelBuilder.Entity<Entity>().ToTable("Entities", tb => tb.IsTemporal());
+            modelBuilder.Entity<Entity>().OwnsOne(x => x.Reference, nb =>
             {
                 nb.ToJson();
                 nb.OwnsOne(x => x.Nested);
             });
 
-            modelBuilder.Entity<Entity30478>().OwnsMany(x => x.Collection, nb =>
+            modelBuilder.Entity<Entity>().OwnsMany(x => x.Collection, nb =>
             {
                 nb.ToJson();
                 nb.OwnsOne(x => x.Nested);
@@ -1389,39 +1389,36 @@ FROM [Entities] FOR SYSTEM_TIME AS OF '2010-01-01T00:00:00.0000000' AS [e]
 
         public void Seed()
         {
-            var e1 = new Entity30478
+            var e1 = new Entity
             {
                 Id = 1,
                 Name = "e1",
-                Reference = new Json30478
+                Reference = new Json
                 {
                     Name = "r1",
-                    Nested = new JsonNested30478 { Number = 1 }
+                    Nested = new JsonNested { Number = 1 }
                 },
                 Collection =
                 [
-                    new Json30478 { Name = "c11", Nested = new JsonNested30478 { Number = 11 } },
-
-                    new Json30478 { Name = "c12", Nested = new JsonNested30478 { Number = 12 } },
-
-                    new Json30478 { Name = "c13", Nested = new JsonNested30478 { Number = 12 } }
+                    new Json { Name = "c11", Nested = new JsonNested { Number = 11 } },
+                    new Json { Name = "c12", Nested = new JsonNested { Number = 12 } },
+                    new Json { Name = "c13", Nested = new JsonNested { Number = 12 } }
                 ]
             };
 
-            var e2 = new Entity30478
+            var e2 = new Entity
             {
                 Id = 2,
                 Name = "e2",
-                Reference = new Json30478
+                Reference = new Json
                 {
                     Name = "r2",
-                    Nested = new JsonNested30478 { Number = 2 }
+                    Nested = new JsonNested { Number = 2 }
                 },
                 Collection =
                 [
-                    new Json30478 { Name = "c21", Nested = new JsonNested30478 { Number = 21 } },
-
-                    new Json30478 { Name = "c22", Nested = new JsonNested30478 { Number = 22 } }
+                    new Json { Name = "c21", Nested = new JsonNested { Number = 21 } },
+                    new Json { Name = "c22", Nested = new JsonNested { Number = 22 } }
 
                 ]
             };
@@ -1442,25 +1439,25 @@ FROM [Entities] FOR SYSTEM_TIME AS OF '2010-01-01T00:00:00.0000000' AS [e]
             Database.ExecuteSqlRaw($"ALTER TABLE [Entities] ADD PERIOD FOR SYSTEM_TIME ([PeriodStart], [PeriodEnd])");
             Database.ExecuteSqlRaw($"ALTER TABLE [Entities] SET (SYSTEM_VERSIONING = ON (HISTORY_TABLE = [dbo].[EntitiesHistory]))");
         }
-    }
 
-    protected class Entity30478
-    {
-        public int Id { get; set; }
-        public string Name { get; set; }
-        public Json30478 Reference { get; set; }
-        public List<Json30478> Collection { get; set; }
-    }
+        public class Entity
+        {
+            public int Id { get; set; }
+            public string Name { get; set; }
+            public Json Reference { get; set; }
+            public List<Json> Collection { get; set; }
+        }
 
-    protected class Json30478
-    {
-        public string Name { get; set; }
-        public JsonNested30478 Nested { get; set; }
-    }
+        public class Json
+        {
+            public string Name { get; set; }
+            public JsonNested Nested { get; set; }
+        }
 
-    protected class JsonNested30478
-    {
-        public int Number { get; set; }
+        public class JsonNested
+        {
+            public int Number { get; set; }
+        }
     }
 
     #endregion

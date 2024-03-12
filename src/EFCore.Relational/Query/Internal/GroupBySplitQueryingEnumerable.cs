@@ -20,7 +20,8 @@ public class GroupBySplitQueryingEnumerable<TKey, TElement>
     private readonly IReadOnlyList<ReaderColumn?>? _readerColumns;
     private readonly Func<QueryContext, DbDataReader, TKey> _keySelector;
     private readonly Func<QueryContext, DbDataReader, object[]> _keyIdentifier;
-    private readonly IReadOnlyList<ValueComparer> _keyIdentifierValueComparers;
+    //private readonly IReadOnlyList<ValueComparer> _keyIdentifierValueComparers;
+    private readonly IReadOnlyList<Func<object, object, bool>> _keyIdentifierValueComparers;
     private readonly Func<QueryContext, DbDataReader, ResultContext, SplitQueryResultCoordinator, TElement> _elementSelector;
     private readonly Action<QueryContext, IExecutionStrategy, SplitQueryResultCoordinator>? _relatedDataLoaders;
     private readonly Func<QueryContext, IExecutionStrategy, SplitQueryResultCoordinator, Task>? _relatedDataLoadersAsync;
@@ -42,7 +43,8 @@ public class GroupBySplitQueryingEnumerable<TKey, TElement>
         IReadOnlyList<ReaderColumn?>? readerColumns,
         Func<QueryContext, DbDataReader, TKey> keySelector,
         Func<QueryContext, DbDataReader, object[]> keyIdentifier,
-        IReadOnlyList<ValueComparer> keyIdentifierValueComparers,
+        //IReadOnlyList<ValueComparer> keyIdentifierValueComparers,
+        IReadOnlyList<Func<object, object, bool>> keyIdentifierValueComparers,
         Func<QueryContext, DbDataReader, ResultContext, SplitQueryResultCoordinator, TElement> elementSelector,
         Action<QueryContext, IExecutionStrategy, SplitQueryResultCoordinator>? relatedDataLoaders,
         Func<QueryContext, IExecutionStrategy, SplitQueryResultCoordinator, Task>? relatedDataLoadersAsync,
@@ -159,6 +161,20 @@ public class GroupBySplitQueryingEnumerable<TKey, TElement>
         return true;
     }
 
+    private static bool CompareIdentifiers2(IReadOnlyList<Func<object, object, bool>> valueComparers, object[] left, object[] right)
+    {
+        // Ignoring size check on all for perf as they should be same unless bug in code.
+        for (var i = 0; i < left.Length; i++)
+        {
+            if (!valueComparers[i](left[i], right[i]))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     private sealed class Enumerator : IEnumerator<IGrouping<TKey, TElement>>
     {
         private readonly RelationalQueryContext _relationalQueryContext;
@@ -166,7 +182,8 @@ public class GroupBySplitQueryingEnumerable<TKey, TElement>
         private readonly IReadOnlyList<ReaderColumn?>? _readerColumns;
         private readonly Func<QueryContext, DbDataReader, TKey> _keySelector;
         private readonly Func<QueryContext, DbDataReader, object[]> _keyIdentifier;
-        private readonly IReadOnlyList<ValueComparer> _keyIdentifierValueComparers;
+        //private readonly IReadOnlyList<ValueComparer> _keyIdentifierValueComparers;
+        private readonly IReadOnlyList<Func<object, object, bool>> _keyIdentifierValueComparers;
         private readonly Func<QueryContext, DbDataReader, ResultContext, SplitQueryResultCoordinator, TElement> _elementSelector;
         private readonly Action<QueryContext, IExecutionStrategy, SplitQueryResultCoordinator>? _relatedDataLoaders;
         private readonly Type _contextType;
@@ -248,7 +265,7 @@ public class GroupBySplitQueryingEnumerable<TKey, TElement>
                             if (_resultCoordinator!.HasNext ?? _dbDataReader!.Read())
                             {
                                 // Check if grouping key changed
-                                if (!CompareIdentifiers(
+                                if (!CompareIdentifiers2(
                                         _keyIdentifierValueComparers, keyIdentifier,
                                         _keyIdentifier(_relationalQueryContext, _dbDataReader!)))
                                 {
@@ -340,7 +357,8 @@ public class GroupBySplitQueryingEnumerable<TKey, TElement>
         private readonly IReadOnlyList<ReaderColumn?>? _readerColumns;
         private readonly Func<QueryContext, DbDataReader, TKey> _keySelector;
         private readonly Func<QueryContext, DbDataReader, object[]> _keyIdentifier;
-        private readonly IReadOnlyList<ValueComparer> _keyIdentifierValueComparers;
+        //private readonly IReadOnlyList<ValueComparer> _keyIdentifierValueComparers;
+        private readonly IReadOnlyList<Func<object, object, bool>> _keyIdentifierValueComparers;
         private readonly Func<QueryContext, DbDataReader, ResultContext, SplitQueryResultCoordinator, TElement> _elementSelector;
         private readonly Func<QueryContext, IExecutionStrategy, SplitQueryResultCoordinator, Task>? _relatedDataLoaders;
         private readonly Type _contextType;
@@ -426,7 +444,7 @@ public class GroupBySplitQueryingEnumerable<TKey, TElement>
                             if (_resultCoordinator!.HasNext ?? await _dataReader!.ReadAsync(_cancellationToken).ConfigureAwait(false))
                             {
                                 // Check if grouping key changed
-                                if (!CompareIdentifiers(
+                                if (!CompareIdentifiers2(
                                         _keyIdentifierValueComparers, keyIdentifier,
                                         _keyIdentifier(_relationalQueryContext, _dbDataReader!)))
                                 {

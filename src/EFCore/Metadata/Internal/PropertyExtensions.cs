@@ -173,4 +173,16 @@ public static class PropertyExtensions
     /// </summary>
     public static bool RequiresOriginalValue(this IReadOnlyComplexProperty property)
         => property.ComplexType.ContainingEntityType.GetChangeTrackingStrategy() != ChangeTrackingStrategy.ChangingAndChangedNotifications;
+
+    public static (IEntityType Root, List<IComplexProperty> ComplexProperties) FindPathForPropertyOnComplexType(this IProperty property)
+    {
+        var complexProperties = new List<IComplexProperty>();
+        var declaringType = property.DeclaringType;
+        if (declaringType is IEntityType)
+        {
+
+        }
+
+
+    }
 }

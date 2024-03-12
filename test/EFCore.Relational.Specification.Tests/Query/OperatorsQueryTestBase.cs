@@ -335,13 +335,13 @@ public abstract class OperatorsQueryTestBase : NonSharedModelTestBase
         Assert.Equal("Bar", result.Owned.SomeProperty);
     }
 
-    private class Owner
+    public class Owner
     {
         public int Id { get; set; }
         public Owned Owned { get; set; } = null!;
     }
 
-    private class Owned
+    public class Owned
     {
         public string SomeProperty { get; set; } = "";
     }

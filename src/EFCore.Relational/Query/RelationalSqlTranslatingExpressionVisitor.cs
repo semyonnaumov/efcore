@@ -1731,7 +1731,11 @@ public class RelationalSqlTranslatingExpressionVisitor : ExpressionVisitor
                         ParameterListValueExtractorMethod.MakeGenericMethod(entityType.ClrType, property.ClrType.MakeNullable()),
                         QueryCompilationContext.QueryContextParameter,
                         Expression.Constant(sqlParameterExpression.Name, typeof(string)),
-                        Expression.Constant(property, typeof(IProperty))),
+                        _liftableConstantFactory.CreateLiftableConstant(
+                            c => c.Dependencies.Model.FindEntityType(entityType.Name)!.FindProperty(property.Name)!,
+                            property.Name + "Property",
+                            typeof(IProperty))),
+                        //Expression.Constant(property, typeof(IProperty))),
                     QueryCompilationContext.QueryContextParameter);
 
                 var newParameterName =

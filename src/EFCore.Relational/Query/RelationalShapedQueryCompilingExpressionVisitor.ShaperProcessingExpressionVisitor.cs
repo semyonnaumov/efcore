@@ -3020,6 +3020,15 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
             return resultExpression;
         }
 
+        private static readonly MethodInfo ModelFindEntiyTypeMethod =
+            typeof(IModel).GetRuntimeMethod(nameof(IModel.FindEntityType), [typeof(string)])!;
+
+        private static readonly MethodInfo TypeBaseFindComplexPropertyMethod =
+            typeof(ITypeBase).GetRuntimeMethod(nameof(ITypeBase.FindComplexProperty), [typeof(string)])!;
+
+        private static readonly MethodInfo TypeBaseFindPropertyMethod =
+            typeof(ITypeBase).GetRuntimeMethod(nameof(ITypeBase.FindProperty), [typeof(string)])!;
+
         private Func<Expression> CreateReaderColumnsExpression()
             => () =>
             {
@@ -3052,19 +3061,31 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                     }
                     else
                     {
-                        if (property.DeclaringType is not IEntityType) continue;
+#pragma warning disable EF1001 // Internal EF Core API usage.
+                        var (rootEntityType, complexProperties) = property.FindPathForPropertyOnComplexType();
+#pragma warning restore EF1001 // Internal EF Core API usage.
 
-                        var entityTypeName = property.DeclaringType.Name;
+
+                        var entityTypeName = rootEntityType.Name;
+                        var typeBase = (Expression)Call(
+                                Property(
+                                    Property(
+                                        materializerLiftableConstantContextParameter,
+                                        nameof(MaterializerLiftableConstantContext.Dependencies)),
+                                    nameof(ShapedQueryCompilingExpressionVisitorDependencies.Model)),
+                                ModelFindEntiyTypeMethod,
+                                Constant(entityTypeName));
+
+                        foreach (var complexProperty in complexProperties)
+                        {
+                            var complexPropertyName = complexProperty.Name;
+                            typeBase = Property(
+                                Call(typeBase, TypeBaseFindComplexPropertyMethod, Constant(complexPropertyName)),
+                                nameof(IComplexProperty.ComplexType));
+                        }
+
                         var propertyName = property.Name;
-                        Expression<Func<MaterializerLiftableConstantContext, string, string, object?>> wrapper = (c, etn, pn)
-                            => c.Dependencies.Model
-                                .FindEntityType(etn)!
-                                .FindProperty(pn)!;
-
-                        propertyExpression = ReplacingExpressionVisitor.Replace(
-                            wrapper.Parameters.ToArray<Expression>(),
-                            new Expression[] { materializerLiftableConstantContextParameter, Expression.Constant(entityTypeName), Expression.Constant(propertyName) },
-                            wrapper.Body);
+                        propertyExpression = Call(typeBase, TypeBaseFindPropertyMethod, Constant(propertyName));
                     }
 
                     initializers.Add(

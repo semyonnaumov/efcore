@@ -174,15 +174,35 @@ public static class PropertyExtensions
     public static bool RequiresOriginalValue(this IReadOnlyComplexProperty property)
         => property.ComplexType.ContainingEntityType.GetChangeTrackingStrategy() != ChangeTrackingStrategy.ChangingAndChangedNotifications;
 
-    public static (IEntityType Root, List<IComplexProperty> ComplexProperties) FindPathForPropertyOnComplexType(this IProperty property)
+    /// <summary>
+    ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+    ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+    ///     any release. You should only use it directly in your code with extreme caution and knowing that
+    ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+    /// </summary>
+    public static (IEntityType Root, List<IComplexProperty> ComplexProperties) FindPathForPropertyOnComplexType(this IPropertyBase property)
     {
-        var complexProperties = new List<IComplexProperty>();
         var declaringType = property.DeclaringType;
-        if (declaringType is IEntityType)
+        if (declaringType is IEntityType declaringEntityType)
         {
-
+            return (declaringEntityType, []);
         }
 
+        var complexProperties = new List<IComplexProperty>();
+        while (declaringType is IComplexType complexType)
+        {
+            complexProperties.Add(complexType.ComplexProperty);
+            declaringType = complexType.ComplexProperty.DeclaringType;
+        }
 
+        complexProperties.Reverse();
+        return ((IEntityType)declaringType, complexProperties);
+
+        //var complexProperties = new List<IComplexProperty>();
+        //while (declaringType is IComplexType declaringComplexType)
+        //{
+        //    complexProperties.Add(declaringComplexType)
+
+        //}
     }
 }

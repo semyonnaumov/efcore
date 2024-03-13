@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using JetBrains.Annotations;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
 namespace Microsoft.EntityFrameworkCore.Query;
 
@@ -142,7 +143,12 @@ public class StructuralTypeShaperExpression : Expression, IPrintableExpression
 
         if (type is IComplexType complexType)
         {
-            return Lambda(Constant(complexType, typeof(IComplexType)), valueBufferParameter);
+            //return Lambda(Constant(complexType, typeof(IComplexType)), valueBufferParameter);
+            return Lambda(
+                liftableConstantFactory.CreateLiftableConstant(
+                    complexType.BuildComplexTypeAccessLambdaForLiftableConstant(),
+                    complexType.Name + "ComplexType",
+                    typeof(IComplexType)), valueBufferParameter);
         }
 
         var entityType = (IEntityType)type;

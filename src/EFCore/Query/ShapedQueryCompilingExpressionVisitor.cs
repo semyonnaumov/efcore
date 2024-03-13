@@ -590,6 +590,10 @@ public abstract class ShapedQueryCompilingExpressionVisitor : ExpressionVisitor
             {
                 var concreteEntityType = concreteEntityTypes[i];
 
+
+
+                tu jest zjebane
+
                 switchCases[i] = SwitchCase(
                     CreateFullMaterializeExpression(concreteEntityTypes[i], expressionContext),
                     // Constant(concreteEntityTypes[i], typeof(IEntityType))

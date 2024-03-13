@@ -4,6 +4,7 @@
 using System.Collections;
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using Microsoft.EntityFrameworkCore.Query.Internal;
 using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 
 namespace Microsoft.EntityFrameworkCore.Query;
@@ -2046,7 +2047,10 @@ public class RelationalSqlTranslatingExpressionVisitor : ExpressionVisitor
             case SqlParameterExpression sqlParameterExpression
                 when sqlParameterExpression.Name.StartsWith(QueryCompilationContext.QueryParameterPrefix, StringComparison.Ordinal):
             {
-                var entityTypeName = property.DeclaringType.Name;
+#pragma warning disable EF1001 // Internal EF Core API usage.
+                var liftableConstantLambda =   LiftableConstantExpressionHelpers.BuildPropertyAccessLambdaForLiftableConstant(property);
+#pragma warning restore EF1001 // Internal EF Core API usage.
+
                 var lambda = Expression.Lambda(
                     Expression.Call(
                         ParameterValueExtractorMethod.MakeGenericMethod(property.ClrType.MakeNullable()),
@@ -2054,7 +2058,7 @@ public class RelationalSqlTranslatingExpressionVisitor : ExpressionVisitor
                         Expression.Constant(sqlParameterExpression.Name, typeof(string)),
                         Expression.Constant(null, typeof(List<IComplexProperty>)),
                         _liftableConstantFactory.CreateLiftableConstant(
-                            c => c.Dependencies.Model.FindEntityType(entityTypeName)!.GetProperties().Single(p => p.Name == property.Name),
+                            liftableConstantLambda,
                             property.Name + "Property",
                             typeof(IProperty))),
                 //Expression.Constant(property, typeof(IProperty))),

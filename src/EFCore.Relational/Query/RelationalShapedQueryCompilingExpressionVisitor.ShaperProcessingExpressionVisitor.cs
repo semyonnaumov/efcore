@@ -3023,6 +3023,9 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
         private static readonly MethodInfo ModelFindEntiyTypeMethod =
             typeof(IModel).GetRuntimeMethod(nameof(IModel.FindEntityType), [typeof(string)])!;
 
+        private static readonly MethodInfo RuntimeModelFindAdHocEntiyTypeMethod =
+            typeof(RuntimeModel).GetRuntimeMethod(nameof(RuntimeModel.FindAdHocEntityType), [typeof(string)])!;
+
         private static readonly MethodInfo TypeBaseFindComplexPropertyMethod =
             typeof(ITypeBase).GetRuntimeMethod(nameof(ITypeBase.FindComplexProperty), [typeof(string)])!;
 
@@ -3062,12 +3065,31 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                     else
                     {
 #pragma warning disable EF1001 // Internal EF Core API usage.
-                        var (rootEntityType, complexProperties) = property.FindPathForPropertyOnComplexType();
+                        var (rootEntityType, complexProperties) = LiftableConstantExpressionHelpers.FindPathForPropertyOnComplexType(property);
 #pragma warning restore EF1001 // Internal EF Core API usage.
 
 
                         var entityTypeName = rootEntityType.Name;
-                        var typeBase = (Expression)Call(
+                        Expression typeBase;
+
+                        // TODO: surely, there is a better way?
+                        if (rootEntityType.Model is RuntimeModel runtimeModel
+                            && runtimeModel.FindAdHocEntityType(rootEntityType.ClrType) == rootEntityType)
+                        {
+                            typeBase = (Expression)Call(
+                                Convert(
+                                    Property(
+                                        Property(
+                                            materializerLiftableConstantContextParameter,
+                                            nameof(MaterializerLiftableConstantContext.Dependencies)),
+                                        nameof(ShapedQueryCompilingExpressionVisitorDependencies.Model)),
+                                    typeof(RuntimeModel)),
+                                RuntimeModelFindAdHocEntiyTypeMethod,
+                                Constant(entityTypeName));
+                        }
+                        else
+                        {
+                            typeBase = (Expression)Call(
                                 Property(
                                     Property(
                                         materializerLiftableConstantContextParameter,
@@ -3075,6 +3097,8 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                                     nameof(ShapedQueryCompilingExpressionVisitorDependencies.Model)),
                                 ModelFindEntiyTypeMethod,
                                 Constant(entityTypeName));
+                        }
+
 
                         foreach (var complexProperty in complexProperties)
                         {

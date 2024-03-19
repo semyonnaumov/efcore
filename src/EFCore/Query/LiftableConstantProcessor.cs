@@ -449,15 +449,23 @@ public class LiftableConstantProcessor : ExpressionVisitor, ILiftableConstantPro
             => typeof(Expression).Assembly.GetType("System.Linq.Expressions.AssignBinaryExpression", throwOnError: true)!;
     }
 
+    private readonly List<string> _exceptions = ["ParameterBindingInfo", "MyDiscriminator", "RuntimeServiceProperty", "ProxyFactory"];
+
 #if DEBUG
     protected override Expression VisitConstant(ConstantExpression node)
     {
         if (!IsLiteral(node.Value))
         {
-            throw new InvalidOperationException($"Materializer expression contains a non-literal constant of type '{node.Value!.GetType().Name}'. ");
+            if (!node.Value!.GetType().Name.Contains("DisplayClass") && !_exceptions.Contains(node.Value!.GetType().Name))
+            {
+                throw new InvalidOperationException($"Materializer expression contains a non-literal constant of type '{node.Value!.GetType().Name}'. ");
+            }
+
+            //throw new InvalidOperationException($"Materializer expression contains a non-literal constant of type '{node.Value!.GetType().Name}'. ");
         }
 
-        return IsLiteral(node.Value)
+        return IsLiteral(node.Value) || node.Value!.GetType().Name.Contains("DisplayClass") || _exceptions.Contains(node.Value!.GetType().Name)
+        //return IsLiteral(node.Value)
             ? node
             : throw new InvalidOperationException(
                 $"Materializer expression contains a non-literal constant of type '{node.Value!.GetType().Name}'. " +

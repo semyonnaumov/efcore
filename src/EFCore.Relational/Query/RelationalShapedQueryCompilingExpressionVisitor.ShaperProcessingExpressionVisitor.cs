@@ -2813,7 +2813,15 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                         exceptionParameter,
                         Call(dbDataReader, GetFieldValueMethod.MakeGenericMethod(typeof(object)), indexExpression),
                         Constant(valueExpression.Type.MakeNullable(nullable), typeof(Type)),
-                        Constant(property, typeof(IPropertyBase))));
+                        //Constant(property, typeof(IPropertyBase))
+                        property == null
+                            ? Expression.Default(typeof(IPropertyBase))
+                            : _parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
+#pragma warning disable EF1001 // Internal EF Core API usage.
+                            LiftableConstantExpressionHelpers.BuildMemberAccessLambdaForProperty(property),
+#pragma warning restore EF1001 // Internal EF Core API usage.
+                            property + "Property",
+                            typeof(IPropertyBase))));
 
                 valueExpression = TryCatch(valueExpression, catchBlock);
             }

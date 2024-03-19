@@ -547,6 +547,10 @@ public abstract class ShapedQueryCompilingExpressionVisitor : ExpressionVisitor
                         LiftableConstantExpressionHelpers.BuildMemberAccessLambdaForEntityOrComplexType(complexTypeValue),
                         complexTypeValue.Name + "ComplexType",
                         constantExpression.Type),
+                    //{ Value: IProperty propertyValue } => liftableConstantFactory.CreateLiftableConstant(
+                    //    LiftableConstantExpressionHelpers.BuildMemberAccessLambdaForProperty(propertyValue),
+                    //    propertyValue.Name + "Property",
+                    //    constantExpression.Type),
                     _ => base.VisitConstant(constantExpression)
                 };
         }

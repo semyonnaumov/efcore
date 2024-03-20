@@ -1,8 +1,10 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Diagnostics.CodeAnalysis;
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore.ChangeTracking.Internal;
+using Microsoft.EntityFrameworkCore.Diagnostics.Internal;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.EntityFrameworkCore.Query.Internal;
 using static System.Linq.Expressions.Expression;
@@ -232,8 +234,67 @@ public abstract class ShapedQueryCompilingExpressionVisitor : ExpressionVisitor
                     LiftableConstantExpressionHelpers.BuildMemberAccessLambdaForProperty(propertyValue),
                     propertyValue.Name + "Property",
                     constantExpression.Type),
+                { Value: IServiceProperty servicePropertyValue } => liftableConstantFactory.CreateLiftableConstant(
+                    constantExpression,
+                    LiftableConstantExpressionHelpers.BuildMemberAccessLambdaForProperty(servicePropertyValue),
+                    servicePropertyValue.Name + "ServiceProperty",
+                    constantExpression.Type),
+                { Value: IMaterializationInterceptor materializationInterceptorValue } => liftableConstantFactory.CreateLiftableConstant(
+                    constantExpression,
+                    c => (IMaterializationInterceptor?)new MaterializationInterceptorAggregator().AggregateInterceptors(
+                        c.Dependencies.SingletonInterceptors.OfType<IMaterializationInterceptor>().ToList())!,
+                    "materializationInterceptor",
+                    constantExpression.Type),
+                { Value: IInstantiationBindingInterceptor instantiationBindingInterceptor } => liftableConstantFactory.CreateLiftableConstant(
+                    constantExpression,
+                    c => c.Dependencies.SingletonInterceptors.OfType<IInstantiationBindingInterceptor>().Where(x => x == instantiationBindingInterceptor).Single(),
+                    "instantiationBindingInterceptor",
+                    constantExpression.Type),
+
+
+
+
+
+
+
+
+                
+
+
+
+
+
+
+
+
                 _ => base.VisitConstant(constantExpression)
             };
+
+        protected override Expression VisitBinary(BinaryExpression binaryExpression)
+        {
+            var left = Visit(binaryExpression.Left);
+            var right = Visit(binaryExpression.Right);
+            var conversion = (LambdaExpression?)Visit(binaryExpression.Conversion);
+
+            if (binaryExpression.NodeType is ExpressionType.Assign
+                && left is MemberExpression { Member: FieldInfo { IsInitOnly: true } } initFieldMember)
+            {
+                return (BinaryExpression)Activator.CreateInstance(
+                    GetAssignBinaryExpressionType(),
+                    BindingFlags.NonPublic | BindingFlags.Instance,
+                    null,
+                    [initFieldMember, right],
+                    null)!;
+            }
+
+            return binaryExpression.Update(left, conversion, right);
+
+            [UnconditionalSuppressMessage(
+                "ReflectionAnalysis", "IL2026",
+                Justification = "DynamicDependency ensures AssignBinaryExpression isn't trimmed")]
+            static Type GetAssignBinaryExpressionType()
+                => typeof(Expression).Assembly.GetType("System.Linq.Expressions.AssignBinaryExpression", throwOnError: true)!;
+        }
 
         protected override Expression VisitExtension(Expression node)
         {
@@ -645,7 +706,7 @@ public abstract class ShapedQueryCompilingExpressionVisitor : ExpressionVisitor
                 switchCases[i] = SwitchCase(
                     CreateFullMaterializeExpression(concreteEntityTypes[i], expressionContext),
                     _liftableConstantFactory.CreateLiftableConstant(
-                        Constant(concreteEntityTypes[i], typeof(IEntityType)),
+                        Constant(concreteEntityTypes[i], typeBase is IEntityType ? typeof(IEntityType) : typeof(IComplexType)),
                         LiftableConstantExpressionHelpers.BuildMemberAccessLambdaForEntityOrComplexType(concreteEntityType),
                         concreteEntityType.Name + (typeBase is IEntityType ? "EntityType" : "ComplexType"),
                         typeBase is IEntityType ? typeof(IEntityType) : typeof(IComplexType)));

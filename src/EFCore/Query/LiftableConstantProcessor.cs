@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
 
@@ -449,7 +450,7 @@ public class LiftableConstantProcessor : ExpressionVisitor, ILiftableConstantPro
             => typeof(Expression).Assembly.GetType("System.Linq.Expressions.AssignBinaryExpression", throwOnError: true)!;
     }
 
-    private readonly List<string> _exceptions = ["ParameterBindingInfo", "MyDiscriminator", "RuntimeServiceProperty", "ProxyFactory", "StructuralEqualityComparer"];
+    private readonly List<string> _exceptions = ["ParameterBindingInfo", "MyDiscriminator", /*"ProxyFactory",*/ "StructuralEqualityComparer"];
 
 #if DEBUG
     protected override Expression VisitConstant(ConstantExpression node)
@@ -475,11 +476,10 @@ public class LiftableConstantProcessor : ExpressionVisitor, ILiftableConstantPro
         {
             return value switch
             {
-                int or long or uint or ulong or short or sbyte or ushort or byte or double or float or decimal
-                    or char // maumar: is char ok here?
+                int or long or uint or ulong or short or sbyte or ushort or byte or double or float or decimal or char 
                     => true,
 
-                string or bool or Type or Enum or null => true,
+                string or bool or Type or Enum or null or CultureInfo => true,
 
                 ITuple tuple
                     when tuple.GetType() is { IsGenericType: true } tupleType

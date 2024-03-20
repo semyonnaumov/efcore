@@ -26,6 +26,9 @@ public class LiftableConstantExpressionHelpers
     private static readonly MethodInfo TypeBaseFindPropertyMethod =
         typeof(ITypeBase).GetRuntimeMethod(nameof(ITypeBase.FindProperty), [typeof(string)])!;
 
+    private static readonly MethodInfo TypeBaseFindServicePropertyMethod =
+        typeof(IEntityType).GetRuntimeMethod(nameof(IEntityType.FindServiceProperty), [typeof(string)])!;
+
     private static readonly MethodInfo EntityTypeFindNavigationMethod =
         typeof(IEntityType).GetRuntimeMethod(nameof(IEntityType.FindNavigation), [typeof(string)])!;
 
@@ -110,7 +113,7 @@ public class LiftableConstantExpressionHelpers
 
         return Expression.Call(
             declaringTypeMemberAccessExpression,
-            TypeBaseFindPropertyMethod,
+            property is IServiceProperty ? TypeBaseFindServicePropertyMethod : TypeBaseFindPropertyMethod,
             Expression.Constant(property.Name));
     }
 

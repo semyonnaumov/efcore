@@ -1943,7 +1943,8 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
 
                     foreach (var valueBufferTryReadValueMethodToProcess in valueBufferTryReadValueMethodsToProcess)
                     {
-                        var property = (IProperty)((ConstantExpression)valueBufferTryReadValueMethodToProcess.Arguments[2]).Value!;
+                        var property = valueBufferTryReadValueMethodToProcess.Arguments[2].GetConstantValue<IProperty>();
+                        //var property = (IProperty)((ConstantExpression)valueBufferTryReadValueMethodToProcess.Arguments[2]).Value!;
 
                         testExpressions.Add(
                             Call(
@@ -2242,7 +2243,8 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                     if (methodCallExpression.Method.IsGenericMethod
                         && methodCallExpression.Method.GetGenericMethodDefinition()
                         == Infrastructure.ExpressionExtensions.ValueBufferTryReadValueMethod
-                        && ((ConstantExpression)methodCallExpression.Arguments[2]).Value is IProperty property
+                        && methodCallExpression.Arguments[2].GetConstantValue<object>() is IProperty property
+                        //&& ((ConstantExpression)methodCallExpression.Arguments[2]).Value is IProperty property
                         && _nonKeyProperties.Contains(property))
                     {
                         _valueBufferTryReadValueMethods.Add(methodCallExpression);
@@ -2250,6 +2252,19 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
 
                         return methodCallExpression;
                     }
+
+
+                    //if (methodCallExpression.Method.IsGenericMethod
+                    //    && methodCallExpression.Method.GetGenericMethodDefinition()
+                    //    == Infrastructure.ExpressionExtensions.ValueBufferTryReadValueMethod
+                    //    && ((ConstantExpression)methodCallExpression.Arguments[2]).Value is IProperty property
+                    //    && _nonKeyProperties.Contains(property))
+                    //{
+                    //    _valueBufferTryReadValueMethods.Add(methodCallExpression);
+                    //    _nonKeyProperties.Remove(property);
+
+                    //    return methodCallExpression;
+                    //}
 
                     return base.VisitMethodCall(methodCallExpression);
                 }
@@ -2325,7 +2340,8 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                     if (methodCallExpression.Method.IsGenericMethod
                         && methodCallExpression.Method.GetGenericMethodDefinition()
                         == Infrastructure.ExpressionExtensions.ValueBufferTryReadValueMethod
-                        && ((ConstantExpression)methodCallExpression.Arguments[2]).Value is IProperty prop
+                        //&& ((ConstantExpression)methodCallExpression.Arguments[2]).Value is IProperty prop
+                        && methodCallExpression.Arguments[2].GetConstantValue<object>() is IProperty prop
                         && _propertyAssignmentMap.TryGetValue(prop, out var param))
                     {
                         property = prop;

@@ -54,7 +54,8 @@ public sealed record ShapedQueryCompilingExpressionVisitorDependencies
         ICoreSingletonOptions coreSingletonOptions,
         IModel model,
         ILiftableConstantFactory liftableConstantFactory,
-        IDiagnosticsLogger<DbLoggerCategory.Query> queryLogger)
+        IDiagnosticsLogger<DbLoggerCategory.Query> queryLogger,
+        IEnumerable<ISingletonInterceptor> singletonInterceptors)
     {
         EntityMaterializerSource = entityMaterializerSource;
         TypeMappingSource = typeMappingSource;
@@ -63,6 +64,7 @@ public sealed record ShapedQueryCompilingExpressionVisitorDependencies
         Model = model;
         LiftableConstantFactory = liftableConstantFactory;
         QueryLogger = queryLogger;
+        SingletonInterceptors = singletonInterceptors;
     }
 
     /// <summary>
@@ -99,4 +101,9 @@ public sealed record ShapedQueryCompilingExpressionVisitorDependencies
     ///     The query logger.
     /// </summary>
     public IDiagnosticsLogger<DbLoggerCategory.Query> QueryLogger { get; init; }
+
+    /// <summary>
+    ///     Registered singleton interceptors.
+    /// </summary>
+    public IEnumerable<ISingletonInterceptor> SingletonInterceptors { get; init; }
 }

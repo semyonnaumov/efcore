@@ -23,14 +23,21 @@ public class LiftableConstantExpression : Expression, IPrintableExpression
     /// TODO
     /// </summary>
     public LiftableConstantExpression(
+        ConstantExpression originalExpression,
         LambdaExpression resolverExpression,
         string variableName,
         Type type)
     {
+        OriginalExpression = originalExpression;
         ResolverExpression = resolverExpression;
         VariableName = char.ToLower(variableName[0]) + variableName[1..];
         Type = type;
     }
+
+    /// <summary>
+    /// TODO
+    /// </summary>
+    public ConstantExpression OriginalExpression { get; }
 
     /// <summary>
     /// TODO
@@ -75,7 +82,7 @@ public class LiftableConstantExpression : Expression, IPrintableExpression
     /// <returns>This expression if no children changed, or an expression with the updated children.</returns>
     public virtual LiftableConstantExpression Update(LambdaExpression resolverExpression)
         => resolverExpression != ResolverExpression
-            ? new LiftableConstantExpression(resolverExpression, VariableName, Type)
+            ? new LiftableConstantExpression(OriginalExpression, resolverExpression, VariableName, Type)
             : this;
 
     /// <inheritdoc />

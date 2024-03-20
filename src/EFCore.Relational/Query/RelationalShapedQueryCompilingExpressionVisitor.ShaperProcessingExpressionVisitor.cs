@@ -480,6 +480,7 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                         new[]
                         {
                             _parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
+                                Constant(ValueBuffer.Empty),
                                 _ => ValueBuffer.Empty,
                                 "emptyValueBuffer",
                                 typeof(ValueBuffer)),
@@ -499,6 +500,7 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                             new[]
                             {
                                 _parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
+                                    Constant(ValueBuffer.Empty),
                                     _ => ValueBuffer.Empty,
                                     "emptyValueBuffer",
                                     typeof(ValueBuffer)),
@@ -851,19 +853,17 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                                 entity,
                                 parentIdentifierLambda,
                                 outerIdentifierLambda,
-                                // Constant(navigation),
                                 _parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
+                                    Constant(navigation),
 #pragma warning disable EF1001 // Internal EF Core API usage.
                                     LiftableConstantExpressionHelpers.BuildNavigationAccessLambda(navigation),
 #pragma warning restore EF1001 // Internal EF Core API usage.
                                     navigation.Name + "Navigation",
                                     typeof(INavigationBase)),
-                                // Constant(navigation.IsShadowProperty()
-                                //     ? null
-                                //     : navigation.GetCollectionAccessor(), typeof(IClrCollectionAccessor)),
                                 navigation.IsShadowProperty()
                                     ? Constant(null, typeof(IClrCollectionAccessor))
                                     : _parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
+                                        Constant(navigation.GetCollectionAccessor(), typeof(IClrCollectionAccessor)),
 #pragma warning disable EF1001 // Internal EF Core API usage.
                                         LiftableConstantExpressionHelpers.BuildClrCollectionAccessorLambda(navigation),
 #pragma warning restore EF1001 // Internal EF Core API usage.
@@ -900,10 +900,10 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                                 NewArrayInit(typeof(Func<object, object, bool>), relationalCollectionShaperExpression.OuterIdentifierValueComparers.Select(vc => vc.ObjectEqualsExpression)),
                                 NewArrayInit(typeof(Func<object, object, bool>), relationalCollectionShaperExpression.SelfIdentifierValueComparers.Select(vc => vc.ObjectEqualsExpression)),
                                 innerShaper,
-                                // Expression.Constant(inverseNavigation, typeof(INavigationBase)),
                                 inverseNavigation is null
                                     ? Constant(null, typeof(INavigationBase))
                                     : _parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
+                                        Expression.Constant(inverseNavigation, typeof(INavigationBase)),
 #pragma warning disable EF1001 // Internal EF Core API usage.
                                         LiftableConstantExpressionHelpers.BuildNavigationAccessLambda(inverseNavigation),
 #pragma warning restore EF1001 // Internal EF Core API usage.
@@ -962,15 +962,15 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                                 _resultCoordinatorParameter,
                                 entity,
                                 parentIdentifierLambda,
-                                // Expression.Constant(navigation),
                                 _parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
+                                    Expression.Constant(navigation),
 #pragma warning disable EF1001 // Internal EF Core API usage.
                                     LiftableConstantExpressionHelpers.BuildNavigationAccessLambda(navigation),
 #pragma warning restore EF1001 // Internal EF Core API usage.
                                     navigation.Name + "Navigation",
                                     typeof(INavigationBase)),
-                                // Expression.Constant(navigation.GetCollectionAccessor()),
                                 _parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
+                                    Expression.Constant(navigation.GetCollectionAccessor()),
 #pragma warning disable EF1001 // Internal EF Core API usage.
                                     LiftableConstantExpressionHelpers.BuildClrCollectionAccessorLambda(navigation),
 #pragma warning restore EF1001 // Internal EF Core API usage.
@@ -1013,10 +1013,10 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                                     _isAsync
                                         ? typeof(Func<QueryContext, IExecutionStrategy, SplitQueryResultCoordinator, Task>)
                                         : typeof(Action<QueryContext, IExecutionStrategy, SplitQueryResultCoordinator>)),
-                                // Constant(inverseNavigation, typeof(INavigationBase)),
                                 inverseNavigation is null
                                     ? Constant(null, typeof(INavigationBase))
                                     : _parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
+                                        Constant(inverseNavigation, typeof(INavigationBase)),
 #pragma warning disable EF1001 // Internal EF Core API usage.
                                         LiftableConstantExpressionHelpers.BuildNavigationAccessLambda(inverseNavigation),
 #pragma warning restore EF1001 // Internal EF Core API usage.
@@ -1074,17 +1074,17 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                             QueryCompilationContext.QueryContextParameter,
                             entity,
                             navigationExpression,
-                            //Constant(navigation),
                             _parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
+                                Constant(navigation),
 #pragma warning disable EF1001 // Internal EF Core API usage.
                                 LiftableConstantExpressionHelpers.BuildNavigationAccessLambda(navigation),
 #pragma warning restore EF1001 // Internal EF Core API usage.
                                 navigation.Name + "Navigation12",
                                 typeof(INavigation)),
-                            //Constant(inverseNavigation, typeof(INavigationBase)),
                             inverseNavigation == null
-                                ? Expression.Default(typeof(INavigation))
+                                ? Default(typeof(INavigation))
                                 : _parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
+                                    Constant(inverseNavigation, typeof(INavigationBase)),
 #pragma warning disable EF1001 // Internal EF Core API usage.
                                     LiftableConstantExpressionHelpers.BuildNavigationAccessLambda(inverseNavigation),
 #pragma warning restore EF1001 // Internal EF Core API usage.
@@ -1153,10 +1153,10 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                                     //Constant(outerIdentifierLambda.Compile()),
                                     parentIdentifierLambda,
                                     outerIdentifierLambda,
-                                    //Constant(collectionAccessor, typeof(IClrCollectionAccessor))
                                     navigation == null
                                         ? Default(typeof(IClrCollectionAccessor))
                                         : _parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
+                                            Constant(collectionAccessor, typeof(IClrCollectionAccessor)),
 #pragma warning disable EF1001 // Internal EF Core API usage.
                                             LiftableConstantExpressionHelpers.BuildClrCollectionAccessorLambda(navigation),
 #pragma warning restore EF1001 // Internal EF Core API usage.
@@ -1261,10 +1261,10 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                                     _resultCoordinatorParameter,
                                     //Constant(parentIdentifierLambda.Compile()),
                                     parentIdentifierLambda,
-                                    //Constant(collectionAccessor, typeof(IClrCollectionAccessor)))));
                                     navigation == null
                                         ? Default(typeof(IClrCollectionAccessor))
                                         : _parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
+                                            Constant(collectionAccessor, typeof(IClrCollectionAccessor)),
 #pragma warning disable EF1001 // Internal EF Core API usage.
                                             LiftableConstantExpressionHelpers.BuildClrCollectionAccessorLambda(navigation),
 #pragma warning restore EF1001 // Internal EF Core API usage.
@@ -1657,8 +1657,8 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                         QueryCompilationContext.QueryContextParameter,
                         keyValuesParameter,
                         jsonReaderDataParameter,
-                        //Constant(navigation),
                         _parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
+                            Constant(navigation),
 #pragma warning disable EF1001 // Internal EF Core API usage.
                             LiftableConstantExpressionHelpers.BuildNavigationAccessLambda(navigation),
 #pragma warning restore EF1001 // Internal EF Core API usage.
@@ -1826,8 +1826,8 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                             New(
                                 JsonReaderManagerConstructor,
                                 _jsonReaderDataParameter,
-                                //Constant(_queryLogger))),
                                 _liftableConstantFactory.CreateLiftableConstant(
+                                    Constant(_queryLogger),
                                     c => c.Dependencies.QueryLogger,
                                     "queryLogger",
                                     typeof(IDiagnosticsLogger<DbLoggerCategory.Query>)))),
@@ -1952,8 +1952,8 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                                     Utf8JsonReaderManagerCurrentReaderField),
                                 Utf8JsonReaderValueTextEqualsMethod,
                                 Property(
-                                    //Constant(JsonEncodedText.Encode(property.GetJsonPropertyName()!)),
                                     _liftableConstantFactory.CreateLiftableConstant(
+                                        Constant(JsonEncodedText.Encode(property.GetJsonPropertyName()!)),
                                         _ => JsonEncodedText.Encode(property.GetJsonPropertyName()!, null),
                                         property.Name + "EncodedProperty",
                                         typeof(JsonEncodedText)),
@@ -1990,8 +1990,8 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                                     Utf8JsonReaderManagerCurrentReaderField),
                                 Utf8JsonReaderValueTextEqualsMethod,
                                 Property(
-                                    //Constant(JsonEncodedText.Encode(innerShaperMapElement.Key)),
                                     _liftableConstantFactory.CreateLiftableConstant(
+                                        Constant(JsonEncodedText.Encode(innerShaperMapElement.Key)),
                                         _ => JsonEncodedText.Encode(innerShaperMapElementKey, null),
                                         innerShaperMapElementKey + "EncodedNavigation",
                                         typeof(JsonEncodedText)),
@@ -2007,7 +2007,15 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                         var assignment = Assign(propertyVariable, innerShaperMapElement.Value);
                         var managerRecreation = Assign(
                             //managerVariable, New(JsonReaderManagerConstructor, _jsonReaderDataParameter, Constant(_queryLogger)));
-                            managerVariable, New(JsonReaderManagerConstructor, _jsonReaderDataParameter, Default(typeof(IDiagnosticsLogger<DbLoggerCategory.Query>))));
+                            managerVariable,
+                            New(
+                                JsonReaderManagerConstructor,
+                                _jsonReaderDataParameter,
+                                _liftableConstantFactory.CreateLiftableConstant(
+                                    Constant(_queryLogger),
+                                    c => c.Dependencies.QueryLogger,
+                                    "queryLogger",
+                                    typeof(IDiagnosticsLogger<DbLoggerCategory.Query>))));
 
                         readExpressions.Add(
                             Block(
@@ -2039,8 +2047,8 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                         switchCases.Add(
                             SwitchCase(
                                 testExpression,
-                                //Constant(JsonTokenType.PropertyName)));
                                 _liftableConstantFactory.CreateLiftableConstant(
+                                    Constant(JsonTokenType.PropertyName),
                                     _ => JsonTokenType.PropertyName,
                                     "PropertyNameJsonToken",
                                     typeof(JsonTokenType))));
@@ -2049,8 +2057,8 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                     switchCases.Add(
                         SwitchCase(
                             Break(breakLabel),
-                            //Constant(JsonTokenType.EndObject)));
                             _liftableConstantFactory.CreateLiftableConstant(
+                                Constant(JsonTokenType.EndObject),
                                 _ => JsonTokenType.EndObject,
                                 "PropertyNameJsonToken",
                                 typeof(JsonTokenType))));
@@ -2377,7 +2385,16 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                     Block(
                         Assign(
                             //jsonReaderManagerVariable, New(JsonReaderManagerConstructor, jsonReaderDataVariable, Constant(_queryLogger))),
-                            jsonReaderManagerVariable, New(JsonReaderManagerConstructor, jsonReaderDataVariable, Default(typeof(IDiagnosticsLogger<DbLoggerCategory.Query>)))),
+                            jsonReaderManagerVariable,
+                            New(
+                                JsonReaderManagerConstructor,
+                                jsonReaderDataVariable,
+
+                                _parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
+                                    Constant(_queryLogger),
+                                    c => c.Dependencies.QueryLogger,
+                                    "queryLogger",
+                                    typeof(IDiagnosticsLogger<DbLoggerCategory.Query>)))),
                         Call(jsonReaderManagerVariable, Utf8JsonReaderManagerMoveNextMethod),
                         Call(jsonReaderManagerVariable, Utf8JsonReaderManagerCaptureStateMethod)));
 
@@ -2638,15 +2655,15 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                 Block(
                     typeof(void),
                     Call(
-                        //Constant(navigation.GetCollectionAccessor()),
-
                         // TODO: Very temporary hack. This is bad for perf.
                         navigation is ISkipNavigation
                         ? _parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
+                            Constant(navigation.GetCollectionAccessor()),
                             c => c.Dependencies.Model.FindEntityType(navigation.DeclaringEntityType.Name)!.FindSkipNavigation(navigation.Name)!.GetCollectionAccessor()!,
                             navigation.Name + "NavigationCollectionAccessor33",
                             typeof(IClrCollectionAccessor))
                         : _parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
+                            Constant(navigation.GetCollectionAccessor()),
                             c => c.Dependencies.Model.FindEntityType(navigation.DeclaringEntityType.Name)!.FindNavigation(navigation.Name)!.GetCollectionAccessor()!,
                             navigation.Name + "NavigationCollectionAccessor34",
                             typeof(IClrCollectionAccessor)),
@@ -2661,17 +2678,16 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
             ParameterExpression relatedEntity,
             INavigationBase navigation)
             => Call(
-                // Constant(navigation.GetCollectionAccessor()),
-
                 // // TODO: Very temporary hack. This is bad for perf.
                 // Call(Expression.Constant(navigation), typeof(INavigationBase).GetMethod(nameof(INavigationBase.GetCollectionAccessor), Array.Empty<Type>())!),
-
                 navigation is ISkipNavigation
                 ? _parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
+                    Constant(navigation.GetCollectionAccessor()),
                     c => c.Dependencies.Model.FindEntityType(navigation.DeclaringEntityType.Name)!.FindSkipNavigation(navigation.Name)!.GetCollectionAccessor()!,
                     navigation.Name + "NavigationCollectionAccessor23",
                     typeof(IClrCollectionAccessor))
                 : _parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
+                    Constant(navigation.GetCollectionAccessor()),
                     c => c.Dependencies.Model.FindEntityType(navigation.DeclaringEntityType.Name)!.FindNavigation(navigation.Name)!.GetCollectionAccessor()!,
                     navigation.Name + "NavigationCollectionAccessor24",
                     typeof(IClrCollectionAccessor)),
@@ -2813,10 +2829,10 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                         exceptionParameter,
                         Call(dbDataReader, GetFieldValueMethod.MakeGenericMethod(typeof(object)), indexExpression),
                         Constant(valueExpression.Type.MakeNullable(nullable), typeof(Type)),
-                        //Constant(property, typeof(IPropertyBase))
                         property == null
-                            ? Expression.Default(typeof(IPropertyBase))
+                            ? Default(typeof(IPropertyBase))
                             : _parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
+                                Constant(property, typeof(IPropertyBase)),
 #pragma warning disable EF1001 // Internal EF Core API usage.
                             LiftableConstantExpressionHelpers.BuildMemberAccessLambdaForProperty(property),
 #pragma warning restore EF1001 // Internal EF Core API usage.
@@ -2876,6 +2892,7 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
             var propertyName = property.Name;
 
             var jsonReaderWriterExpression = _parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
+                Constant(property.GetJsonValueReaderWriter() ?? property.GetTypeMapping().JsonValueReaderWriter!),
                 c => c.Dependencies.Model.FindEntityType(declaringEntityTypeName)!.FindProperty(propertyName)!.GetJsonValueReaderWriter()
                     ?? c.Dependencies.Model.FindEntityType(declaringEntityTypeName)!.FindProperty(propertyName)!.GetTypeMapping().JsonValueReaderWriter!,
                 propertyName + "PropertyName",
@@ -2979,6 +2996,7 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                 }
 
                 var result = _parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
+                    Constant(_readerColumns),
                     Lambda<Func<MaterializerLiftableConstantContext, object>>(
                         NewArrayInit(
                             typeof(ReaderColumn),

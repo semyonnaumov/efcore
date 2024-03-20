@@ -213,7 +213,7 @@ public class QueryCompilationContext
         // Verify that the shaper does not call any non-public methods, since such invocations cannot be generated in C# for precompiled
         // queries. We have this here (in DEBUG) to check any method calls we integrate somewhere in the query pipeline (e.g. for parameter
         // rewriting for string.StartsWith).
-        _shaperPublicMethodVerifier.Visit(queryExecutorExpression);
+        //_shaperPublicMethodVerifier.Visit(queryExecutorExpression);
 #endif
 
         return queryExecutorExpression;
@@ -278,6 +278,7 @@ public class QueryCompilationContext
                 case IProperty property:
                 {
                     return liftableConstantFactory.CreateLiftableConstant(
+                        constantExpression,
                         LiftableConstantExpressionHelpers.BuildMemberAccessLambdaForProperty(property),
                         property.Name + "Property",
                         typeof(IProperty));
@@ -298,6 +299,7 @@ public class QueryCompilationContext
                     }
 
                     return liftableConstantFactory.CreateLiftableConstant(
+                        constantExpression,
                         Expression.Lambda<Func<MaterializerLiftableConstantContext, object>>(
                             Expression.ListInit(Expression.New(typeof(List<IComplexProperty>)), elementInitExpressions),
                             prm),

@@ -205,7 +205,45 @@ public abstract class ShapedQueryCompilingExpressionVisitor : ExpressionVisitor
     {
         VerifyNoClientConstant(expression);
 
-        return _entityMaterializerInjectingExpressionVisitor.Inject(expression);
+        var materializerExpression = _entityMaterializerInjectingExpressionVisitor.Inject(expression);
+
+        var result = new MaterializationConditionConstantLifter(Dependencies.LiftableConstantFactory).Visit(materializerExpression);
+
+        return result;
+    }
+
+    private sealed class MaterializationConditionConstantLifter(ILiftableConstantFactory liftableConstantFactory) : ExpressionVisitor
+    {
+        protected override Expression VisitConstant(ConstantExpression constantExpression)
+            => constantExpression switch
+            {
+                { Value: IEntityType entityTypeValue } => liftableConstantFactory.CreateLiftableConstant(
+                    constantExpression,
+                    LiftableConstantExpressionHelpers.BuildMemberAccessLambdaForEntityOrComplexType(entityTypeValue),
+                    entityTypeValue.Name + "EntityType",
+                    constantExpression.Type),
+                { Value: IComplexType complexTypeValue } => liftableConstantFactory.CreateLiftableConstant(
+                    constantExpression,
+                    LiftableConstantExpressionHelpers.BuildMemberAccessLambdaForEntityOrComplexType(complexTypeValue),
+                    complexTypeValue.Name + "ComplexType",
+                    constantExpression.Type),
+                { Value: IProperty propertyValue } => liftableConstantFactory.CreateLiftableConstant(
+                    constantExpression,
+                    LiftableConstantExpressionHelpers.BuildMemberAccessLambdaForProperty(propertyValue),
+                    propertyValue.Name + "Property",
+                    constantExpression.Type),
+                _ => base.VisitConstant(constantExpression)
+            };
+
+        protected override Expression VisitExtension(Expression node)
+        {
+            if (node is LiftableConstantExpression)
+            {
+                return node;
+            }
+
+            return base.VisitExtension(node);
+        }
     }
 
     /// <summary>
@@ -433,8 +471,8 @@ public abstract class ShapedQueryCompilingExpressionVisitor : ExpressionVisitor
                         Call(
                             QueryCompilationContext.QueryContextParameter,
                             TryGetEntryMethodInfo,
-                            // Constant(primaryKey),
                             _liftableConstantFactory.CreateLiftableConstant(
+                                Constant(primaryKey),
                                 // TODO: Owned, STET
                                 c => c.Dependencies.Model.FindEntityType(typeBase.Name)!.FindPrimaryKey()!,
                                 typeBase.Name + "Key",
@@ -508,13 +546,13 @@ public abstract class ShapedQueryCompilingExpressionVisitor : ExpressionVisitor
                                                     typeof(object), p.GetIndex(), p)))),
                                     Call(
                                         CreateNullKeyValueInNoTrackingQueryMethod,
-                                        //Constant(typeBase),
                                         _liftableConstantFactory.CreateLiftableConstant(
+                                            Constant(typeBase),
                                             LiftableConstantExpressionHelpers.BuildMemberAccessLambdaForEntityOrComplexType(typeBase),
                                             typeBase.Name + "EntityType",
                                             typeof(IEntityType)),
-                                        //Constant(primaryKey.Properties),
                                         _liftableConstantFactory.CreateLiftableConstant(
+                                            Constant(primaryKey.Properties),
                                             x => x.Dependencies.Model.FindEntityType(typeBase.Name)!.FindPrimaryKey()!.Properties,
                                             typeBase.Name + "PrimaryKeyProperties",
                                             typeof(IReadOnlyList<IProperty>)),
@@ -540,17 +578,20 @@ public abstract class ShapedQueryCompilingExpressionVisitor : ExpressionVisitor
                 => constantExpression switch
                 {
                     { Value: IEntityType entityTypeValue } => liftableConstantFactory.CreateLiftableConstant(
+                        constantExpression,
                         LiftableConstantExpressionHelpers.BuildMemberAccessLambdaForEntityOrComplexType(entityTypeValue),
                         entityTypeValue.Name + "EntityType",
                         constantExpression.Type),
                     { Value: IComplexType complexTypeValue } => liftableConstantFactory.CreateLiftableConstant(
+                        constantExpression,
                         LiftableConstantExpressionHelpers.BuildMemberAccessLambdaForEntityOrComplexType(complexTypeValue),
                         complexTypeValue.Name + "ComplexType",
                         constantExpression.Type),
-                    //{ Value: IProperty propertyValue } => liftableConstantFactory.CreateLiftableConstant(
-                    //    LiftableConstantExpressionHelpers.BuildMemberAccessLambdaForProperty(propertyValue),
-                    //    propertyValue.Name + "Property",
-                    //    constantExpression.Type),
+                    { Value: IProperty propertyValue } => liftableConstantFactory.CreateLiftableConstant(
+                        constantExpression,
+                        LiftableConstantExpressionHelpers.BuildMemberAccessLambdaForProperty(propertyValue),
+                        propertyValue.Name + "Property",
+                        constantExpression.Type),
                     _ => base.VisitConstant(constantExpression)
                 };
         }
@@ -574,8 +615,8 @@ public abstract class ShapedQueryCompilingExpressionVisitor : ExpressionVisitor
             expressions.Add(
                 Assign(
                     shadowValuesVariable,
-                    // Expression.Constant(Snapshot.Empty),
                     _liftableConstantFactory.CreateLiftableConstant(
+                        Expression.Constant(Snapshot.Empty),
                         _ => Snapshot.Empty,
                         "emptySnapshot",
                         typeof(Snapshot))));
@@ -603,8 +644,8 @@ public abstract class ShapedQueryCompilingExpressionVisitor : ExpressionVisitor
                 var concreteEntityType = concreteEntityTypes[i];
                 switchCases[i] = SwitchCase(
                     CreateFullMaterializeExpression(concreteEntityTypes[i], expressionContext),
-                    // Constant(concreteEntityTypes[i], typeof(IEntityType))
                     _liftableConstantFactory.CreateLiftableConstant(
+                        Constant(concreteEntityTypes[i], typeof(IEntityType)),
                         LiftableConstantExpressionHelpers.BuildMemberAccessLambdaForEntityOrComplexType(concreteEntityType),
                         concreteEntityType.Name + (typeBase is IEntityType ? "EntityType" : "ComplexType"),
                         typeBase is IEntityType ? typeof(IEntityType) : typeof(IComplexType)));

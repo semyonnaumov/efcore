@@ -435,7 +435,16 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor : ShapedQue
     }
 
     private LiftableConstantExpression CreateRelationalCommandCacheExpression(Expression queryExpression)
-        => RelationalDependencies.RelationalLiftableConstantFactory.CreateLiftableConstant(
+    {
+        var relationalCommandCache = new RelationalCommandCache(
+            Dependencies.MemoryCache,
+            RelationalDependencies.QuerySqlGeneratorFactory,
+            RelationalDependencies.RelationalParameterBasedSqlProcessorFactory,
+            queryExpression,
+            _useRelationalNulls);
+
+        return RelationalDependencies.RelationalLiftableConstantFactory.CreateLiftableConstant(
+            Constant(relationalCommandCache),
             c => new RelationalCommandCache(
                 c.Dependencies.MemoryCache,
                 c.RelationalDependencies.QuerySqlGeneratorFactory,
@@ -444,4 +453,5 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor : ShapedQue
                 _useRelationalNulls),
             "relationalCommandCache",
             typeof(RelationalCommandCache));
+    }
 }

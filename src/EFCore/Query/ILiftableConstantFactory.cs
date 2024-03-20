@@ -12,6 +12,7 @@ public interface ILiftableConstantFactory
     /// TODO
     /// </summary>
     LiftableConstantExpression CreateLiftableConstant(
+        ConstantExpression originalExpression,
         Expression<Func<MaterializerLiftableConstantContext, object>> resolverExpression,
         string variableName,
         Type type);

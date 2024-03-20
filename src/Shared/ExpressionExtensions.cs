@@ -45,7 +45,15 @@ internal static class ExpressionExtensions
             : expression;
 
     public static T GetConstantValue<T>(this Expression expression)
-        => expression is ConstantExpression constantExpression
-            ? (T)constantExpression.Value!
-            : throw new InvalidOperationException();
+        => expression switch
+        {
+            ConstantExpression constantExpression => (T)constantExpression.Value!,
+            LiftableConstantExpression liftableConstantExpression => (T)liftableConstantExpression.OriginalExpression.Value!,
+            _ => throw new InvalidOperationException()
+        }; 
+
+    //public static T GetConstantValue<T>(this Expression expression)
+    //    => expression is ConstantExpression constantExpression
+    //        ? (T)constantExpression.Value!
+    //        : throw new InvalidOperationException();
 }

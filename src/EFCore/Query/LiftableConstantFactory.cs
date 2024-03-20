@@ -12,8 +12,9 @@ public class LiftableConstantFactory : ILiftableConstantFactory
     /// TODO
     /// </summary>
     public virtual LiftableConstantExpression CreateLiftableConstant(
+        ConstantExpression originalExpression,
         Expression<Func<MaterializerLiftableConstantContext, object>> resolverExpression,
         string variableName,
         Type type)
-        => new(resolverExpression, variableName, type);
+        => new(originalExpression, resolverExpression, variableName, type);
 }

@@ -260,8 +260,13 @@ public class EntityMaterializerSource : IEntityMaterializerSource
                         InjectableServiceInjectedMethod,
                         getContext,
                         instanceVariable,
-                        Expression.Constant(bindingInfo, typeof(ParameterBindingInfo))
-                        //bindingInfoExpression
+
+
+                        Expression.Constant(bindingInfo.QueryTrackingBehavior, typeof(QueryTrackingBehavior?)),
+                        Expression.Constant(bindingInfo.StructuralType)
+
+                        //Expression.Constant(bindingInfo, typeof(ParameterBindingInfo))
+                        ////bindingInfoExpression
                         )));
         }
     }

@@ -2544,12 +2544,14 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                         Left: MethodCallExpression
                         {
                             Method: { IsGenericMethod: true } method,
-                            //Arguments: [_, _, ConstantExpression { Value: IProperty property }]
-                            Arguments: [_, _, ConstantExpression leftConstant]
+                            Arguments: [_, _, Expression leftExpression]
                         },
-                        Right: ConstantExpression { Value: null }
+                        Right: Expression rightExpression
                     }
-                    && leftConstant.GetConstantValue<object>() is IProperty property //added
+                    && leftExpression is ConstantExpression or LiftableConstantExpression
+                    && leftExpression.GetConstantValue<object>() is IProperty property
+                    && rightExpression is ConstantExpression or LiftableConstantExpression
+                    && rightExpression.GetConstantValue<object>() == null
                     && method.GetGenericMethodDefinition() == Infrastructure.ExpressionExtensions.ValueBufferTryReadValueMethod)
                 {
                     return _mappedProperties.Contains(property)
@@ -2565,10 +2567,10 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                 if (methodCallExpression is
                     {
                         Method: { IsGenericMethod: true } method,
-                        //Arguments: [_, _, ConstantExpression { Value: IProperty property }]
-                        Arguments: [_, _, ConstantExpression  argumentConstant]
+                        Arguments: [_, _, Expression  argumentExpression]
                     }
-                    && argumentConstant.GetConstantValue<object>() is IProperty property //added
+                    && argumentExpression is ConstantExpression or LiftableConstantExpression
+                    && argumentExpression.GetConstantValue<object>() is IProperty property
                     && method.GetGenericMethodDefinition() == Infrastructure.ExpressionExtensions.ValueBufferTryReadValueMethod
                     && !_mappedProperties.Contains(property))
                 {

@@ -48,6 +48,8 @@ public abstract class ServiceParameterBinding : ParameterBinding
     /// <returns>The expression tree.</returns>
     public override Expression BindToParameter(ParameterBindingInfo bindingInfo)
     {
+        tutaj
+
         var serviceInstance = bindingInfo.ServiceInstances.FirstOrDefault(e => e.Type == ServiceType);
         if (serviceInstance != null)
         {

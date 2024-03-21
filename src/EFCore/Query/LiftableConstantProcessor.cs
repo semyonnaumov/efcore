@@ -450,12 +450,12 @@ public class LiftableConstantProcessor : ExpressionVisitor, ILiftableConstantPro
             => typeof(Expression).Assembly.GetType("System.Linq.Expressions.AssignBinaryExpression", throwOnError: true)!;
     }
 
-    private readonly List<string> _exceptions = ["ParameterBindingInfo",/* "ProxyFactory",*/ "StructuralEqualityComparer"];
+    private readonly List<string> _exceptions = [/*"ParameterBindingInfo",*/ "StructuralEqualityComparer"];
 
 #if DEBUG
     protected override Expression VisitConstant(ConstantExpression node)
     {
-        if (!IsLiteral(node.Value))
+        if (!LiftableConstantExpressionHelpers.IsLiteral(node.Value))
         {
             if (!node.Value!.GetType().Name.Contains("DisplayClass") && !_exceptions.Contains(node.Value!.GetType().Name))
             {
@@ -465,44 +465,45 @@ public class LiftableConstantProcessor : ExpressionVisitor, ILiftableConstantPro
             //throw new InvalidOperationException($"Materializer expression contains a non-literal constant of type '{node.Value!.GetType().Name}'. ");
         }
 
-        return IsLiteral(node.Value) || node.Value!.GetType().Name.Contains("DisplayClass") || _exceptions.Contains(node.Value!.GetType().Name)
+        return LiftableConstantExpressionHelpers.IsLiteral(node.Value)
+            || node.Value!.GetType().Name.Contains("DisplayClass") || _exceptions.Contains(node.Value!.GetType().Name)
         //return IsLiteral(node.Value)
             ? node
             : throw new InvalidOperationException(
                 $"Materializer expression contains a non-literal constant of type '{node.Value!.GetType().Name}'. " +
                 $"Use a {nameof(LiftableConstantExpression)} to reference any non-literal constants.");
 
-        static bool IsLiteral(object? value)
-        {
-            return value switch
-            {
-                int or long or uint or ulong or short or sbyte or ushort or byte or double or float or decimal or char 
-                    => true,
+        //static bool IsLiteral(object? value)
+        //{
+        //    return value switch
+        //    {
+        //        int or long or uint or ulong or short or sbyte or ushort or byte or double or float or decimal or char 
+        //            => true,
 
-                string or bool or Type or Enum or null or CultureInfo => true,
+        //        string or bool or Type or Enum or null or CultureInfo => true,
 
-                ITuple tuple
-                    when tuple.GetType() is { IsGenericType: true } tupleType
-                         && tupleType.Name.StartsWith("ValueTuple`", StringComparison.Ordinal)
-                         && tupleType.Namespace == "System"
-                    => IsTupleLiteral(tuple),
+        //        ITuple tuple
+        //            when tuple.GetType() is { IsGenericType: true } tupleType
+        //                 && tupleType.Name.StartsWith("ValueTuple`", StringComparison.Ordinal)
+        //                 && tupleType.Namespace == "System"
+        //            => IsTupleLiteral(tuple),
 
-                _ => false
-            };
+        //        _ => false
+        //    };
 
-            bool IsTupleLiteral(ITuple tuple)
-            {
-                for (var i = 0; i < tuple.Length; i++)
-                {
-                    if (!IsLiteral(tuple[i]))
-                    {
-                        return false;
-                    }
-                }
+        //    bool IsTupleLiteral(ITuple tuple)
+        //    {
+        //        for (var i = 0; i < tuple.Length; i++)
+        //        {
+        //            if (!IsLiteral(tuple[i]))
+        //            {
+        //                return false;
+        //            }
+        //        }
 
-                return true;
-            }
-        }
+        //        return true;
+        //    }
+        //}
     }
 #endif
 }

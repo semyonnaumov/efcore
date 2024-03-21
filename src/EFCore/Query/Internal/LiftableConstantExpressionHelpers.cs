@@ -60,6 +60,8 @@ public class LiftableConstantExpressionHelpers
                      && tupleType.Namespace == "System"
                 => IsTupleLiteral(tuple),
 
+            Array array => IsArrayOfLiterals(array),
+
             _ => false
         };
 
@@ -68,6 +70,19 @@ public class LiftableConstantExpressionHelpers
             for (var i = 0; i < tuple.Length; i++)
             {
                 if (!IsLiteral(tuple[i]))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        bool IsArrayOfLiterals(Array array)
+        {
+            foreach (var arrayElement in array)
+            {
+                if (!IsLiteral(arrayElement))
                 {
                     return false;
                 }

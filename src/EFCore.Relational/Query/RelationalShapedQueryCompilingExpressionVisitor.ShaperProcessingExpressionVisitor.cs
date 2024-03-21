@@ -2544,10 +2544,12 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                         Left: MethodCallExpression
                         {
                             Method: { IsGenericMethod: true } method,
-                            Arguments: [_, _, ConstantExpression { Value: IProperty property }]
+                            //Arguments: [_, _, ConstantExpression { Value: IProperty property }]
+                            Arguments: [_, _, ConstantExpression leftConstant]
                         },
                         Right: ConstantExpression { Value: null }
                     }
+                    && leftConstant.GetConstantValue<object>() is IProperty property //added
                     && method.GetGenericMethodDefinition() == Infrastructure.ExpressionExtensions.ValueBufferTryReadValueMethod)
                 {
                     return _mappedProperties.Contains(property)
@@ -2563,8 +2565,10 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                 if (methodCallExpression is
                     {
                         Method: { IsGenericMethod: true } method,
-                        Arguments: [_, _, ConstantExpression { Value: IProperty property }]
+                        //Arguments: [_, _, ConstantExpression { Value: IProperty property }]
+                        Arguments: [_, _, ConstantExpression  argumentConstant]
                     }
+                    && argumentConstant.GetConstantValue<object>() is IProperty property //added
                     && method.GetGenericMethodDefinition() == Infrastructure.ExpressionExtensions.ValueBufferTryReadValueMethod
                     && !_mappedProperties.Contains(property))
                 {

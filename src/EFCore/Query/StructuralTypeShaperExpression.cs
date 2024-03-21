@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using JetBrains.Annotations;
+using Microsoft.EntityFrameworkCore.Query.Internal;
 
 namespace Microsoft.EntityFrameworkCore.Query;
 
@@ -22,6 +23,9 @@ public class StructuralTypeShaperExpression : Expression, IPrintableExpression
 {
     private static readonly MethodInfo CreateUnableToDiscriminateExceptionMethod
         = typeof(StructuralTypeShaperExpression).GetTypeInfo().GetDeclaredMethod(nameof(CreateUnableToDiscriminateException))!;
+
+    private static readonly MethodInfo GetDiscriminatorValueMethod
+        = typeof(IReadOnlyEntityType).GetTypeInfo().GetDeclaredMethod(nameof(IReadOnlyEntityType.GetDiscriminatorValue))!;
 
     /// <summary>
     ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
@@ -138,8 +142,12 @@ public class StructuralTypeShaperExpression : Expression, IPrintableExpression
                 var switchCases = new SwitchCase[concreteEntityTypes.Length];
                 for (var i = 0; i < concreteEntityTypes.Length; i++)
                 {
-                    var discriminatorValue = Constant(concreteEntityTypes[i].GetDiscriminatorValue(), discriminatorProperty.ClrType);
-                    switchCases[i] = SwitchCase(Constant(concreteEntityTypes[i], typeof(IEntityType)), discriminatorValue);
+                    var discriminatorValueObject = concreteEntityTypes[i].GetDiscriminatorValue();
+                    var discriminatorValueExpression = LiftableConstantExpressionHelpers.IsLiteral(discriminatorValueObject)
+                        ? (Expression)Constant(discriminatorValueObject, discriminatorProperty.ClrType)
+                        : Convert(Call(Constant(concreteEntityTypes[i]), GetDiscriminatorValueMethod), discriminatorProperty.ClrType);
+
+                    switchCases[i] = SwitchCase(Constant(concreteEntityTypes[i], typeof(IEntityType)), discriminatorValueExpression);
                 }
 
                 expressions.Add(Switch(discriminatorValueVariable, exception, switchCases));
@@ -149,11 +157,18 @@ public class StructuralTypeShaperExpression : Expression, IPrintableExpression
                 var conditions = exception;
                 for (var i = concreteEntityTypes.Length - 1; i >= 0; i--)
                 {
+                    var discriminatorValueObject = concreteEntityTypes[i].GetDiscriminatorValue();
                     conditions = Condition(
                         discriminatorComparer.ExtractEqualsBody(
                             discriminatorValueVariable,
-                            Constant(
-                                concreteEntityTypes[i].GetDiscriminatorValue(),
+                            LiftableConstantExpressionHelpers.IsLiteral(discriminatorValueObject)
+                            ? Constant(
+                                discriminatorValueObject,
+                                discriminatorProperty.ClrType)
+                            : Convert(
+                                Call(
+                                    Constant(concreteEntityTypes[i], typeof(IEntityType)),
+                                    GetDiscriminatorValueMethod),
                                 discriminatorProperty.ClrType)),
                         Constant(concreteEntityTypes[i], typeof(IEntityType)),
                         conditions);

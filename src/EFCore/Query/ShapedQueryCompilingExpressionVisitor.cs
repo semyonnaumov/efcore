@@ -245,30 +245,30 @@ public abstract class ShapedQueryCompilingExpressionVisitor : ExpressionVisitor
                         c.Dependencies.SingletonInterceptors.OfType<IMaterializationInterceptor>().ToList())!,
                     "materializationInterceptor",
                     constantExpression.Type),
-                { Value: IInstantiationBindingInterceptor instantiationBindingInterceptor } => liftableConstantFactory.CreateLiftableConstant(
+                { Value: IInstantiationBindingInterceptor instantiationBindingInterceptorValue } => liftableConstantFactory.CreateLiftableConstant(
                     constantExpression,
-                    c => c.Dependencies.SingletonInterceptors.OfType<IInstantiationBindingInterceptor>().Where(x => x == instantiationBindingInterceptor).Single(),
+                    c => c.Dependencies.SingletonInterceptors.OfType<IInstantiationBindingInterceptor>().Where(x => x == instantiationBindingInterceptorValue).Single(),
                     "instantiationBindingInterceptor",
                     constantExpression.Type),
 
-
-
-
-
-
-
-
-                
-
-
-
-
-
-
-
-
-                _ => base.VisitConstant(constantExpression)
+                _ => Fallback(constantExpression)
             };
+
+
+        private Expression Fallback(ConstantExpression constantExpression)
+        {
+            // if constant is of interface type we blind guess it might be a service and try to resolve it
+            if (constantExpression.Value != null && constantExpression.Type.IsInterface)
+            {
+                return liftableConstantFactory.CreateLiftableConstant(
+                    constantExpression,
+                    c => c.Dependencies.ContextServices.InternalServiceProvider.GetService(constantExpression.Type)!,
+                    "instantiationBindingInterceptor",
+                    constantExpression.Type);
+            }
+
+            return base.VisitConstant(constantExpression);
+        }
 
         protected override Expression VisitBinary(BinaryExpression binaryExpression)
         {

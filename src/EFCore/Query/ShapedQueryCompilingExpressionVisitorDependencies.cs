@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.Extensions.Caching.Memory;
 
 namespace Microsoft.EntityFrameworkCore.Query;
@@ -55,7 +56,13 @@ public sealed record ShapedQueryCompilingExpressionVisitorDependencies
         IModel model,
         ILiftableConstantFactory liftableConstantFactory,
         IDiagnosticsLogger<DbLoggerCategory.Query> queryLogger,
-        IEnumerable<ISingletonInterceptor> singletonInterceptors)
+        IEnumerable<ISingletonInterceptor> singletonInterceptors,
+
+
+        IDbContextServices contextServices
+
+
+        )
     {
         EntityMaterializerSource = entityMaterializerSource;
         TypeMappingSource = typeMappingSource;
@@ -65,6 +72,8 @@ public sealed record ShapedQueryCompilingExpressionVisitorDependencies
         LiftableConstantFactory = liftableConstantFactory;
         QueryLogger = queryLogger;
         SingletonInterceptors = singletonInterceptors;
+
+        ContextServices = contextServices;
     }
 
     /// <summary>
@@ -106,4 +115,9 @@ public sealed record ShapedQueryCompilingExpressionVisitorDependencies
     ///     Registered singleton interceptors.
     /// </summary>
     public IEnumerable<ISingletonInterceptor> SingletonInterceptors { get; init; }
+
+    /// <summary>
+    /// TODO
+    /// </summary>
+    public IDbContextServices ContextServices { get; init; }
 }

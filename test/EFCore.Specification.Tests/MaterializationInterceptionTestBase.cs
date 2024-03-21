@@ -1,6 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Microsoft.EntityFrameworkCore.Proxies.Internal;
+
 namespace Microsoft.EntityFrameworkCore;
 
 public abstract class MaterializationInterceptionTestBase<TContext> : SingletonInterceptorsTestBase<TContext>
@@ -494,6 +496,7 @@ public abstract class MaterializationInterceptionTestBase<TContext> : SingletonI
 
             return new FactoryMethodBinding(
                 this,
+                Expression.Constant(this),
                 typeof(TestBindingInterceptor).GetTypeInfo().GetDeclaredMethod(nameof(BookFactory))!,
                 new List<ParameterBinding>(),
                 interceptionData.TypeBase.ClrType);

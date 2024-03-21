@@ -450,7 +450,7 @@ public class LiftableConstantProcessor : ExpressionVisitor, ILiftableConstantPro
             => typeof(Expression).Assembly.GetType("System.Linq.Expressions.AssignBinaryExpression", throwOnError: true)!;
     }
 
-    private readonly List<string> _exceptions = ["ParameterBindingInfo", "MyDiscriminator", /*"ProxyFactory",*/ "StructuralEqualityComparer"];
+    private readonly List<string> _exceptions = ["ParameterBindingInfo",/* "ProxyFactory",*/ "StructuralEqualityComparer"];
 
 #if DEBUG
     protected override Expression VisitConstant(ConstantExpression node)

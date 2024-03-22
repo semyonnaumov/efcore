@@ -87,5 +87,12 @@ public class LiftableConstantExpression : Expression, IPrintableExpression
 
     /// <inheritdoc />
     public void Print(ExpressionPrinter expressionPrinter)
-        => expressionPrinter.Append($"[Constant: {expressionPrinter.Visit(ResolverExpression)}]");
+    {
+        //expressionPrinter.Append("[LiftableConstant: ");
+        expressionPrinter.Append("[LIFTABLE Constant: ");
+        expressionPrinter.Visit(OriginalExpression);
+        expressionPrinter.Append(" | Resolver: ");
+        expressionPrinter.Visit(ResolverExpression);
+        expressionPrinter.Append("]");
+    }
 }

@@ -1358,6 +1358,9 @@ public abstract class BuiltInDataTypesTestBase<TFixture> : IClassFixture<TFixtur
     [ConditionalFact]
     public virtual void Can_insert_and_read_back_all_non_nullable_data_types()
     {
+
+        try this
+
         using (var context = CreateContext())
         {
             context.Set<BuiltInDataTypes>().Add(

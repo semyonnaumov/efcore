@@ -48,9 +48,18 @@ public class BoolToStringConverter : BoolToTwoValuesConverter<string>
 
     private static Expression<Func<string, bool>> FromProvider(string trueValue)
     {
-        var testChar = trueValue.ToUpperInvariant()[0];
+        var prm = Expression.Parameter(typeof(string), "v");
+        Expression.Lambda(())
+
+        //var testChar = trueValue.ToUpperInvariant()[0];
+
+        //return v => !string.IsNullOrEmpty(v)
+        //    && v.ToUpperInvariant()[0] == testChar;
+
+        //var testChar = trueValue.ToUpperInvariant()[0];
 
         return v => !string.IsNullOrEmpty(v)
-            && v.ToUpperInvariant()[0] == testChar;
+            && v.ToUpperInvariant()[0] == trueValue.ToUpperInvariant()[0];
+
     }
 }

@@ -356,6 +356,10 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor : ShapedQue
                     shapedQueryExpression.ShaperExpression, out var relationalCommandCache, out var readerColumns,
                     out var relatedDataLoaders, ref collectionCount);
 
+
+            var output = ExpressionPrinter.Print(shaper);
+
+
             if (querySplittingBehavior == null
                 && collectionCount > 1)
             {

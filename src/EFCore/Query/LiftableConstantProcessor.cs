@@ -457,7 +457,7 @@ public class LiftableConstantProcessor : ExpressionVisitor, ILiftableConstantPro
     {
         if (!LiftableConstantExpressionHelpers.IsLiteral(node.Value))
         {
-            if (!node.Value!.GetType().Name.Contains("DisplayClass") && !_exceptions.Contains(node.Value!.GetType().Name))
+            if (!node.Value!.GetType().Name.Contains("Display77Class") && !_exceptions.Contains(node.Value!.GetType().Name))
             {
                 throw new InvalidOperationException($"Materializer expression contains a non-literal constant of type '{node.Value!.GetType().Name}'. ");
             }
@@ -466,7 +466,7 @@ public class LiftableConstantProcessor : ExpressionVisitor, ILiftableConstantPro
         }
 
         return LiftableConstantExpressionHelpers.IsLiteral(node.Value)
-            || node.Value!.GetType().Name.Contains("DisplayClass") || _exceptions.Contains(node.Value!.GetType().Name)
+            || node.Value!.GetType().Name.Contains("Display77Class") || _exceptions.Contains(node.Value!.GetType().Name)
         //return IsLiteral(node.Value)
             ? node
             : throw new InvalidOperationException(

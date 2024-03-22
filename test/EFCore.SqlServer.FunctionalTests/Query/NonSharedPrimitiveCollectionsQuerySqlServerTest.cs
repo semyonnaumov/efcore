@@ -699,7 +699,6 @@ WHERE (
 
     #endregion
 
-    [ConditionalFact]
     public override Task Column_with_custom_converter()
         => base.Column_with_custom_converter();
 

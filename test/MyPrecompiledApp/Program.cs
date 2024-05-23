@@ -1,11 +1,24 @@
-﻿// <copyright file="Class1.cs" company="PlaceholderCompany">
-// Copyright (c) PlaceholderCompany. All rights reserved.
-// </copyright>
-// <summary>Kto to wymyslil</summary>
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.EntityFrameworkCore;
 
-namespace MyPrecompiledTest;
+namespace MyPrecompiledApp;
+
+internal class Program
+{
+    static void Main(string[] args)
+    {
+        using var ctx = new MyContext();
+        //ctx.Database.EnsureDeleted();
+        //ctx.Database.EnsureCreated();
+
+        var query = ctx.Entities.Where(x => x.Id > 5).ToList();
+    }
+}
+
+
+
 
 public class MyContext : DbContext
 {
@@ -30,19 +43,3 @@ public class MyEntity
     public string Name { get; set; }
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
 }
-
-
-
-public class MyTestClass
-{
-    public void Test()
-    {
-        using var ctx = new MyContext();
-        //ctx.Database.EnsureDeleted();
-        //ctx.Database.EnsureCreated();
-
-        var query = ctx.Entities.Where(x => x.Id > 5).ToList();
-    }
-}
-
-

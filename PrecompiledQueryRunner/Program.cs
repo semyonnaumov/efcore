@@ -27,7 +27,7 @@ internal class Program
         await using var context = new MyContext();
 
         // "D:/git/efcore/test/MyPrecompiledTest/MyPrecompiledTest.csproj"
-        await GeneratePrecompiledQueries("D:/git/efcore/test/MyPrecompiledTest/MyPrecompiledTest.csproj", context, "D:/git/efcore/test/MyPrecompiledTest", new ());
+        await GeneratePrecompiledQueries("D:/git/efcore/test/MyPrecompiledApp/MyPrecompiledApp.csproj", context, "D:/git/efcore/test/MyPrecompiledApp", new ());
 
         ////await GeneratePrecompiledQueries("/Users/roji/projects/test/Test/Test.csproj", context, "/Users/roji/projects/test/Test", new ());
         async Task GeneratePrecompiledQueries(

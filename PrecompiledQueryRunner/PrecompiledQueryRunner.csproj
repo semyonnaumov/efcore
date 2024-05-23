@@ -18,6 +18,7 @@
   <DocumentationFile>$(OutputPath)$(PrecompiledQueryRunner).xml</DocumentationFile>
   <NoWarn>$(NoWarn),1573,1591,1712</NoWarn>
   <PublishAot>False</PublishAot>
+  <PublishTrimmed>False</PublishTrimmed>
 </PropertyGroup>
 
   <ItemGroup>

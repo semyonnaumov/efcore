@@ -15,6 +15,8 @@ Microsoft.EntityFrameworkCore.DbSet
     <ImplicitUsings>true</ImplicitUsings>
     <NoWarn>$(NoWarn);EF9100</NoWarn> <!-- Precompiled query is experimental -->
     <NoWarn>$(NoWarn);EF9101</NoWarn> <!-- Metrics is experimental -->
+    <PublishAot>true</PublishAot>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
   </PropertyGroup>
 
   <ItemGroup>
@@ -125,6 +127,24 @@ Microsoft.EntityFrameworkCore.DbSet
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
     </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="ILLink.Substitutions.xml">
+      <LogicalName>ILLink.Substitutions.xml</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <PropertyGroup>
+    <DisableQueryCompilation>true</DisableQueryCompilation>
+  </PropertyGroup>
+
+  <!--TODO: remove this later - proper configuration is located in buildTransitive/net8.0-->
+  <ItemGroup>
+    <RuntimeHostConfigurationOption Include="Microsoft.EntityFrameworkCore.DisableQueryCompilation"
+      Condition="'$(DisableQueryCompilation)' != ''"
+      Value="$(DisableQueryCompilation)"
+      Trim="true" />
   </ItemGroup>
 
 </Project>

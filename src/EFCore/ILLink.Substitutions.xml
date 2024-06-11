@@ -1,0 +1,8 @@
+﻿<linker>
+  <assembly fullname="Microsoft.EntityFrameworkCore">
+    <type fullname="Microsoft.EntityFrameworkCore.AppContextSwitches">
+      <method signature="System.Boolean get_DisableQueryCompilation()" body="stub" value="true"
+              feature="Microsoft.EntityFrameworkCore.DisableQueryCompilation" featurevalue="true"/>
+    </type>
+  </assembly>
+</linker>

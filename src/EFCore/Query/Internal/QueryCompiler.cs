@@ -80,7 +80,7 @@ public class QueryCompiler : IQueryCompiler
             = _compiledQueryCache
                 .GetOrAddQuery(
                     _compiledQueryCacheKeyGenerator.GenerateCacheKey(queryAfterExtraction, async),
-                    () => RuntimeFeature.IsDynamicCodeSupported
+                    () => !AppContextSwitches.DisableQueryCompilation //RuntimeFeature.IsDynamicCodeSupported
                         ? CompileQueryCore<TResult>(_database, queryAfterExtraction, _model, async)
                         : throw new InvalidOperationException("Query wasn't precompiled and dynamic code isn't supported (NativeAOT)"));
 
@@ -95,6 +95,11 @@ public class QueryCompiler : IQueryCompiler
     /// </summary>
     public virtual Func<QueryContext, TResult> CreateCompiledQuery<TResult>(Expression query)
     {
+        if (AppContextSwitches.DisableQueryCompilation)
+        {
+            throw new InvalidOperationException("Query compilation was disabled, so CompiledQuery is not allowed.");
+        }
+
         var queryAfterExtraction = ExtractParameters(query, _queryContextFactory.Create(), _logger, compiledQuery: true);
 
         return CompileQueryCore<TResult>(_database, queryAfterExtraction, _model, false);
@@ -108,6 +113,11 @@ public class QueryCompiler : IQueryCompiler
     /// </summary>
     public virtual Func<QueryContext, TResult> CreateCompiledAsyncQuery<TResult>(Expression query)
     {
+        if (AppContextSwitches.DisableQueryCompilation)
+        {
+            throw new InvalidOperationException("Query compilation was disabled, so CompiledQuery is not allowed.");
+        }
+
         var queryAfterExtraction = ExtractParameters(query, _queryContextFactory.Create(), _logger, compiledQuery: true);
 
         return CompileQueryCore<TResult>(_database, queryAfterExtraction, _model, true);

@@ -5,5 +5,13 @@
          This prevents the attributes from being trimmed.
     -->
     <NullabilityInfoContextSupport>true</NullabilityInfoContextSupport>
+
+    <ItemGroup>
+      <RuntimeHostConfigurationOption Include="Microsoft.EntityFrameworkCore.DisableQueryCompilation"
+        Condition="'$(DisableQueryCompilation)' != ''"
+        Value="$(DisableQueryCompilation)"
+        Trim="true" />
+    </ItemGroup>
+
   </PropertyGroup>
 </Project>

@@ -15,6 +15,120 @@ namespace Microsoft.EntityFrameworkCore;
 
 #nullable disable
 
+public class Xxx
+{
+    private readonly ITestOutputHelper _testOutputHelper;
+
+    public Xxx(ITestOutputHelper testOutputHelper)
+    {
+        _testOutputHelper = testOutputHelper;
+    }
+
+    [ConditionalFact]
+    public async Task Main()
+    {
+        using (var context = new SomeDbContext())
+        {
+            await context.Database.EnsureDeletedAsync();
+            await context.Database.EnsureCreatedAsync();
+
+            context.AddRange(
+                new Post
+                {
+                    Commits =
+                    {
+                        new()
+                        {
+                            Id = 1,
+                            CommittedOn = DateTime.Now,
+                            Comment = "1"
+                        },
+                        new()
+                        {
+                            Id = 2,
+                            CommittedOn = DateTime.Now,
+                            Comment = "2"
+                        },
+                        new()
+                        {
+                            Id = 4,
+                            CommittedOn = DateTime.Now,
+                            Comment = "4"
+                        },
+                        new()
+                        {
+                            Id = 3,
+                            CommittedOn = DateTime.Now,
+                            Comment = "3"
+                        }
+                    }
+                });
+            await context.SaveChangesAsync();
+        }
+
+        using (var context = new SomeDbContext())
+        {
+            var post = await context.Set<Post>().SingleAsync();
+            foreach (var commit in post.Commits)
+            {
+                _testOutputHelper.WriteLine($"{commit.Id}: {commit.Comment}");
+            }
+        }
+    }
+
+    public class Commit
+    {
+        private int _idd;
+
+        public int Id
+        {
+            get => _idd;
+            set => _idd = value;
+        }
+
+        public DateTime CommittedOn { get; set; }
+        public string Comment { get; set; }
+    }
+
+    public class Post
+    {
+        public int Id {get; set; }
+        public List<Commit> Commits { get; } = new();
+    }
+
+    public class SomeDbContext : DbContext
+    {
+        //public DbSet<School> Schools => Set<School>();
+
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+            => optionsBuilder
+                .UseSqlServer("Data Source=localhost;Database=TestDb;Integrated Security=True;Trust Server Certificate=True;ConnectRetryCount=0")
+                //.UseSqlite(@"Data Source=db.dat")
+                //.UseNpgsql("Server=localhost;Database=AspireTest;User ID=postgres;Password=clippy77i@")
+                // .UseCosmos(
+                //     "https://localhost:8081",
+                //     "C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==",
+                //     "EFDatabase")
+                //.LogTo(Console.WriteLine, LogLevel.Information)
+                .EnableSensitiveDataLogging();
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Post>().OwnsMany(
+                e => e.Commits, b =>
+                {
+                    b.ToJson();
+                    b.Property(e => e.Id).ValueGeneratedNever();
+                });
+        }
+
+        // protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+        // {
+        // }
+    }
+
+}
+
 public class SqlServerEndToEndTest : IClassFixture<SqlServerFixture>
 {
     private const string DatabaseName = "SqlServerEndToEndTest";

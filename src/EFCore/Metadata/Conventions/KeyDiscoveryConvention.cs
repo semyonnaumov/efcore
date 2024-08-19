@@ -119,29 +119,29 @@ public class KeyDiscoveryConvention :
             }
         }
 
-        if (ownership?.IsUnique == false)
-        {
-            if (keyProperties.Count == 0
-                || ownership.Properties.Contains(keyProperties.First()))
-            {
-                var primaryKey = entityType.FindPrimaryKey();
-                var shadowProperty = primaryKey?.Properties.Last();
-                if (shadowProperty == null
-                    || primaryKey!.Properties.Count == 1
-                    || ownership.Properties.Contains(shadowProperty))
-                {
-                    shadowProperty = entityType.Builder.CreateUniqueProperty(typeof(int), "Id", required: true)!.Metadata;
-                }
-
-                keyProperties.Clear();
-                keyProperties.Add(shadowProperty);
-            }
-
-            var extraProperty = keyProperties[0];
-            keyProperties.RemoveAt(0);
-            keyProperties.AddRange(ownership.Properties);
-            keyProperties.Add(extraProperty);
-        }
+        // if (ownership?.IsUnique == false)
+        // {
+        //     if (keyProperties.Count == 0
+        //         || ownership.Properties.Contains(keyProperties.First()))
+        //     {
+        //         var primaryKey = entityType.FindPrimaryKey();
+        //         var shadowProperty = primaryKey?.Properties.Last();
+        //         if (shadowProperty == null
+        //             || primaryKey!.Properties.Count == 1
+        //             || ownership.Properties.Contains(shadowProperty))
+        //         {
+        //             shadowProperty = entityType.Builder.CreateUniqueProperty(typeof(int), "Id", required: true)!.Metadata;
+        //         }
+        //
+        //         keyProperties.Clear();
+        //         keyProperties.Add(shadowProperty);
+        //     }
+        //
+        //     var extraProperty = keyProperties[0];
+        //     keyProperties.RemoveAt(0);
+        //     keyProperties.AddRange(ownership.Properties);
+        //     keyProperties.Add(extraProperty);
+        // }
 
         if (keyProperties.Count == 0)
         {
@@ -166,17 +166,50 @@ public class KeyDiscoveryConvention :
         IList<IConventionProperty> keyProperties,
         IConventionEntityType entityType)
     {
-        // Remove duplicates
-        for (var i = keyProperties.Count - 1; i >= 0; i--)
+        var synthesizedProperty = keyProperties.FirstOrDefault(p => p.Name == "__synthesizedId");
+        var ownershipForeignKey = entityType.FindOwnership();
+        if (ownershipForeignKey?.IsUnique == false)
         {
-            var property = keyProperties[i];
-            for (var j = i - 1; j >= 0; j--)
+            // This is an owned collection, so it has a composite key consisting of FK properties pointing to the owner PK,
+            // any additional key properties defined by the application, and then the synthesized property.
+            // Add these in the correct order--this is somewhat inefficient, but we are limited because we have to manipulate the
+            // existing collection.
+            var existingKeyProperties = keyProperties.ToList();
+            keyProperties.Clear();
+
+            // Add the FK properties to form the first part of the composite key.
+            foreach (var conventionProperty in ownershipForeignKey.Properties)
             {
-                if (property == keyProperties[j])
+                keyProperties.Add(conventionProperty);
+            }
+
+            // Generate the synthesized key property if it doesn't exist.
+            if (synthesizedProperty == null)
+            {
+                var builder = entityType.Builder.CreateUniqueProperty(typeof(int), "__synthesizedId", required: true);
+                builder = builder?.ValueGenerated(ValueGenerated.OnAdd) ?? builder;
+                synthesizedProperty = builder!.Metadata;
+            }
+
+            // Add non-duplicate, non-ownership, non-synthesized properties.
+            foreach (var keyProperty in existingKeyProperties)
+            {
+                if (keyProperty != synthesizedProperty
+                    && !keyProperties.Contains(keyProperty))
                 {
-                    keyProperties.RemoveAt(j);
-                    i--;
+                    keyProperties.Add(keyProperty);
                 }
+            }
+
+            // Finally, the synthesized property always goes at the end.
+            keyProperties.Add(synthesizedProperty);
+        }
+        else
+        {
+            // This was an owned collection, but now is not, so remove the synthesized property.
+            if (synthesizedProperty is not null)
+            {
+                keyProperties.Remove(synthesizedProperty);
             }
         }
     }
@@ -255,7 +288,8 @@ public class KeyDiscoveryConvention :
         IConventionPropertyBuilder propertyBuilder,
         IConventionContext<IConventionPropertyBuilder> context)
     {
-        if (propertyBuilder.Metadata.DeclaringType is not IConventionEntityType entityType)
+        if (propertyBuilder.Metadata.DeclaringType is not IConventionEntityType entityType
+            || propertyBuilder.Metadata.Name == "__synthesizedId")
         {
             return;
         }

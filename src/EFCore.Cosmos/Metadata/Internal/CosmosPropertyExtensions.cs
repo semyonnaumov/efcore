@@ -22,10 +22,6 @@ public static class CosmosPropertyExtensions
         Check.DebugAssert(
             (property.DeclaringType as IEntityType)?.IsOwned() == true, $"Expected {property.DeclaringType.DisplayName()} to be owned.");
 
-        return property.ClrType == typeof(int)
-            && !property.IsForeignKey()
-            && (property.ValueGenerated & ValueGenerated.OnAdd) != 0
-            && property.FindContainingPrimaryKey() is { Properties.Count: > 1 }
-            && property.GetJsonPropertyName().Length == 0;
+        return property.Name == CosmosKeyDiscoveryConvention.SynthesizedOrdinalPropertyName;
     }
 }

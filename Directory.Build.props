@@ -51,8 +51,8 @@
   </PropertyGroup>
   
   <PropertyGroup>
-    <!-- Don't upgrade NuGetAudit warnings to errors before the initial wave is fixed. -->
-    <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
+    <!-- Only upgrade NuGetAudit warnings to errors for official builds. -->
+    <WarningsNotAsErrors Condition="'$(OfficialBuild)' != 'true'">$(WarningsNotAsErrors);NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
   </PropertyGroup>
 
   <!-- HACK: Work around #15093 -->

@@ -49,11 +49,6 @@
   <PropertyGroup Condition="'$(DeveloperBuild)' == 'true'">
     <WarningsNotAsErrors>$(WarningsNotAsErrors);CS1591;SA1636</WarningsNotAsErrors>
   </PropertyGroup>
-  
-  <PropertyGroup>
-    <!-- Don't upgrade NuGetAudit warnings to errors before the initial wave is fixed. -->
-    <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
-  </PropertyGroup>
 
   <!-- HACK: Work around #15093 -->
   <PropertyGroup>

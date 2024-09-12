@@ -51,8 +51,14 @@
     <ProjectReference Include="..\..\src\EFCore.Design\EFCore.Design.csproj" />
     <ProjectReference Include="..\EFCore.Specification.Tests\EFCore.Specification.Tests.csproj" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.2" />
-    <PackageReference Include="IdentityServer4.EntityFramework" Version="4.1.2" />
     <PackageReference Condition="!$([MSBuild]::IsOSPlatform('OSX'))" Include="Grpc.AspNetCore" Version="2.59.0" />
+
+    <!-- Suppress NuGet audit warnings for IdentityServer4 and update it's dependencies -->
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-ff4q-64jc-gx98;https://github.com/advisories/GHSA-55p7-v223-x366" />
+    <PackageReference Include="IdentityServer4.EntityFramework" Version="4.1.2" />
+    <!-- TODO: Probably better to set up a subscription for aspnetcore but other packages are already hardcoded -->
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="8.0.8" />
+    <PackageReference Include="System.Text.Encodings.Web" Version="$(SystemTextEncodingsWebVersion)" />
   </ItemGroup>
 
   <ItemGroup>

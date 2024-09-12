@@ -27,7 +27,9 @@
     <MicrosoftExtensionsLoggingVersion>9.0.0-rc.2.24429.19</MicrosoftExtensionsLoggingVersion>
     <MicrosoftNETCoreAppRefVersion>9.0.0-rc.2.24429.19</MicrosoftNETCoreAppRefVersion>
     <MicrosoftNETCoreAppRuntimewinx64Version>9.0.0-rc.2.24429.19</MicrosoftNETCoreAppRuntimewinx64Version>
+    <SystemTextEncodingsWebVersion>9.0.0-rc.2.24429.19</SystemTextEncodingsWebVersion>
     <SystemTextJsonVersion>9.0.0-rc.2.24429.19</SystemTextJsonVersion>
+    <SystemFormatsAsn1Version>9.0.0-rc.2.24429.19</SystemFormatsAsn1Version>
   </PropertyGroup>
   <PropertyGroup Label="Dependencies from dotnet/arcade">
     <MicrosoftDotNetBuildTasksTemplatingVersion>10.0.0-beta.24459.1</MicrosoftDotNetBuildTasksTemplatingVersion>

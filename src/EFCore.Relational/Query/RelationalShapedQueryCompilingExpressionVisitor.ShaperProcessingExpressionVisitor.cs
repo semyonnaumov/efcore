@@ -879,51 +879,119 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                         var relatedEntityClrType = innerShaper.ReturnType;
                         var inverseNavigation = navigation.Inverse;
 
-                        _collectionPopulatingExpressions!.Add(
-                            Call(
-                                PopulateIncludeCollectionMethodInfo.MakeGenericMethod(includingEntityClrType, relatedEntityClrType),
-                                collectionIdConstant,
-                                QueryCompilationContext.QueryContextParameter,
-                                _dataReaderParameter,
-                                _resultCoordinatorParameter,
-                                parentIdentifierLambda,
-                                outerIdentifierLambda,
-                                selfIdentifierLambda,
-                                _parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
-                                    relationalCollectionShaperExpression.ParentIdentifierValueComparers.Select(x => (Func<object, object, bool>)x.Equals).ToArray(),
-                                    Lambda<Func<MaterializerLiftableConstantContext, object>>(
-                                        NewArrayInit(
-                                            typeof(Func<object, object, bool>),
-                                            relationalCollectionShaperExpression.ParentIdentifierValueComparers.Select(vc => vc.ObjectEqualsExpression)),
-                                        Parameter(typeof(MaterializerLiftableConstantContext), "_")),
-                                    "parentIdentifierValueComparers",
-                                    typeof(Func<object, object, bool>[])),
-                                _parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
-                                    relationalCollectionShaperExpression.OuterIdentifierValueComparers.Select(x => (Func<object, object, bool>)x.Equals).ToArray(),
-                                    Lambda<Func<MaterializerLiftableConstantContext, object>>(
-                                        NewArrayInit(
-                                            typeof(Func<object, object, bool>),
-                                            relationalCollectionShaperExpression.OuterIdentifierValueComparers.Select(vc => vc.ObjectEqualsExpression)),
-                                        Parameter(typeof(MaterializerLiftableConstantContext), "_")),
-                                    "outerIdentifierValueComparers",
-                                    typeof(Func<object, object, bool>[])),
-                                _parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
-                                    relationalCollectionShaperExpression.SelfIdentifierValueComparers.Select(x => (Func<object, object, bool>)x.Equals).ToArray(),
-                                    Lambda<Func<MaterializerLiftableConstantContext, object>>(
-                                        NewArrayInit(
-                                            typeof(Func<object, object, bool>),
-                                            relationalCollectionShaperExpression.SelfIdentifierValueComparers.Select(vc => vc.ObjectEqualsExpression)),
-                                        Parameter(typeof(MaterializerLiftableConstantContext), "_")),
-                                    "selfIdentifierValueComparers",
-                                    typeof(Func<object, object, bool>[])),
-                                innerShaper,
-                                _parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
-                                    inverseNavigation,
-                                    LiftableConstantExpressionHelpers.BuildNavigationAccessLambda(inverseNavigation),
-                                    (inverseNavigation?.Name ?? "null") + "InverseNavigation",
-                                    typeof(INavigationBase)),
-                                GenerateFixup(includingEntityClrType, relatedEntityClrType, navigation, inverseNavigation),
-                                Constant(_isTracking)));
+                        if (relationalCollectionShaperExpression.ParentIdentifierValueComparers.All(x => x.GetType().Name == "DefaultValueComparer`1")
+                            && relationalCollectionShaperExpression.OuterIdentifierValueComparers.All(x => x.GetType().Name == "DefaultValueComparer`1")
+                            && relationalCollectionShaperExpression.SelfIdentifierValueComparers.All(x => x.GetType().Name == "DefaultValueComparer`1"))
+                        {
+                            _collectionPopulatingExpressions!.Add(
+                                Call(
+                                    FastPopulateIncludeCollectionMethodInfo.MakeGenericMethod(includingEntityClrType, relatedEntityClrType),
+                                    collectionIdConstant,
+                                    QueryCompilationContext.QueryContextParameter,
+                                    _dataReaderParameter,
+                                    _resultCoordinatorParameter,
+                                    parentIdentifierLambda,
+                                    outerIdentifierLambda,
+                                    selfIdentifierLambda,
+
+
+                                    NewArrayInit(
+                                        typeof(Type),
+                                        relationalCollectionShaperExpression.ParentIdentifierValueComparers.Select(vc => Constant(vc.Type))),
+
+                                    NewArrayInit(
+                                        typeof(Type),
+                                        relationalCollectionShaperExpression.OuterIdentifierValueComparers.Select(vc => Constant(vc.Type))),
+
+                                    NewArrayInit(
+                                        typeof(Type),
+                                        relationalCollectionShaperExpression.SelfIdentifierValueComparers.Select(vc => Constant(vc.Type))),
+
+
+                                    //_parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
+                                    //    relationalCollectionShaperExpression.ParentIdentifierValueComparers.Select(x => x.Type).ToArray(),
+                                    //    Lambda<Func<MaterializerLiftableConstantContext, object>>(
+                                    //        NewArrayInit(
+                                    //            typeof(Type),
+                                    //            relationalCollectionShaperExpression.ParentIdentifierValueComparers.Select(vc => Constant(vc.Type))),
+                                    //        Parameter(typeof(MaterializerLiftableConstantContext), "_")),
+                                    //    "parentIdentifierValueComparers",
+                                    //    typeof(Type[])),
+                                    //_parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
+                                    //    relationalCollectionShaperExpression.OuterIdentifierValueComparers.Select(x => x.Type).ToArray(),
+                                    //    Lambda<Func<MaterializerLiftableConstantContext, object>>(
+                                    //        NewArrayInit(
+                                    //            typeof(Type),
+                                    //            relationalCollectionShaperExpression.OuterIdentifierValueComparers.Select(vc => Constant(vc.Type))),
+                                    //        Parameter(typeof(MaterializerLiftableConstantContext), "_")),
+                                    //    "outerIdentifierValueComparers",
+                                    //    typeof(Type[])),
+                                    //_parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
+                                    //    relationalCollectionShaperExpression.SelfIdentifierValueComparers.Select(x => x.Type).ToArray(),
+                                    //    Lambda<Func<MaterializerLiftableConstantContext, object>>(
+                                    //        NewArrayInit(
+                                    //            typeof(Type),
+                                    //            relationalCollectionShaperExpression.SelfIdentifierValueComparers.Select(vc => Constant(vc.Type))),
+                                    //        Parameter(typeof(MaterializerLiftableConstantContext), "_")),
+                                    //    "selfIdentifierValueComparers",
+                                    //    typeof(Type[])),
+                                    innerShaper,
+                                    _parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
+                                        inverseNavigation,
+                                        LiftableConstantExpressionHelpers.BuildNavigationAccessLambda(inverseNavigation),
+                                        (inverseNavigation?.Name ?? "null") + "InverseNavigation",
+                                        typeof(INavigationBase)),
+                                    GenerateFixup(includingEntityClrType, relatedEntityClrType, navigation, inverseNavigation),
+                                    Constant(_isTracking)));
+                        }
+                        else
+                        {
+                            _collectionPopulatingExpressions!.Add(
+                                Call(
+                                    PopulateIncludeCollectionMethodInfo.MakeGenericMethod(includingEntityClrType, relatedEntityClrType),
+                                    collectionIdConstant,
+                                    QueryCompilationContext.QueryContextParameter,
+                                    _dataReaderParameter,
+                                    _resultCoordinatorParameter,
+                                    parentIdentifierLambda,
+                                    outerIdentifierLambda,
+                                    selfIdentifierLambda,
+                                    _parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
+                                        relationalCollectionShaperExpression.ParentIdentifierValueComparers.Select(x => (Func<object, object, bool>)x.Equals).ToArray(),
+                                        Lambda<Func<MaterializerLiftableConstantContext, object>>(
+                                            NewArrayInit(
+                                                typeof(Func<object, object, bool>),
+                                                relationalCollectionShaperExpression.ParentIdentifierValueComparers.Select(vc => vc.ObjectEqualsExpression)),
+                                            Parameter(typeof(MaterializerLiftableConstantContext), "_")),
+                                        "parentIdentifierValueComparers",
+                                        typeof(Func<object, object, bool>[])),
+                                    _parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
+                                        relationalCollectionShaperExpression.OuterIdentifierValueComparers.Select(x => (Func<object, object, bool>)x.Equals).ToArray(),
+                                        Lambda<Func<MaterializerLiftableConstantContext, object>>(
+                                            NewArrayInit(
+                                                typeof(Func<object, object, bool>),
+                                                relationalCollectionShaperExpression.OuterIdentifierValueComparers.Select(vc => vc.ObjectEqualsExpression)),
+                                            Parameter(typeof(MaterializerLiftableConstantContext), "_")),
+                                        "outerIdentifierValueComparers",
+                                        typeof(Func<object, object, bool>[])),
+                                    _parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
+                                        relationalCollectionShaperExpression.SelfIdentifierValueComparers.Select(x => (Func<object, object, bool>)x.Equals).ToArray(),
+                                        Lambda<Func<MaterializerLiftableConstantContext, object>>(
+                                            NewArrayInit(
+                                                typeof(Func<object, object, bool>),
+                                                relationalCollectionShaperExpression.SelfIdentifierValueComparers.Select(vc => vc.ObjectEqualsExpression)),
+                                            Parameter(typeof(MaterializerLiftableConstantContext), "_")),
+                                        "selfIdentifierValueComparers",
+                                        typeof(Func<object, object, bool>[])),
+                                    innerShaper,
+                                    _parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
+                                        inverseNavigation,
+                                        LiftableConstantExpressionHelpers.BuildNavigationAccessLambda(inverseNavigation),
+                                        (inverseNavigation?.Name ?? "null") + "InverseNavigation",
+                                        typeof(INavigationBase)),
+                                    GenerateFixup(includingEntityClrType, relatedEntityClrType, navigation, inverseNavigation),
+                                    Constant(_isTracking)));
+                        }
                     }
                     else if (includeExpression.NavigationExpression is RelationalSplitCollectionShaperExpression
                              relationalSplitCollectionShaperExpression)

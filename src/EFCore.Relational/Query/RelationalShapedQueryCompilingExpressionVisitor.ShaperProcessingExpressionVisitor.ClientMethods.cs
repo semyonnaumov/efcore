@@ -37,6 +37,20 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
         private static readonly MethodInfo PopulateIncludeCollectionMethodInfo
             = typeof(ShaperProcessingExpressionVisitor).GetTypeInfo().GetDeclaredMethod(nameof(PopulateIncludeCollection))!;
 
+
+
+
+
+
+        private static readonly MethodInfo FastPopulateIncludeCollectionMethodInfo
+            = typeof(ShaperProcessingExpressionVisitor).GetTypeInfo().GetDeclaredMethod(nameof(FastPopulateIncludeCollection))!;
+
+
+
+
+
+
+
         private static readonly MethodInfo InitializeSplitIncludeCollectionMethodInfo
             = typeof(ShaperProcessingExpressionVisitor).GetTypeInfo().GetDeclaredMethod(nameof(InitializeSplitIncludeCollection))!;
 
@@ -255,6 +269,10 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
             where TIncludingEntity : class
             where TIncludedEntity : class
         {
+
+            var i = 1;
+            if (i == 1) throw new InvalidOperationException("fd");
+
             var collectionMaterializationContext = resultCoordinator.Collections[collectionId]!;
             if (collectionMaterializationContext.Parent is TIncludingEntity entity)
             {
@@ -354,6 +372,181 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                 collectionMaterializationContext.UpdateSelfIdentifier(null);
             }
         }
+
+        /// <summary>
+        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+        ///     any release. You should only use it directly in your code with extreme caution and knowing that
+        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        /// </summary>
+        [EntityFrameworkInternal]
+        public static Dictionary<Type, ValueComparer> DefaultComparerMap = new Dictionary<Type, ValueComparer>
+        {
+            { typeof(int), ValueComparer.CreateDefault<int>(false) },
+        };
+
+        /// <summary>
+        ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+        ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+        ///     any release. You should only use it directly in your code with extreme caution and knowing that
+        ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+        /// </summary>
+        [EntityFrameworkInternal]
+        public static void FastPopulateIncludeCollection<TIncludingEntity, TIncludedEntity>(
+            int collectionId,
+            QueryContext queryContext,
+            DbDataReader dbDataReader,
+            SingleQueryResultCoordinator resultCoordinator,
+            Func<QueryContext, DbDataReader, object[]> parentIdentifier,
+            Func<QueryContext, DbDataReader, object[]> outerIdentifier,
+            Func<QueryContext, DbDataReader, object[]> selfIdentifier,
+            IReadOnlyList<Type> parentIdentifierValueComparers,
+            IReadOnlyList<Type> outerIdentifierValueComparers,
+            IReadOnlyList<Type> selfIdentifierValueComparers,
+            Func<QueryContext, DbDataReader, ResultContext, SingleQueryResultCoordinator, TIncludedEntity> innerShaper,
+            INavigationBase? inverseNavigation,
+            Action<TIncludingEntity, TIncludedEntity> fixup,
+            bool trackingQuery)
+            where TIncludingEntity : class
+            where TIncludedEntity : class
+        {
+            var collectionMaterializationContext = resultCoordinator.Collections[collectionId]!;
+            if (collectionMaterializationContext.Parent is TIncludingEntity entity)
+            {
+                if (resultCoordinator.HasNext == false)
+                {
+                    // Outer Enumerator has ended
+                    GenerateCurrentElementIfPending();
+                    return;
+                }
+
+                if (!FastCompareIdentifiers(
+                        outerIdentifierValueComparers,
+                        outerIdentifier(queryContext, dbDataReader), collectionMaterializationContext.OuterIdentifier))
+                {
+                    // Outer changed so collection has ended. Materialize last element.
+                    GenerateCurrentElementIfPending();
+                    // If parent also changed then this row is now pointing to element of next collection
+                    if (!FastCompareIdentifiers(
+                            parentIdentifierValueComparers,
+                            parentIdentifier(queryContext, dbDataReader), collectionMaterializationContext.ParentIdentifier))
+                    {
+                        resultCoordinator.HasNext = true;
+                    }
+
+                    return;
+                }
+
+                var innerKey = selfIdentifier(queryContext, dbDataReader);
+                if (innerKey.All(e => e == null))
+                {
+                    // No correlated element
+                    return;
+                }
+
+                if (collectionMaterializationContext.SelfIdentifier != null)
+                {
+                    if (FastCompareIdentifiers(selfIdentifierValueComparers, innerKey, collectionMaterializationContext.SelfIdentifier))
+                    {
+                        // repeated row for current element
+                        // If it is pending materialization then it may have nested elements
+                        if (collectionMaterializationContext.ResultContext.Values != null)
+                        {
+                            ProcessCurrentElementRow();
+                        }
+
+                        resultCoordinator.ResultReady = false;
+                        return;
+                    }
+
+                    // Row for new element which is not first element
+                    // So materialize the element
+                    GenerateCurrentElementIfPending();
+                    resultCoordinator.HasNext = null;
+                    collectionMaterializationContext.UpdateSelfIdentifier(innerKey);
+                }
+                else
+                {
+                    // First row for current element
+                    collectionMaterializationContext.UpdateSelfIdentifier(innerKey);
+                }
+
+                ProcessCurrentElementRow();
+                resultCoordinator.ResultReady = false;
+            }
+
+            void ProcessCurrentElementRow()
+            {
+                var previousResultReady = resultCoordinator.ResultReady;
+                resultCoordinator.ResultReady = true;
+                var relatedEntity = innerShaper(
+                    queryContext, dbDataReader, collectionMaterializationContext.ResultContext, resultCoordinator);
+                if (resultCoordinator.ResultReady)
+                {
+                    // related entity is materialized
+                    collectionMaterializationContext.ResultContext.Values = null;
+                    if (!trackingQuery)
+                    {
+                        fixup(entity, relatedEntity);
+                        if (inverseNavigation is { IsCollection: false })
+                        {
+                            inverseNavigation.SetIsLoadedWhenNoTracking(relatedEntity);
+                        }
+                    }
+                }
+
+                resultCoordinator.ResultReady &= previousResultReady;
+            }
+
+            void GenerateCurrentElementIfPending()
+            {
+                if (collectionMaterializationContext.ResultContext.Values != null)
+                {
+                    resultCoordinator.HasNext = false;
+                    ProcessCurrentElementRow();
+                }
+
+                collectionMaterializationContext.UpdateSelfIdentifier(null);
+            }
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
         /// <summary>
         ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
@@ -646,6 +839,9 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
             where TRelatedEntity : TElement
             where TCollection : class, ICollection<TElement>
         {
+            var blah = 1;
+            if (blah == 1) throw new InvalidOperationException("fdfd");
+
             var collectionMaterializationContext = resultCoordinator.Collections[collectionId]!;
             if (collectionMaterializationContext.Collection is null)
             {
@@ -1212,10 +1408,27 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
 
         private static bool CompareIdentifiers(IReadOnlyList<Func<object, object, bool>> valueComparers, object[] left, object[] right)
         {
+            var foo = 1;
+            if (foo == 1) throw new InvalidOperationException("fd");
+
             // Ignoring size check on all for perf as they should be same unless bug in code.
             for (var i = 0; i < left.Length; i++)
             {
                 if (!valueComparers[i](left[i], right[i]))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static bool FastCompareIdentifiers(IReadOnlyList<Type> defaultValueComparerTypes, object[] left, object[] right)
+        {
+            // Ignoring size check on all for perf as they should be same unless bug in code.
+            for (var i = 0; i < left.Length; i++)
+            {
+                if (!DefaultComparerMap[defaultValueComparerTypes[i]].Equals(left[i], right[i]))
                 {
                     return false;
                 }

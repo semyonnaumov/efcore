@@ -191,6 +191,9 @@ public class GroupBySplitQueryingEnumerable<TKey, TElement>
 
     private static bool CompareIdentifiers(IReadOnlyList<Func<object, object, bool>> valueComparers, object[] left, object[] right)
     {
+        var foo = 1;
+        if (foo == 1) throw new InvalidOperationException("fd");
+
         // Ignoring size check on all for perf as they should be same unless bug in code.
         for (var i = 0; i < left.Length; i++)
         {

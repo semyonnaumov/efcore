@@ -14,7 +14,7 @@ namespace Microsoft.EntityFrameworkCore.Benchmarks.Query;
 public abstract class NavigationsQueryTests
 {
     private AdventureWorksContextBase _context;
-    private IQueryable<Store> _query;
+    private IQueryable<SalesOrderHeader> _query;
 
     protected virtual int QueriesPerIteration
         => 10;
@@ -22,11 +22,11 @@ public abstract class NavigationsQueryTests
     protected virtual int UnfilteredCount
         => 466;
 
-    [Params(true, false)]
-    public bool Async { get; set; }
+    //[Params(true, false)]
+    //public bool Async { get; set; }
 
-    [Params(true, false)]
-    public bool Filter { get; set; }
+    //[Params(true, false)]
+    //public bool Filter { get; set; }
 
     protected abstract AdventureWorksContextBase CreateContext();
 
@@ -34,32 +34,56 @@ public abstract class NavigationsQueryTests
     public virtual void InitializeContext()
     {
         _context = CreateContext();
-        _query = Filter
-            ? _context.Store.Where(s => s.SalesPerson.Bonus > 3000)
-            : _context.Store.Where(s => s.SalesPerson.Bonus >= 0);
+        //_query = Filter
+        //    ? _context.Store.Where(s => s.SalesPerson.Bonus > 3000)
+        //    : _context.Store.Where(s => s.SalesPerson.Bonus >= 0);
+
+        _query = _context.SalesOrderHeader.AsNoTracking()
+    //return ctx.SalesOrderHeaders.AsNoTracking()
+    .Where(p => p.SalesOrderID > 50000 && p.SalesOrderID <= 50300)
+    .Include(p => p.Customer)
+    .Include(p => p.SalesOrderDetail);
     }
 
     [GlobalCleanup]
     public virtual void CleanupContext()
     {
-        Assert.Equal(Filter ? UnfilteredCount : 701, _query.Count());
+        //Assert.Equal(Filter ? UnfilteredCount : 701, _query.Count());
 
         _context.Dispose();
     }
 
+    //[Benchmark]
+    //public virtual async Task PredicateAcrossOptionalNavigation()
+    //{
+    //    for (var i = 0; i < QueriesPerIteration; i++)
+    //    {
+    //        if (Async)
+    //        {
+    //            await _query.ToListAsync();
+    //        }
+    //        else
+    //        {
+    //            _query.ToList();
+    //        }
+    //    }
+    //}
+
     [Benchmark]
-    public virtual async Task PredicateAcrossOptionalNavigation()
+    public virtual void MultiInclue()
     {
         for (var i = 0; i < QueriesPerIteration; i++)
         {
-            if (Async)
-            {
-                await _query.ToListAsync();
-            }
-            else
+            //if (Async)
+            //{
+            //    await _query.ToListAsync();
+            //}
+            //else
             {
                 _query.ToList();
             }
         }
+
     }
+
 }

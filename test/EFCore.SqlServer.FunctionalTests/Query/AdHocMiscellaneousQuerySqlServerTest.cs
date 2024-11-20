@@ -2405,4 +2405,1679 @@ WHERE CASE
 END = N'COUNTRY'
 """);
     }
+
+
+    [ConditionalFact]
+    public void PerfRepro()
+    {
+        var bencher = new EFCoreBencher();
+        bencher.Setup();
+
+        var sw = new Stopwatch();
+        sw.Start();
+
+        for (int i = 0; i < 500; i++)
+        {
+            bencher.LoadSalesOrderHeaders();
+        }
+
+        throw new InvalidOperationException(sw.Elapsed.ToString());
+    }
+
+    public class EFCoreBencher
+    {
+        private static PooledDbContextFactory<AdventureWorksContext> _factory;
+
+        public void Setup()
+        {
+            var options = new DbContextOptionsBuilder<AdventureWorksContext>()
+                //.UseSqlServer(@"Data Source=(localdb)\MSSqlLocalDb;Integrated Security=SSPI;Initial Catalog=AdventureWorks;")
+                .UseSqlServer(@"Server=(localdb)\mssqllocaldb;Database=AdventureWorks2019;Trusted_Connection=True;MultipleActiveResultSets=true")
+                .EnableThreadSafetyChecks(false)
+                .Options;
+
+            _factory = new PooledDbContextFactory<AdventureWorksContext>(options);
+            using var ctx = _factory.CreateDbContext();
+        }
+
+        public List<SalesOrderHeader> LoadSalesOrderHeaders()
+        {
+            using var ctx = _factory.CreateDbContext();
+
+            return ctx.SalesOrderHeaders.AsNoTracking()
+                .Where(p => p.SalesOrderId > 50000 && p.SalesOrderId <= 50300)
+                .Include(p => p.Customer)
+                .Include(p => p.SalesOrderDetails)
+                .ToList();
+        }
+
+        public async Task<List<SalesOrderHeader>> LoadSalesOrderHeadersAsync()
+        {
+            await using var ctx = _factory.CreateDbContext();
+            return await ctx.SalesOrderHeaders.AsNoTracking()
+                .Where(p => p.SalesOrderId > 50000 && p.SalesOrderId <= 50300)
+                .Include(p => p.Customer)
+                .Include(p => p.SalesOrderDetails)
+                .ToListAsync();
+        }
+    }
+
+    public partial class AdventureWorksContext : DbContext
+    {
+        public AdventureWorksContext(DbContextOptions<AdventureWorksContext> options)
+            : base(options)
+        {
+        }
+
+        public virtual DbSet<CountryRegionCurrency> CountryRegionCurrencies { get; set; }
+
+        public virtual DbSet<CreditCard> CreditCards { get; set; }
+
+        public virtual DbSet<Currency> Currencies { get; set; }
+
+        public virtual DbSet<CurrencyRate> CurrencyRates { get; set; }
+
+        public virtual DbSet<Customer> Customers { get; set; }
+
+        public virtual DbSet<PersonCreditCard> PersonCreditCards { get; set; }
+
+        public virtual DbSet<SalesOrderDetail> SalesOrderDetails { get; set; }
+
+        public virtual DbSet<SalesOrderHeader> SalesOrderHeaders { get; set; }
+
+        public virtual DbSet<SalesOrderHeaderSalesReason> SalesOrderHeaderSalesReasons { get; set; }
+
+        public virtual DbSet<SalesPerson> SalesPeople { get; set; }
+
+        public virtual DbSet<SalesPersonQuotaHistory> SalesPersonQuotaHistories { get; set; }
+
+        public virtual DbSet<SalesReason> SalesReasons { get; set; }
+
+        public virtual DbSet<SalesTaxRate> SalesTaxRates { get; set; }
+
+        public virtual DbSet<SalesTerritory> SalesTerritories { get; set; }
+
+        public virtual DbSet<SalesTerritoryHistory> SalesTerritoryHistories { get; set; }
+
+        public virtual DbSet<ShoppingCartItem> ShoppingCartItems { get; set; }
+
+        public virtual DbSet<SpecialOffer> SpecialOffers { get; set; }
+
+        public virtual DbSet<SpecialOfferProduct> SpecialOfferProducts { get; set; }
+
+        public virtual DbSet<Store> Stores { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<CountryRegionCurrency>(entity =>
+            {
+                entity.HasKey(e => new { e.CountryRegionCode, e.CurrencyCode }).HasName("PK_CountryRegionCurrency_CountryRegionCode_CurrencyCode");
+
+                entity.ToTable("CountryRegionCurrency", "Sales", tb => tb.HasComment("Cross-reference table mapping ISO currency codes to a country or region."));
+
+                entity.HasIndex(e => e.CurrencyCode, "IX_CountryRegionCurrency_CurrencyCode");
+
+                entity.Property(e => e.CountryRegionCode)
+                    .HasMaxLength(3)
+                    .HasComment("ISO code for countries and regions. Foreign key to CountryRegion.CountryRegionCode.");
+                entity.Property(e => e.CurrencyCode)
+                    .HasMaxLength(3)
+                    .IsFixedLength()
+                    .HasComment("ISO standard currency code. Foreign key to Currency.CurrencyCode.");
+                entity.Property(e => e.ModifiedDate)
+                    .HasDefaultValueSql("(getdate())")
+                    .HasComment("Date and time the record was last updated.")
+                    .HasColumnType("datetime");
+
+                entity.HasOne(d => d.CurrencyCodeNavigation).WithMany(p => p.CountryRegionCurrencies)
+                    .HasForeignKey(d => d.CurrencyCode)
+                    .OnDelete(DeleteBehavior.ClientSetNull);
+            });
+
+            modelBuilder.Entity<CreditCard>(entity =>
+            {
+                entity.HasKey(e => e.CreditCardId).HasName("PK_CreditCard_CreditCardID");
+
+                entity.ToTable("CreditCard", "Sales", tb => tb.HasComment("Customer credit card information."));
+
+                entity.HasIndex(e => e.CardNumber, "AK_CreditCard_CardNumber").IsUnique();
+
+                entity.Property(e => e.CreditCardId)
+                    .HasComment("Primary key for CreditCard records.")
+                    .HasColumnName("CreditCardID");
+                entity.Property(e => e.CardNumber)
+                    .IsRequired()
+                    .HasMaxLength(25)
+                    .HasComment("Credit card number.");
+                entity.Property(e => e.CardType)
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .HasComment("Credit card name.");
+                entity.Property(e => e.ExpMonth).HasComment("Credit card expiration month.");
+                entity.Property(e => e.ExpYear).HasComment("Credit card expiration year.");
+                entity.Property(e => e.ModifiedDate)
+                    .HasDefaultValueSql("(getdate())")
+                    .HasComment("Date and time the record was last updated.")
+                    .HasColumnType("datetime");
+            });
+
+            modelBuilder.Entity<Currency>(entity =>
+            {
+                entity.HasKey(e => e.CurrencyCode).HasName("PK_Currency_CurrencyCode");
+
+                entity.ToTable("Currency", "Sales", tb => tb.HasComment("Lookup table containing standard ISO currencies."));
+
+                entity.HasIndex(e => e.Name, "AK_Currency_Name").IsUnique();
+
+                entity.Property(e => e.CurrencyCode)
+                    .HasMaxLength(3)
+                    .IsFixedLength()
+                    .HasComment("The ISO code for the Currency.");
+                entity.Property(e => e.ModifiedDate)
+                    .HasDefaultValueSql("(getdate())")
+                    .HasComment("Date and time the record was last updated.")
+                    .HasColumnType("datetime");
+                entity.Property(e => e.Name)
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .HasComment("Currency name.");
+            });
+
+            modelBuilder.Entity<CurrencyRate>(entity =>
+            {
+                entity.HasKey(e => e.CurrencyRateId).HasName("PK_CurrencyRate_CurrencyRateID");
+
+                entity.ToTable("CurrencyRate", "Sales", tb => tb.HasComment("Currency exchange rates."));
+
+                entity.HasIndex(e => new { e.CurrencyRateDate, e.FromCurrencyCode, e.ToCurrencyCode }, "AK_CurrencyRate_CurrencyRateDate_FromCurrencyCode_ToCurrencyCode").IsUnique();
+
+                entity.Property(e => e.CurrencyRateId)
+                    .HasComment("Primary key for CurrencyRate records.")
+                    .HasColumnName("CurrencyRateID");
+                entity.Property(e => e.AverageRate)
+                    .HasComment("Average exchange rate for the day.")
+                    .HasColumnType("money");
+                entity.Property(e => e.CurrencyRateDate)
+                    .HasComment("Date and time the exchange rate was obtained.")
+                    .HasColumnType("datetime");
+                entity.Property(e => e.EndOfDayRate)
+                    .HasComment("Final exchange rate for the day.")
+                    .HasColumnType("money");
+                entity.Property(e => e.FromCurrencyCode)
+                    .IsRequired()
+                    .HasMaxLength(3)
+                    .IsFixedLength()
+                    .HasComment("Exchange rate was converted from this currency code.");
+                entity.Property(e => e.ModifiedDate)
+                    .HasDefaultValueSql("(getdate())")
+                    .HasComment("Date and time the record was last updated.")
+                    .HasColumnType("datetime");
+                entity.Property(e => e.ToCurrencyCode)
+                    .IsRequired()
+                    .HasMaxLength(3)
+                    .IsFixedLength()
+                    .HasComment("Exchange rate was converted to this currency code.");
+
+                entity.HasOne(d => d.FromCurrencyCodeNavigation).WithMany(p => p.CurrencyRateFromCurrencyCodeNavigations)
+                    .HasForeignKey(d => d.FromCurrencyCode)
+                    .OnDelete(DeleteBehavior.ClientSetNull);
+
+                entity.HasOne(d => d.ToCurrencyCodeNavigation).WithMany(p => p.CurrencyRateToCurrencyCodeNavigations)
+                    .HasForeignKey(d => d.ToCurrencyCode)
+                    .OnDelete(DeleteBehavior.ClientSetNull);
+            });
+
+            modelBuilder.Entity<Customer>(entity =>
+            {
+                entity.HasKey(e => e.CustomerId).HasName("PK_Customer_CustomerID");
+
+                entity.ToTable("Customer", "Sales", tb => tb.HasComment("Current customer information. Also see the Person and Store tables."));
+
+                entity.HasIndex(e => e.AccountNumber, "AK_Customer_AccountNumber").IsUnique();
+
+                entity.HasIndex(e => e.Rowguid, "AK_Customer_rowguid").IsUnique();
+
+                entity.HasIndex(e => e.TerritoryId, "IX_Customer_TerritoryID");
+
+                entity.Property(e => e.CustomerId)
+                    .HasComment("Primary key.")
+                    .HasColumnName("CustomerID");
+                entity.Property(e => e.AccountNumber)
+                    .IsRequired()
+                    .HasMaxLength(10)
+                    .IsUnicode(false)
+                    .HasComputedColumnSql("(isnull('AW'+[dbo].[ufnLeadingZeros]([CustomerID]),''))", false)
+                    .HasComment("Unique number identifying the customer assigned by the accounting system.");
+                entity.Property(e => e.ModifiedDate)
+                    .HasDefaultValueSql("(getdate())")
+                    .HasComment("Date and time the record was last updated.")
+                    .HasColumnType("datetime");
+                entity.Property(e => e.PersonId)
+                    .HasComment("Foreign key to Person.BusinessEntityID")
+                    .HasColumnName("PersonID");
+                entity.Property(e => e.Rowguid)
+                    .HasDefaultValueSql("(newid())")
+                    .HasComment("ROWGUIDCOL number uniquely identifying the record. Used to support a merge replication sample.")
+                    .HasColumnName("rowguid");
+                entity.Property(e => e.StoreId)
+                    .HasComment("Foreign key to Store.BusinessEntityID")
+                    .HasColumnName("StoreID");
+                entity.Property(e => e.TerritoryId)
+                    .HasComment("ID of the territory in which the customer is located. Foreign key to SalesTerritory.SalesTerritoryID.")
+                    .HasColumnName("TerritoryID");
+
+                entity.HasOne(d => d.Store).WithMany(p => p.Customers).HasForeignKey(d => d.StoreId);
+
+                entity.HasOne(d => d.Territory).WithMany(p => p.Customers).HasForeignKey(d => d.TerritoryId);
+            });
+
+            modelBuilder.Entity<PersonCreditCard>(entity =>
+            {
+                entity.HasKey(e => new { e.BusinessEntityId, e.CreditCardId }).HasName("PK_PersonCreditCard_BusinessEntityID_CreditCardID");
+
+                entity.ToTable("PersonCreditCard", "Sales", tb => tb.HasComment("Cross-reference table mapping people to their credit card information in the CreditCard table. "));
+
+                entity.Property(e => e.BusinessEntityId)
+                    .HasComment("Business entity identification number. Foreign key to Person.BusinessEntityID.")
+                    .HasColumnName("BusinessEntityID");
+                entity.Property(e => e.CreditCardId)
+                    .HasComment("Credit card identification number. Foreign key to CreditCard.CreditCardID.")
+                    .HasColumnName("CreditCardID");
+                entity.Property(e => e.ModifiedDate)
+                    .HasDefaultValueSql("(getdate())")
+                    .HasComment("Date and time the record was last updated.")
+                    .HasColumnType("datetime");
+
+                entity.HasOne(d => d.CreditCard).WithMany(p => p.PersonCreditCards)
+                    .HasForeignKey(d => d.CreditCardId)
+                    .OnDelete(DeleteBehavior.ClientSetNull);
+            });
+
+            modelBuilder.Entity<SalesOrderDetail>(entity =>
+            {
+                entity.HasKey(e => new { e.SalesOrderId, e.SalesOrderDetailId }).HasName("PK_SalesOrderDetail_SalesOrderID_SalesOrderDetailID");
+
+                entity.ToTable("SalesOrderDetail", "Sales", tb => tb.HasComment("Individual products associated with a specific sales order. See SalesOrderHeader."));
+
+                entity.HasIndex(e => e.Rowguid, "AK_SalesOrderDetail_rowguid").IsUnique();
+
+                entity.HasIndex(e => e.ProductId, "IX_SalesOrderDetail_ProductID");
+
+                entity.Property(e => e.SalesOrderId)
+                    .HasComment("Primary key. Foreign key to SalesOrderHeader.SalesOrderID.")
+                    .HasColumnName("SalesOrderID");
+                entity.Property(e => e.SalesOrderDetailId)
+                    .ValueGeneratedOnAdd()
+                    .HasComment("Primary key. One incremental unique number per product sold.")
+                    .HasColumnName("SalesOrderDetailID");
+                entity.Property(e => e.CarrierTrackingNumber)
+                    .HasMaxLength(25)
+                    .HasComment("Shipment tracking number supplied by the shipper.");
+                entity.Property(e => e.LineTotal)
+                    .HasComputedColumnSql("(isnull(([UnitPrice]*((1.0)-[UnitPriceDiscount]))*[OrderQty],(0.0)))", false)
+                    .HasComment("Per product subtotal. Computed as UnitPrice * (1 - UnitPriceDiscount) * OrderQty.")
+                    .HasColumnType("numeric(38, 6)");
+                entity.Property(e => e.ModifiedDate)
+                    .HasDefaultValueSql("(getdate())")
+                    .HasComment("Date and time the record was last updated.")
+                    .HasColumnType("datetime");
+                entity.Property(e => e.OrderQty).HasComment("Quantity ordered per product.");
+                entity.Property(e => e.ProductId)
+                    .HasComment("Product sold to customer. Foreign key to Product.ProductID.")
+                    .HasColumnName("ProductID");
+                entity.Property(e => e.Rowguid)
+                    .HasDefaultValueSql("(newid())")
+                    .HasComment("ROWGUIDCOL number uniquely identifying the record. Used to support a merge replication sample.")
+                    .HasColumnName("rowguid");
+                entity.Property(e => e.SpecialOfferId)
+                    .HasComment("Promotional code. Foreign key to SpecialOffer.SpecialOfferID.")
+                    .HasColumnName("SpecialOfferID");
+                entity.Property(e => e.UnitPrice)
+                    .HasComment("Selling price of a single product.")
+                    .HasColumnType("money");
+                entity.Property(e => e.UnitPriceDiscount)
+                    .HasComment("Discount amount.")
+                    .HasColumnType("money");
+
+                entity.HasOne(d => d.SalesOrder).WithMany(p => p.SalesOrderDetails).HasForeignKey(d => d.SalesOrderId);
+
+                entity.HasOne(d => d.SpecialOfferProduct).WithMany(p => p.SalesOrderDetails)
+                    .HasForeignKey(d => new { d.SpecialOfferId, d.ProductId })
+                    .OnDelete(DeleteBehavior.ClientSetNull)
+                    .HasConstraintName("FK_SalesOrderDetail_SpecialOfferProduct_SpecialOfferIDProductID");
+            });
+
+            modelBuilder.Entity<SalesOrderHeader>(entity =>
+            {
+                entity.HasKey(e => e.SalesOrderId).HasName("PK_SalesOrderHeader_SalesOrderID");
+
+                entity.ToTable("SalesOrderHeader", "Sales", tb => tb.HasComment("General sales order information."));
+
+                entity.HasIndex(e => e.SalesOrderNumber, "AK_SalesOrderHeader_SalesOrderNumber").IsUnique();
+
+                entity.HasIndex(e => e.Rowguid, "AK_SalesOrderHeader_rowguid").IsUnique();
+
+                entity.HasIndex(e => e.CustomerId, "IX_SalesOrderHeader_CustomerID");
+
+                entity.HasIndex(e => e.SalesPersonId, "IX_SalesOrderHeader_SalesPersonID");
+
+                entity.Property(e => e.SalesOrderId)
+                    .HasComment("Primary key.")
+                    .HasColumnName("SalesOrderID");
+                entity.Property(e => e.AccountNumber)
+                    .HasMaxLength(15)
+                    .HasComment("Financial accounting number reference.");
+                entity.Property(e => e.BillToAddressId)
+                    .HasComment("Customer billing address. Foreign key to Address.AddressID.")
+                    .HasColumnName("BillToAddressID");
+                entity.Property(e => e.Comment)
+                    .HasMaxLength(128)
+                    .HasComment("Sales representative comments.");
+                entity.Property(e => e.CreditCardApprovalCode)
+                    .HasMaxLength(15)
+                    .IsUnicode(false)
+                    .HasComment("Approval code provided by the credit card company.");
+                entity.Property(e => e.CreditCardId)
+                    .HasComment("Credit card identification number. Foreign key to CreditCard.CreditCardID.")
+                    .HasColumnName("CreditCardID");
+                entity.Property(e => e.CurrencyRateId)
+                    .HasComment("Currency exchange rate used. Foreign key to CurrencyRate.CurrencyRateID.")
+                    .HasColumnName("CurrencyRateID");
+                entity.Property(e => e.CustomerId)
+                    .HasComment("Customer identification number. Foreign key to Customer.BusinessEntityID.")
+                    .HasColumnName("CustomerID");
+                entity.Property(e => e.DueDate)
+                    .HasComment("Date the order is due to the customer.")
+                    .HasColumnType("datetime");
+                entity.Property(e => e.Freight)
+                    .HasComment("Shipping cost.")
+                    .HasColumnType("money");
+                entity.Property(e => e.ModifiedDate)
+                    .HasDefaultValueSql("(getdate())")
+                    .HasComment("Date and time the record was last updated.")
+                    .HasColumnType("datetime");
+                entity.Property(e => e.OnlineOrderFlag)
+                    .HasDefaultValue(true)
+                    .HasComment("0 = Order placed by sales person. 1 = Order placed online by customer.");
+                entity.Property(e => e.OrderDate)
+                    .HasDefaultValueSql("(getdate())")
+                    .HasComment("Dates the sales order was created.")
+                    .HasColumnType("datetime");
+                entity.Property(e => e.PurchaseOrderNumber)
+                    .HasMaxLength(25)
+                    .HasComment("Customer purchase order number reference. ");
+                entity.Property(e => e.RevisionNumber).HasComment("Incremental number to track changes to the sales order over time.");
+                entity.Property(e => e.Rowguid)
+                    .HasDefaultValueSql("(newid())")
+                    .HasComment("ROWGUIDCOL number uniquely identifying the record. Used to support a merge replication sample.")
+                    .HasColumnName("rowguid");
+                entity.Property(e => e.SalesOrderNumber)
+                    .IsRequired()
+                    .HasMaxLength(25)
+                    .HasComputedColumnSql("(isnull(N'SO'+CONVERT([nvarchar](23),[SalesOrderID]),N'*** ERROR ***'))", false)
+                    .HasComment("Unique sales order identification number.");
+                entity.Property(e => e.SalesPersonId)
+                    .HasComment("Sales person who created the sales order. Foreign key to SalesPerson.BusinessEntityID.")
+                    .HasColumnName("SalesPersonID");
+                entity.Property(e => e.ShipDate)
+                    .HasComment("Date the order was shipped to the customer.")
+                    .HasColumnType("datetime");
+                entity.Property(e => e.ShipMethodId)
+                    .HasComment("Shipping method. Foreign key to ShipMethod.ShipMethodID.")
+                    .HasColumnName("ShipMethodID");
+                entity.Property(e => e.ShipToAddressId)
+                    .HasComment("Customer shipping address. Foreign key to Address.AddressID.")
+                    .HasColumnName("ShipToAddressID");
+                entity.Property(e => e.Status)
+                    .HasDefaultValue((byte)1)
+                    .HasComment("Order current status. 1 = In process; 2 = Approved; 3 = Backordered; 4 = Rejected; 5 = Shipped; 6 = Cancelled");
+                entity.Property(e => e.SubTotal)
+                    .HasComment("Sales subtotal. Computed as SUM(SalesOrderDetail.LineTotal)for the appropriate SalesOrderID.")
+                    .HasColumnType("money");
+                entity.Property(e => e.TaxAmt)
+                    .HasComment("Tax amount.")
+                    .HasColumnType("money");
+                entity.Property(e => e.TerritoryId)
+                    .HasComment("Territory in which the sale was made. Foreign key to SalesTerritory.SalesTerritoryID.")
+                    .HasColumnName("TerritoryID");
+                entity.Property(e => e.TotalDue)
+                    .HasComputedColumnSql("(isnull(([SubTotal]+[TaxAmt])+[Freight],(0)))", false)
+                    .HasComment("Total due from customer. Computed as Subtotal + TaxAmt + Freight.")
+                    .HasColumnType("money");
+
+                entity.HasOne(d => d.CreditCard).WithMany(p => p.SalesOrderHeaders).HasForeignKey(d => d.CreditCardId);
+
+                entity.HasOne(d => d.CurrencyRate).WithMany(p => p.SalesOrderHeaders).HasForeignKey(d => d.CurrencyRateId);
+
+                entity.HasOne(d => d.Customer).WithMany(p => p.SalesOrderHeaders)
+                    .HasForeignKey(d => d.CustomerId)
+                    .OnDelete(DeleteBehavior.ClientSetNull);
+
+                entity.HasOne(d => d.SalesPerson).WithMany(p => p.SalesOrderHeaders).HasForeignKey(d => d.SalesPersonId);
+
+                entity.HasOne(d => d.Territory).WithMany(p => p.SalesOrderHeaders).HasForeignKey(d => d.TerritoryId);
+            });
+
+            modelBuilder.Entity<SalesOrderHeaderSalesReason>(entity =>
+            {
+                entity.HasKey(e => new { e.SalesOrderId, e.SalesReasonId }).HasName("PK_SalesOrderHeaderSalesReason_SalesOrderID_SalesReasonID");
+
+                entity.ToTable("SalesOrderHeaderSalesReason", "Sales", tb => tb.HasComment("Cross-reference table mapping sales orders to sales reason codes."));
+
+                entity.Property(e => e.SalesOrderId)
+                    .HasComment("Primary key. Foreign key to SalesOrderHeader.SalesOrderID.")
+                    .HasColumnName("SalesOrderID");
+                entity.Property(e => e.SalesReasonId)
+                    .HasComment("Primary key. Foreign key to SalesReason.SalesReasonID.")
+                    .HasColumnName("SalesReasonID");
+                entity.Property(e => e.ModifiedDate)
+                    .HasDefaultValueSql("(getdate())")
+                    .HasComment("Date and time the record was last updated.")
+                    .HasColumnType("datetime");
+
+                entity.HasOne(d => d.SalesOrder).WithMany(p => p.SalesOrderHeaderSalesReasons).HasForeignKey(d => d.SalesOrderId);
+
+                entity.HasOne(d => d.SalesReason).WithMany(p => p.SalesOrderHeaderSalesReasons)
+                    .HasForeignKey(d => d.SalesReasonId)
+                    .OnDelete(DeleteBehavior.ClientSetNull);
+            });
+
+            modelBuilder.Entity<SalesPerson>(entity =>
+            {
+                entity.HasKey(e => e.BusinessEntityId).HasName("PK_SalesPerson_BusinessEntityID");
+
+                entity.ToTable("SalesPerson", "Sales", tb => tb.HasComment("Sales representative current information."));
+
+                entity.HasIndex(e => e.Rowguid, "AK_SalesPerson_rowguid").IsUnique();
+
+                entity.Property(e => e.BusinessEntityId)
+                    .ValueGeneratedNever()
+                    .HasComment("Primary key for SalesPerson records. Foreign key to Employee.BusinessEntityID")
+                    .HasColumnName("BusinessEntityID");
+                entity.Property(e => e.Bonus)
+                    .HasComment("Bonus due if quota is met.")
+                    .HasColumnType("money");
+                entity.Property(e => e.CommissionPct)
+                    .HasComment("Commision percent received per sale.")
+                    .HasColumnType("smallmoney");
+                entity.Property(e => e.ModifiedDate)
+                    .HasDefaultValueSql("(getdate())")
+                    .HasComment("Date and time the record was last updated.")
+                    .HasColumnType("datetime");
+                entity.Property(e => e.Rowguid)
+                    .HasDefaultValueSql("(newid())")
+                    .HasComment("ROWGUIDCOL number uniquely identifying the record. Used to support a merge replication sample.")
+                    .HasColumnName("rowguid");
+                entity.Property(e => e.SalesLastYear)
+                    .HasComment("Sales total of previous year.")
+                    .HasColumnType("money");
+                entity.Property(e => e.SalesQuota)
+                    .HasComment("Projected yearly sales.")
+                    .HasColumnType("money");
+                entity.Property(e => e.SalesYtd)
+                    .HasComment("Sales total year to date.")
+                    .HasColumnType("money")
+                    .HasColumnName("SalesYTD");
+                entity.Property(e => e.TerritoryId)
+                    .HasComment("Territory currently assigned to. Foreign key to SalesTerritory.SalesTerritoryID.")
+                    .HasColumnName("TerritoryID");
+
+                entity.HasOne(d => d.Territory).WithMany(p => p.SalesPeople).HasForeignKey(d => d.TerritoryId);
+            });
+
+            modelBuilder.Entity<SalesPersonQuotaHistory>(entity =>
+            {
+                entity.HasKey(e => new { e.BusinessEntityId, e.QuotaDate }).HasName("PK_SalesPersonQuotaHistory_BusinessEntityID_QuotaDate");
+
+                entity.ToTable("SalesPersonQuotaHistory", "Sales", tb => tb.HasComment("Sales performance tracking."));
+
+                entity.HasIndex(e => e.Rowguid, "AK_SalesPersonQuotaHistory_rowguid").IsUnique();
+
+                entity.Property(e => e.BusinessEntityId)
+                    .HasComment("Sales person identification number. Foreign key to SalesPerson.BusinessEntityID.")
+                    .HasColumnName("BusinessEntityID");
+                entity.Property(e => e.QuotaDate)
+                    .HasComment("Sales quota date.")
+                    .HasColumnType("datetime");
+                entity.Property(e => e.ModifiedDate)
+                    .HasDefaultValueSql("(getdate())")
+                    .HasComment("Date and time the record was last updated.")
+                    .HasColumnType("datetime");
+                entity.Property(e => e.Rowguid)
+                    .HasDefaultValueSql("(newid())")
+                    .HasComment("ROWGUIDCOL number uniquely identifying the record. Used to support a merge replication sample.")
+                    .HasColumnName("rowguid");
+                entity.Property(e => e.SalesQuota)
+                    .HasComment("Sales quota amount.")
+                    .HasColumnType("money");
+
+                entity.HasOne(d => d.BusinessEntity).WithMany(p => p.SalesPersonQuotaHistories)
+                    .HasForeignKey(d => d.BusinessEntityId)
+                    .OnDelete(DeleteBehavior.ClientSetNull);
+            });
+
+            modelBuilder.Entity<SalesReason>(entity =>
+            {
+                entity.HasKey(e => e.SalesReasonId).HasName("PK_SalesReason_SalesReasonID");
+
+                entity.ToTable("SalesReason", "Sales", tb => tb.HasComment("Lookup table of customer purchase reasons."));
+
+                entity.Property(e => e.SalesReasonId)
+                    .HasComment("Primary key for SalesReason records.")
+                    .HasColumnName("SalesReasonID");
+                entity.Property(e => e.ModifiedDate)
+                    .HasDefaultValueSql("(getdate())")
+                    .HasComment("Date and time the record was last updated.")
+                    .HasColumnType("datetime");
+                entity.Property(e => e.Name)
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .HasComment("Sales reason description.");
+                entity.Property(e => e.ReasonType)
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .HasComment("Category the sales reason belongs to.");
+            });
+
+            modelBuilder.Entity<SalesTaxRate>(entity =>
+            {
+                entity.HasKey(e => e.SalesTaxRateId).HasName("PK_SalesTaxRate_SalesTaxRateID");
+
+                entity.ToTable("SalesTaxRate", "Sales", tb => tb.HasComment("Tax rate lookup table."));
+
+                entity.HasIndex(e => new { e.StateProvinceId, e.TaxType }, "AK_SalesTaxRate_StateProvinceID_TaxType").IsUnique();
+
+                entity.HasIndex(e => e.Rowguid, "AK_SalesTaxRate_rowguid").IsUnique();
+
+                entity.Property(e => e.SalesTaxRateId)
+                    .HasComment("Primary key for SalesTaxRate records.")
+                    .HasColumnName("SalesTaxRateID");
+                entity.Property(e => e.ModifiedDate)
+                    .HasDefaultValueSql("(getdate())")
+                    .HasComment("Date and time the record was last updated.")
+                    .HasColumnType("datetime");
+                entity.Property(e => e.Name)
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .HasComment("Tax rate description.");
+                entity.Property(e => e.Rowguid)
+                    .HasDefaultValueSql("(newid())")
+                    .HasComment("ROWGUIDCOL number uniquely identifying the record. Used to support a merge replication sample.")
+                    .HasColumnName("rowguid");
+                entity.Property(e => e.StateProvinceId)
+                    .HasComment("State, province, or country/region the sales tax applies to.")
+                    .HasColumnName("StateProvinceID");
+                entity.Property(e => e.TaxRate)
+                    .HasComment("Tax rate amount.")
+                    .HasColumnType("smallmoney");
+                entity.Property(e => e.TaxType).HasComment("1 = Tax applied to retail transactions, 2 = Tax applied to wholesale transactions, 3 = Tax applied to all sales (retail and wholesale) transactions.");
+            });
+
+            modelBuilder.Entity<SalesTerritory>(entity =>
+            {
+                entity.HasKey(e => e.TerritoryId).HasName("PK_SalesTerritory_TerritoryID");
+
+                entity.ToTable("SalesTerritory", "Sales", tb => tb.HasComment("Sales territory lookup table."));
+
+                entity.HasIndex(e => e.Name, "AK_SalesTerritory_Name").IsUnique();
+
+                entity.HasIndex(e => e.Rowguid, "AK_SalesTerritory_rowguid").IsUnique();
+
+                entity.Property(e => e.TerritoryId)
+                    .HasComment("Primary key for SalesTerritory records.")
+                    .HasColumnName("TerritoryID");
+                entity.Property(e => e.CostLastYear)
+                    .HasComment("Business costs in the territory the previous year.")
+                    .HasColumnType("money");
+                entity.Property(e => e.CostYtd)
+                    .HasComment("Business costs in the territory year to date.")
+                    .HasColumnType("money")
+                    .HasColumnName("CostYTD");
+                entity.Property(e => e.CountryRegionCode)
+                    .IsRequired()
+                    .HasMaxLength(3)
+                    .HasComment("ISO standard country or region code. Foreign key to CountryRegion.CountryRegionCode. ");
+                entity.Property(e => e.Group)
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .HasComment("Geographic area to which the sales territory belong.");
+                entity.Property(e => e.ModifiedDate)
+                    .HasDefaultValueSql("(getdate())")
+                    .HasComment("Date and time the record was last updated.")
+                    .HasColumnType("datetime");
+                entity.Property(e => e.Name)
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .HasComment("Sales territory description");
+                entity.Property(e => e.Rowguid)
+                    .HasDefaultValueSql("(newid())")
+                    .HasComment("ROWGUIDCOL number uniquely identifying the record. Used to support a merge replication sample.")
+                    .HasColumnName("rowguid");
+                entity.Property(e => e.SalesLastYear)
+                    .HasComment("Sales in the territory the previous year.")
+                    .HasColumnType("money");
+                entity.Property(e => e.SalesYtd)
+                    .HasComment("Sales in the territory year to date.")
+                    .HasColumnType("money")
+                    .HasColumnName("SalesYTD");
+            });
+
+            modelBuilder.Entity<SalesTerritoryHistory>(entity =>
+            {
+                entity.HasKey(e => new { e.BusinessEntityId, e.StartDate, e.TerritoryId }).HasName("PK_SalesTerritoryHistory_BusinessEntityID_StartDate_TerritoryID");
+
+                entity.ToTable("SalesTerritoryHistory", "Sales", tb => tb.HasComment("Sales representative transfers to other sales territories."));
+
+                entity.HasIndex(e => e.Rowguid, "AK_SalesTerritoryHistory_rowguid").IsUnique();
+
+                entity.Property(e => e.BusinessEntityId)
+                    .HasComment("Primary key. The sales rep.  Foreign key to SalesPerson.BusinessEntityID.")
+                    .HasColumnName("BusinessEntityID");
+                entity.Property(e => e.StartDate)
+                    .HasComment("Primary key. Date the sales representive started work in the territory.")
+                    .HasColumnType("datetime");
+                entity.Property(e => e.TerritoryId)
+                    .HasComment("Primary key. Territory identification number. Foreign key to SalesTerritory.SalesTerritoryID.")
+                    .HasColumnName("TerritoryID");
+                entity.Property(e => e.EndDate)
+                    .HasComment("Date the sales representative left work in the territory.")
+                    .HasColumnType("datetime");
+                entity.Property(e => e.ModifiedDate)
+                    .HasDefaultValueSql("(getdate())")
+                    .HasComment("Date and time the record was last updated.")
+                    .HasColumnType("datetime");
+                entity.Property(e => e.Rowguid)
+                    .HasDefaultValueSql("(newid())")
+                    .HasComment("ROWGUIDCOL number uniquely identifying the record. Used to support a merge replication sample.")
+                    .HasColumnName("rowguid");
+
+                entity.HasOne(d => d.BusinessEntity).WithMany(p => p.SalesTerritoryHistories)
+                    .HasForeignKey(d => d.BusinessEntityId)
+                    .OnDelete(DeleteBehavior.ClientSetNull);
+
+                entity.HasOne(d => d.Territory).WithMany(p => p.SalesTerritoryHistories)
+                    .HasForeignKey(d => d.TerritoryId)
+                    .OnDelete(DeleteBehavior.ClientSetNull);
+            });
+
+            modelBuilder.Entity<ShoppingCartItem>(entity =>
+            {
+                entity.HasKey(e => e.ShoppingCartItemId).HasName("PK_ShoppingCartItem_ShoppingCartItemID");
+
+                entity.ToTable("ShoppingCartItem", "Sales", tb => tb.HasComment("Contains online customer orders until the order is submitted or cancelled."));
+
+                entity.HasIndex(e => new { e.ShoppingCartId, e.ProductId }, "IX_ShoppingCartItem_ShoppingCartID_ProductID");
+
+                entity.Property(e => e.ShoppingCartItemId)
+                    .HasComment("Primary key for ShoppingCartItem records.")
+                    .HasColumnName("ShoppingCartItemID");
+                entity.Property(e => e.DateCreated)
+                    .HasDefaultValueSql("(getdate())")
+                    .HasComment("Date the time the record was created.")
+                    .HasColumnType("datetime");
+                entity.Property(e => e.ModifiedDate)
+                    .HasDefaultValueSql("(getdate())")
+                    .HasComment("Date and time the record was last updated.")
+                    .HasColumnType("datetime");
+                entity.Property(e => e.ProductId)
+                    .HasComment("Product ordered. Foreign key to Product.ProductID.")
+                    .HasColumnName("ProductID");
+                entity.Property(e => e.Quantity)
+                    .HasDefaultValue(1)
+                    .HasComment("Product quantity ordered.");
+                entity.Property(e => e.ShoppingCartId)
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .HasComment("Shopping cart identification number.")
+                    .HasColumnName("ShoppingCartID");
+            });
+
+            modelBuilder.Entity<SpecialOffer>(entity =>
+            {
+                entity.HasKey(e => e.SpecialOfferId).HasName("PK_SpecialOffer_SpecialOfferID");
+
+                entity.ToTable("SpecialOffer", "Sales", tb => tb.HasComment("Sale discounts lookup table."));
+
+                entity.HasIndex(e => e.Rowguid, "AK_SpecialOffer_rowguid").IsUnique();
+
+                entity.Property(e => e.SpecialOfferId)
+                    .HasComment("Primary key for SpecialOffer records.")
+                    .HasColumnName("SpecialOfferID");
+                entity.Property(e => e.Category)
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .HasComment("Group the discount applies to such as Reseller or Customer.");
+                entity.Property(e => e.Description)
+                    .IsRequired()
+                    .HasMaxLength(255)
+                    .HasComment("Discount description.");
+                entity.Property(e => e.DiscountPct)
+                    .HasComment("Discount precentage.")
+                    .HasColumnType("smallmoney");
+                entity.Property(e => e.EndDate)
+                    .HasComment("Discount end date.")
+                    .HasColumnType("datetime");
+                entity.Property(e => e.MaxQty).HasComment("Maximum discount percent allowed.");
+                entity.Property(e => e.MinQty).HasComment("Minimum discount percent allowed.");
+                entity.Property(e => e.ModifiedDate)
+                    .HasDefaultValueSql("(getdate())")
+                    .HasComment("Date and time the record was last updated.")
+                    .HasColumnType("datetime");
+                entity.Property(e => e.Rowguid)
+                    .HasDefaultValueSql("(newid())")
+                    .HasComment("ROWGUIDCOL number uniquely identifying the record. Used to support a merge replication sample.")
+                    .HasColumnName("rowguid");
+                entity.Property(e => e.StartDate)
+                    .HasComment("Discount start date.")
+                    .HasColumnType("datetime");
+                entity.Property(e => e.Type)
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .HasComment("Discount type category.");
+            });
+
+            modelBuilder.Entity<SpecialOfferProduct>(entity =>
+            {
+                entity.HasKey(e => new { e.SpecialOfferId, e.ProductId }).HasName("PK_SpecialOfferProduct_SpecialOfferID_ProductID");
+
+                entity.ToTable("SpecialOfferProduct", "Sales", tb => tb.HasComment("Cross-reference table mapping products to special offer discounts."));
+
+                entity.HasIndex(e => e.Rowguid, "AK_SpecialOfferProduct_rowguid").IsUnique();
+
+                entity.HasIndex(e => e.ProductId, "IX_SpecialOfferProduct_ProductID");
+
+                entity.Property(e => e.SpecialOfferId)
+                    .HasComment("Primary key for SpecialOfferProduct records.")
+                    .HasColumnName("SpecialOfferID");
+                entity.Property(e => e.ProductId)
+                    .HasComment("Product identification number. Foreign key to Product.ProductID.")
+                    .HasColumnName("ProductID");
+                entity.Property(e => e.ModifiedDate)
+                    .HasDefaultValueSql("(getdate())")
+                    .HasComment("Date and time the record was last updated.")
+                    .HasColumnType("datetime");
+                entity.Property(e => e.Rowguid)
+                    .HasDefaultValueSql("(newid())")
+                    .HasComment("ROWGUIDCOL number uniquely identifying the record. Used to support a merge replication sample.")
+                    .HasColumnName("rowguid");
+
+                entity.HasOne(d => d.SpecialOffer).WithMany(p => p.SpecialOfferProducts)
+                    .HasForeignKey(d => d.SpecialOfferId)
+                    .OnDelete(DeleteBehavior.ClientSetNull);
+            });
+
+            modelBuilder.Entity<Store>(entity =>
+            {
+                entity.HasKey(e => e.BusinessEntityId).HasName("PK_Store_BusinessEntityID");
+
+                entity.ToTable("Store", "Sales", tb => tb.HasComment("Customers (resellers) of Adventure Works products."));
+
+                entity.HasIndex(e => e.Rowguid, "AK_Store_rowguid").IsUnique();
+
+                entity.HasIndex(e => e.SalesPersonId, "IX_Store_SalesPersonID");
+
+                entity.HasIndex(e => e.Demographics, "PXML_Store_Demographics");
+
+                entity.Property(e => e.BusinessEntityId)
+                    .ValueGeneratedNever()
+                    .HasComment("Primary key. Foreign key to Customer.BusinessEntityID.")
+                    .HasColumnName("BusinessEntityID");
+                entity.Property(e => e.Demographics)
+                    .HasComment("Demographic informationg about the store such as the number of employees, annual sales and store type.")
+                    .HasColumnType("xml");
+                entity.Property(e => e.ModifiedDate)
+                    .HasDefaultValueSql("(getdate())")
+                    .HasComment("Date and time the record was last updated.")
+                    .HasColumnType("datetime");
+                entity.Property(e => e.Name)
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .HasComment("Name of the store.");
+                entity.Property(e => e.Rowguid)
+                    .HasDefaultValueSql("(newid())")
+                    .HasComment("ROWGUIDCOL number uniquely identifying the record. Used to support a merge replication sample.")
+                    .HasColumnName("rowguid");
+                entity.Property(e => e.SalesPersonId)
+                    .HasComment("ID of the sales person assigned to the customer. Foreign key to SalesPerson.BusinessEntityID.")
+                    .HasColumnName("SalesPersonID");
+
+                entity.HasOne(d => d.SalesPerson).WithMany(p => p.Stores).HasForeignKey(d => d.SalesPersonId);
+            });
+
+            OnModelCreatingPartial(modelBuilder);
+        }
+
+        partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
+    }
+
+    public partial class CountryRegionCurrency
+    {
+        /// <summary>
+        /// ISO code for countries and regions. Foreign key to CountryRegion.CountryRegionCode.
+        /// </summary>
+        public string CountryRegionCode { get; set; }
+
+        /// <summary>
+        /// ISO standard currency code. Foreign key to Currency.CurrencyCode.
+        /// </summary>
+        public string CurrencyCode { get; set; }
+
+        /// <summary>
+        /// Date and time the record was last updated.
+        /// </summary>
+        public DateTime ModifiedDate { get; set; }
+
+        public virtual Currency CurrencyCodeNavigation { get; set; }
+    }
+
+    public partial class CreditCard
+    {
+        /// <summary>
+        /// Primary key for CreditCard records.
+        /// </summary>
+        public int CreditCardId { get; set; }
+
+        /// <summary>
+        /// Credit card name.
+        /// </summary>
+        public string CardType { get; set; }
+
+        /// <summary>
+        /// Credit card number.
+        /// </summary>
+        public string CardNumber { get; set; }
+
+        /// <summary>
+        /// Credit card expiration month.
+        /// </summary>
+        public byte ExpMonth { get; set; }
+
+        /// <summary>
+        /// Credit card expiration year.
+        /// </summary>
+        public short ExpYear { get; set; }
+
+        /// <summary>
+        /// Date and time the record was last updated.
+        /// </summary>
+        public DateTime ModifiedDate { get; set; }
+
+        public virtual ICollection<PersonCreditCard> PersonCreditCards { get; set; } = new List<PersonCreditCard>();
+
+        public virtual ICollection<SalesOrderHeader> SalesOrderHeaders { get; set; } = new List<SalesOrderHeader>();
+    }
+
+    public partial class Currency
+    {
+        /// <summary>
+        /// The ISO code for the Currency.
+        /// </summary>
+        public string CurrencyCode { get; set; }
+
+        /// <summary>
+        /// Currency name.
+        /// </summary>
+        public string Name { get; set; }
+
+        /// <summary>
+        /// Date and time the record was last updated.
+        /// </summary>
+        public DateTime ModifiedDate { get; set; }
+
+        public virtual ICollection<CountryRegionCurrency> CountryRegionCurrencies { get; set; } = new List<CountryRegionCurrency>();
+
+        public virtual ICollection<CurrencyRate> CurrencyRateFromCurrencyCodeNavigations { get; set; } = new List<CurrencyRate>();
+
+        public virtual ICollection<CurrencyRate> CurrencyRateToCurrencyCodeNavigations { get; set; } = new List<CurrencyRate>();
+    }
+
+    public partial class CurrencyRate
+    {
+        /// <summary>
+        /// Primary key for CurrencyRate records.
+        /// </summary>
+        public int CurrencyRateId { get; set; }
+
+        /// <summary>
+        /// Date and time the exchange rate was obtained.
+        /// </summary>
+        public DateTime CurrencyRateDate { get; set; }
+
+        /// <summary>
+        /// Exchange rate was converted from this currency code.
+        /// </summary>
+        public string FromCurrencyCode { get; set; }
+
+        /// <summary>
+        /// Exchange rate was converted to this currency code.
+        /// </summary>
+        public string ToCurrencyCode { get; set; }
+
+        /// <summary>
+        /// Average exchange rate for the day.
+        /// </summary>
+        public decimal AverageRate { get; set; }
+
+        /// <summary>
+        /// Final exchange rate for the day.
+        /// </summary>
+        public decimal EndOfDayRate { get; set; }
+
+        /// <summary>
+        /// Date and time the record was last updated.
+        /// </summary>
+        public DateTime ModifiedDate { get; set; }
+
+        public virtual Currency FromCurrencyCodeNavigation { get; set; }
+
+        public virtual ICollection<SalesOrderHeader> SalesOrderHeaders { get; set; } = new List<SalesOrderHeader>();
+
+        public virtual Currency ToCurrencyCodeNavigation { get; set; }
+    }
+
+    public new partial class Customer
+    {
+        /// <summary>
+        /// Primary key.
+        /// </summary>
+        public int CustomerId { get; set; }
+
+        /// <summary>
+        /// Foreign key to Person.BusinessEntityID
+        /// </summary>
+        public int? PersonId { get; set; }
+
+        /// <summary>
+        /// Foreign key to Store.BusinessEntityID
+        /// </summary>
+        public int? StoreId { get; set; }
+
+        /// <summary>
+        /// ID of the territory in which the customer is located. Foreign key to SalesTerritory.SalesTerritoryID.
+        /// </summary>
+        public int? TerritoryId { get; set; }
+
+        /// <summary>
+        /// Unique number identifying the customer assigned by the accounting system.
+        /// </summary>
+        public string AccountNumber { get; set; }
+
+        /// <summary>
+        /// ROWGUIDCOL number uniquely identifying the record. Used to support a merge replication sample.
+        /// </summary>
+        public Guid Rowguid { get; set; }
+
+        /// <summary>
+        /// Date and time the record was last updated.
+        /// </summary>
+        public DateTime ModifiedDate { get; set; }
+
+        public virtual ICollection<SalesOrderHeader> SalesOrderHeaders { get; set; } = new List<SalesOrderHeader>();
+
+        public virtual Store Store { get; set; }
+
+        public virtual SalesTerritory Territory { get; set; }
+    }
+
+    public partial class PersonCreditCard
+    {
+        /// <summary>
+        /// Business entity identification number. Foreign key to Person.BusinessEntityID.
+        /// </summary>
+        public int BusinessEntityId { get; set; }
+
+        /// <summary>
+        /// Credit card identification number. Foreign key to CreditCard.CreditCardID.
+        /// </summary>
+        public int CreditCardId { get; set; }
+
+        /// <summary>
+        /// Date and time the record was last updated.
+        /// </summary>
+        public DateTime ModifiedDate { get; set; }
+
+        public virtual CreditCard CreditCard { get; set; }
+    }
+
+    public partial class SalesOrderDetail
+    {
+        /// <summary>
+        /// Primary key. Foreign key to SalesOrderHeader.SalesOrderID.
+        /// </summary>
+        public int SalesOrderId { get; set; }
+
+        /// <summary>
+        /// Primary key. One incremental unique number per product sold.
+        /// </summary>
+        public int SalesOrderDetailId { get; set; }
+
+        /// <summary>
+        /// Shipment tracking number supplied by the shipper.
+        /// </summary>
+        public string CarrierTrackingNumber { get; set; }
+
+        /// <summary>
+        /// Quantity ordered per product.
+        /// </summary>
+        public short OrderQty { get; set; }
+
+        /// <summary>
+        /// Product sold to customer. Foreign key to Product.ProductID.
+        /// </summary>
+        public int ProductId { get; set; }
+
+        /// <summary>
+        /// Promotional code. Foreign key to SpecialOffer.SpecialOfferID.
+        /// </summary>
+        public int SpecialOfferId { get; set; }
+
+        /// <summary>
+        /// Selling price of a single product.
+        /// </summary>
+        public decimal UnitPrice { get; set; }
+
+        /// <summary>
+        /// Discount amount.
+        /// </summary>
+        public decimal UnitPriceDiscount { get; set; }
+
+        /// <summary>
+        /// Per product subtotal. Computed as UnitPrice * (1 - UnitPriceDiscount) * OrderQty.
+        /// </summary>
+        public decimal LineTotal { get; set; }
+
+        /// <summary>
+        /// ROWGUIDCOL number uniquely identifying the record. Used to support a merge replication sample.
+        /// </summary>
+        public Guid Rowguid { get; set; }
+
+        /// <summary>
+        /// Date and time the record was last updated.
+        /// </summary>
+        public DateTime ModifiedDate { get; set; }
+
+        public virtual SalesOrderHeader SalesOrder { get; set; }
+
+        public virtual SpecialOfferProduct SpecialOfferProduct { get; set; }
+    }
+
+    public partial class SalesOrderHeader
+    {
+        /// <summary>
+        /// Primary key.
+        /// </summary>
+        public int SalesOrderId { get; set; }
+
+        /// <summary>
+        /// Incremental number to track changes to the sales order over time.
+        /// </summary>
+        public byte RevisionNumber { get; set; }
+
+        /// <summary>
+        /// Dates the sales order was created.
+        /// </summary>
+        public DateTime OrderDate { get; set; }
+
+        /// <summary>
+        /// Date the order is due to the customer.
+        /// </summary>
+        public DateTime DueDate { get; set; }
+
+        /// <summary>
+        /// Date the order was shipped to the customer.
+        /// </summary>
+        public DateTime? ShipDate { get; set; }
+
+        /// <summary>
+        /// Order current status. 1 = In process; 2 = Approved; 3 = Backordered; 4 = Rejected; 5 = Shipped; 6 = Cancelled
+        /// </summary>
+        public byte Status { get; set; }
+
+        /// <summary>
+        /// 0 = Order placed by sales person. 1 = Order placed online by customer.
+        /// </summary>
+        public bool OnlineOrderFlag { get; set; }
+
+        /// <summary>
+        /// Unique sales order identification number.
+        /// </summary>
+        public string SalesOrderNumber { get; set; }
+
+        /// <summary>
+        /// Customer purchase order number reference. 
+        /// </summary>
+        public string PurchaseOrderNumber { get; set; }
+
+        /// <summary>
+        /// Financial accounting number reference.
+        /// </summary>
+        public string AccountNumber { get; set; }
+
+        /// <summary>
+        /// Customer identification number. Foreign key to Customer.BusinessEntityID.
+        /// </summary>
+        public int CustomerId { get; set; }
+
+        /// <summary>
+        /// Sales person who created the sales order. Foreign key to SalesPerson.BusinessEntityID.
+        /// </summary>
+        public int? SalesPersonId { get; set; }
+
+        /// <summary>
+        /// Territory in which the sale was made. Foreign key to SalesTerritory.SalesTerritoryID.
+        /// </summary>
+        public int? TerritoryId { get; set; }
+
+        /// <summary>
+        /// Customer billing address. Foreign key to Address.AddressID.
+        /// </summary>
+        public int BillToAddressId { get; set; }
+
+        /// <summary>
+        /// Customer shipping address. Foreign key to Address.AddressID.
+        /// </summary>
+        public int ShipToAddressId { get; set; }
+
+        /// <summary>
+        /// Shipping method. Foreign key to ShipMethod.ShipMethodID.
+        /// </summary>
+        public int ShipMethodId { get; set; }
+
+        /// <summary>
+        /// Credit card identification number. Foreign key to CreditCard.CreditCardID.
+        /// </summary>
+        public int? CreditCardId { get; set; }
+
+        /// <summary>
+        /// Approval code provided by the credit card company.
+        /// </summary>
+        public string CreditCardApprovalCode { get; set; }
+
+        /// <summary>
+        /// Currency exchange rate used. Foreign key to CurrencyRate.CurrencyRateID.
+        /// </summary>
+        public int? CurrencyRateId { get; set; }
+
+        /// <summary>
+        /// Sales subtotal. Computed as SUM(SalesOrderDetail.LineTotal)for the appropriate SalesOrderID.
+        /// </summary>
+        public decimal SubTotal { get; set; }
+
+        /// <summary>
+        /// Tax amount.
+        /// </summary>
+        public decimal TaxAmt { get; set; }
+
+        /// <summary>
+        /// Shipping cost.
+        /// </summary>
+        public decimal Freight { get; set; }
+
+        /// <summary>
+        /// Total due from customer. Computed as Subtotal + TaxAmt + Freight.
+        /// </summary>
+        public decimal TotalDue { get; set; }
+
+        /// <summary>
+        /// Sales representative comments.
+        /// </summary>
+        public string Comment { get; set; }
+
+        /// <summary>
+        /// ROWGUIDCOL number uniquely identifying the record. Used to support a merge replication sample.
+        /// </summary>
+        public Guid Rowguid { get; set; }
+
+        /// <summary>
+        /// Date and time the record was last updated.
+        /// </summary>
+        public DateTime ModifiedDate { get; set; }
+
+        public virtual CreditCard CreditCard { get; set; }
+
+        public virtual CurrencyRate CurrencyRate { get; set; }
+
+        public virtual Customer Customer { get; set; }
+
+        public virtual ICollection<SalesOrderDetail> SalesOrderDetails { get; set; } = new List<SalesOrderDetail>();
+
+        public virtual ICollection<SalesOrderHeaderSalesReason> SalesOrderHeaderSalesReasons { get; set; } = new List<SalesOrderHeaderSalesReason>();
+
+        public virtual SalesPerson SalesPerson { get; set; }
+
+        public virtual SalesTerritory Territory { get; set; }
+    }
+
+    public partial class SalesOrderHeaderSalesReason
+    {
+        /// <summary>
+        /// Primary key. Foreign key to SalesOrderHeader.SalesOrderID.
+        /// </summary>
+        public int SalesOrderId { get; set; }
+
+        /// <summary>
+        /// Primary key. Foreign key to SalesReason.SalesReasonID.
+        /// </summary>
+        public int SalesReasonId { get; set; }
+
+        /// <summary>
+        /// Date and time the record was last updated.
+        /// </summary>
+        public DateTime ModifiedDate { get; set; }
+
+        public virtual SalesOrderHeader SalesOrder { get; set; }
+
+        public virtual SalesReason SalesReason { get; set; }
+    }
+
+    public partial class SalesPerson
+    {
+        /// <summary>
+        /// Primary key for SalesPerson records. Foreign key to Employee.BusinessEntityID
+        /// </summary>
+        public int BusinessEntityId { get; set; }
+
+        /// <summary>
+        /// Territory currently assigned to. Foreign key to SalesTerritory.SalesTerritoryID.
+        /// </summary>
+        public int? TerritoryId { get; set; }
+
+        /// <summary>
+        /// Projected yearly sales.
+        /// </summary>
+        public decimal? SalesQuota { get; set; }
+
+        /// <summary>
+        /// Bonus due if quota is met.
+        /// </summary>
+        public decimal Bonus { get; set; }
+
+        /// <summary>
+        /// Commision percent received per sale.
+        /// </summary>
+        public decimal CommissionPct { get; set; }
+
+        /// <summary>
+        /// Sales total year to date.
+        /// </summary>
+        public decimal SalesYtd { get; set; }
+
+        /// <summary>
+        /// Sales total of previous year.
+        /// </summary>
+        public decimal SalesLastYear { get; set; }
+
+        /// <summary>
+        /// ROWGUIDCOL number uniquely identifying the record. Used to support a merge replication sample.
+        /// </summary>
+        public Guid Rowguid { get; set; }
+
+        /// <summary>
+        /// Date and time the record was last updated.
+        /// </summary>
+        public DateTime ModifiedDate { get; set; }
+
+        public virtual ICollection<SalesOrderHeader> SalesOrderHeaders { get; set; } = new List<SalesOrderHeader>();
+
+        public virtual ICollection<SalesPersonQuotaHistory> SalesPersonQuotaHistories { get; set; } = new List<SalesPersonQuotaHistory>();
+
+        public virtual ICollection<SalesTerritoryHistory> SalesTerritoryHistories { get; set; } = new List<SalesTerritoryHistory>();
+
+        public virtual ICollection<Store> Stores { get; set; } = new List<Store>();
+
+        public virtual SalesTerritory Territory { get; set; }
+    }
+
+    public partial class SalesPersonQuotaHistory
+    {
+        /// <summary>
+        /// Sales person identification number. Foreign key to SalesPerson.BusinessEntityID.
+        /// </summary>
+        public int BusinessEntityId { get; set; }
+
+        /// <summary>
+        /// Sales quota date.
+        /// </summary>
+        public DateTime QuotaDate { get; set; }
+
+        /// <summary>
+        /// Sales quota amount.
+        /// </summary>
+        public decimal SalesQuota { get; set; }
+
+        /// <summary>
+        /// ROWGUIDCOL number uniquely identifying the record. Used to support a merge replication sample.
+        /// </summary>
+        public Guid Rowguid { get; set; }
+
+        /// <summary>
+        /// Date and time the record was last updated.
+        /// </summary>
+        public DateTime ModifiedDate { get; set; }
+
+        public virtual SalesPerson BusinessEntity { get; set; }
+    }
+
+    public partial class SalesReason
+    {
+        /// <summary>
+        /// Primary key for SalesReason records.
+        /// </summary>
+        public int SalesReasonId { get; set; }
+
+        /// <summary>
+        /// Sales reason description.
+        /// </summary>
+        public string Name { get; set; }
+
+        /// <summary>
+        /// Category the sales reason belongs to.
+        /// </summary>
+        public string ReasonType { get; set; }
+
+        /// <summary>
+        /// Date and time the record was last updated.
+        /// </summary>
+        public DateTime ModifiedDate { get; set; }
+
+        public virtual ICollection<SalesOrderHeaderSalesReason> SalesOrderHeaderSalesReasons { get; set; } = new List<SalesOrderHeaderSalesReason>();
+    }
+
+    public partial class SalesTaxRate
+    {
+        /// <summary>
+        /// Primary key for SalesTaxRate records.
+        /// </summary>
+        public int SalesTaxRateId { get; set; }
+
+        /// <summary>
+        /// State, province, or country/region the sales tax applies to.
+        /// </summary>
+        public int StateProvinceId { get; set; }
+
+        /// <summary>
+        /// 1 = Tax applied to retail transactions, 2 = Tax applied to wholesale transactions, 3 = Tax applied to all sales (retail and wholesale) transactions.
+        /// </summary>
+        public byte TaxType { get; set; }
+
+        /// <summary>
+        /// Tax rate amount.
+        /// </summary>
+        public decimal TaxRate { get; set; }
+
+        /// <summary>
+        /// Tax rate description.
+        /// </summary>
+        public string Name { get; set; }
+
+        /// <summary>
+        /// ROWGUIDCOL number uniquely identifying the record. Used to support a merge replication sample.
+        /// </summary>
+        public Guid Rowguid { get; set; }
+
+        /// <summary>
+        /// Date and time the record was last updated.
+        /// </summary>
+        public DateTime ModifiedDate { get; set; }
+    }
+
+    public partial class SalesTerritory
+    {
+        /// <summary>
+        /// Primary key for SalesTerritory records.
+        /// </summary>
+        public int TerritoryId { get; set; }
+
+        /// <summary>
+        /// Sales territory description
+        /// </summary>
+        public string Name { get; set; }
+
+        /// <summary>
+        /// ISO standard country or region code. Foreign key to CountryRegion.CountryRegionCode. 
+        /// </summary>
+        public string CountryRegionCode { get; set; }
+
+        /// <summary>
+        /// Geographic area to which the sales territory belong.
+        /// </summary>
+        public string Group { get; set; }
+
+        /// <summary>
+        /// Sales in the territory year to date.
+        /// </summary>
+        public decimal SalesYtd { get; set; }
+
+        /// <summary>
+        /// Sales in the territory the previous year.
+        /// </summary>
+        public decimal SalesLastYear { get; set; }
+
+        /// <summary>
+        /// Business costs in the territory year to date.
+        /// </summary>
+        public decimal CostYtd { get; set; }
+
+        /// <summary>
+        /// Business costs in the territory the previous year.
+        /// </summary>
+        public decimal CostLastYear { get; set; }
+
+        /// <summary>
+        /// ROWGUIDCOL number uniquely identifying the record. Used to support a merge replication sample.
+        /// </summary>
+        public Guid Rowguid { get; set; }
+
+        /// <summary>
+        /// Date and time the record was last updated.
+        /// </summary>
+        public DateTime ModifiedDate { get; set; }
+
+        public virtual ICollection<Customer> Customers { get; set; } = new List<Customer>();
+
+        public virtual ICollection<SalesOrderHeader> SalesOrderHeaders { get; set; } = new List<SalesOrderHeader>();
+
+        public virtual ICollection<SalesPerson> SalesPeople { get; set; } = new List<SalesPerson>();
+
+        public virtual ICollection<SalesTerritoryHistory> SalesTerritoryHistories { get; set; } = new List<SalesTerritoryHistory>();
+    }
+
+    public partial class SalesTerritoryHistory
+    {
+        /// <summary>
+        /// Primary key. The sales rep.  Foreign key to SalesPerson.BusinessEntityID.
+        /// </summary>
+        public int BusinessEntityId { get; set; }
+
+        /// <summary>
+        /// Primary key. Territory identification number. Foreign key to SalesTerritory.SalesTerritoryID.
+        /// </summary>
+        public int TerritoryId { get; set; }
+
+        /// <summary>
+        /// Primary key. Date the sales representive started work in the territory.
+        /// </summary>
+        public DateTime StartDate { get; set; }
+
+        /// <summary>
+        /// Date the sales representative left work in the territory.
+        /// </summary>
+        public DateTime? EndDate { get; set; }
+
+        /// <summary>
+        /// ROWGUIDCOL number uniquely identifying the record. Used to support a merge replication sample.
+        /// </summary>
+        public Guid Rowguid { get; set; }
+
+        /// <summary>
+        /// Date and time the record was last updated.
+        /// </summary>
+        public DateTime ModifiedDate { get; set; }
+
+        public virtual SalesPerson BusinessEntity { get; set; }
+
+        public virtual SalesTerritory Territory { get; set; }
+    }
+
+    public partial class ShoppingCartItem
+    {
+        /// <summary>
+        /// Primary key for ShoppingCartItem records.
+        /// </summary>
+        public int ShoppingCartItemId { get; set; }
+
+        /// <summary>
+        /// Shopping cart identification number.
+        /// </summary>
+        public string ShoppingCartId { get; set; }
+
+        /// <summary>
+        /// Product quantity ordered.
+        /// </summary>
+        public int Quantity { get; set; }
+
+        /// <summary>
+        /// Product ordered. Foreign key to Product.ProductID.
+        /// </summary>
+        public int ProductId { get; set; }
+
+        /// <summary>
+        /// Date the time the record was created.
+        /// </summary>
+        public DateTime DateCreated { get; set; }
+
+        /// <summary>
+        /// Date and time the record was last updated.
+        /// </summary>
+        public DateTime ModifiedDate { get; set; }
+    }
+
+    public partial class SpecialOffer
+    {
+        /// <summary>
+        /// Primary key for SpecialOffer records.
+        /// </summary>
+        public int SpecialOfferId { get; set; }
+
+        /// <summary>
+        /// Discount description.
+        /// </summary>
+        public string Description { get; set; }
+
+        /// <summary>
+        /// Discount precentage.
+        /// </summary>
+        public decimal DiscountPct { get; set; }
+
+        /// <summary>
+        /// Discount type category.
+        /// </summary>
+        public string Type { get; set; }
+
+        /// <summary>
+        /// Group the discount applies to such as Reseller or Customer.
+        /// </summary>
+        public string Category { get; set; }
+
+        /// <summary>
+        /// Discount start date.
+        /// </summary>
+        public DateTime StartDate { get; set; }
+
+        /// <summary>
+        /// Discount end date.
+        /// </summary>
+        public DateTime EndDate { get; set; }
+
+        /// <summary>
+        /// Minimum discount percent allowed.
+        /// </summary>
+        public int MinQty { get; set; }
+
+        /// <summary>
+        /// Maximum discount percent allowed.
+        /// </summary>
+        public int? MaxQty { get; set; }
+
+        /// <summary>
+        /// ROWGUIDCOL number uniquely identifying the record. Used to support a merge replication sample.
+        /// </summary>
+        public Guid Rowguid { get; set; }
+
+        /// <summary>
+        /// Date and time the record was last updated.
+        /// </summary>
+        public DateTime ModifiedDate { get; set; }
+
+        public virtual ICollection<SpecialOfferProduct> SpecialOfferProducts { get; set; } = new List<SpecialOfferProduct>();
+    }
+
+    public partial class SpecialOfferProduct
+    {
+        /// <summary>
+        /// Primary key for SpecialOfferProduct records.
+        /// </summary>
+        public int SpecialOfferId { get; set; }
+
+        /// <summary>
+        /// Product identification number. Foreign key to Product.ProductID.
+        /// </summary>
+        public int ProductId { get; set; }
+
+        /// <summary>
+        /// ROWGUIDCOL number uniquely identifying the record. Used to support a merge replication sample.
+        /// </summary>
+        public Guid Rowguid { get; set; }
+
+        /// <summary>
+        /// Date and time the record was last updated.
+        /// </summary>
+        public DateTime ModifiedDate { get; set; }
+
+        public virtual ICollection<SalesOrderDetail> SalesOrderDetails { get; set; } = new List<SalesOrderDetail>();
+
+        public virtual SpecialOffer SpecialOffer { get; set; }
+    }
+
+    public partial class Store
+    {
+        /// <summary>
+        /// Primary key. Foreign key to Customer.BusinessEntityID.
+        /// </summary>
+        public int BusinessEntityId { get; set; }
+
+        /// <summary>
+        /// Name of the store.
+        /// </summary>
+        public string Name { get; set; }
+
+        /// <summary>
+        /// ID of the sales person assigned to the customer. Foreign key to SalesPerson.BusinessEntityID.
+        /// </summary>
+        public int? SalesPersonId { get; set; }
+
+        /// <summary>
+        /// Demographic informationg about the store such as the number of employees, annual sales and store type.
+        /// </summary>
+        public string Demographics { get; set; }
+
+        /// <summary>
+        /// ROWGUIDCOL number uniquely identifying the record. Used to support a merge replication sample.
+        /// </summary>
+        public Guid Rowguid { get; set; }
+
+        /// <summary>
+        /// Date and time the record was last updated.
+        /// </summary>
+        public DateTime ModifiedDate { get; set; }
+
+        public virtual ICollection<Customer> Customers { get; set; } = new List<Customer>();
+
+        public virtual SalesPerson SalesPerson { get; set; }
+    }
+
+
+
+
+
 }

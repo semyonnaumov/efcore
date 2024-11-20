@@ -262,16 +262,20 @@ public class ValueComparer
                 var left = Parameter(typeof(object), "left");
                 var right = Parameter(typeof(object), "right");
 
+                var remappedEquals = new ReplacingExpressionVisitor(new[] { EqualsExpression.Parameters[0], EqualsExpression.Parameters[1] }, new[] { Convert(left, typeof(T)), Convert(right, typeof(T)) }).Visit(EqualsExpression.Body);
+
                 _objectEqualsExpression = Lambda<Func<object?, object?, bool>>(
                     Condition(
                         Equal(left, Constant(null)),
                         Equal(right, Constant(null)),
                         AndAlso(
                             NotEqual(right, Constant(null)),
-                            Invoke(
-                                EqualsExpression,
-                                Convert(left, typeof(T)),
-                                Convert(right, typeof(T))))),
+                            remappedEquals)),
+
+                            //Invoke(
+                            //    EqualsExpression,
+                            //    Convert(left, typeof(T)),
+                            //    Convert(right, typeof(T))))),
                     left,
                     right);
             }

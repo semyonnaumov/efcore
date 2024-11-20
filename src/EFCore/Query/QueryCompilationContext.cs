@@ -211,8 +211,8 @@ public class QueryCompilationContext
             query,
             QueryContextParameter);
 
-        var treeBuilder = new ExpressionTreeCodeGenerator();
-        var treeCode = treeBuilder.Visit(queryExecutorExpression);
+        //var treeBuilder = new ExpressionTreeCodeGenerator();
+        //var treeCode = treeBuilder.Visit(queryExecutorExpression);
 
         return queryExecutorExpression;
     }

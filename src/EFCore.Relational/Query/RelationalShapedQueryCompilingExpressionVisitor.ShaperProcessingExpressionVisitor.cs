@@ -1167,33 +1167,43 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                                 parentIdentifierLambda,
                                 outerIdentifierLambda,
                                 selfIdentifierLambda,
-                                _parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
-                                    relationalCollectionShaperExpression.ParentIdentifierValueComparers.Select(x => (Func<object, object, bool>)x.Equals).ToArray(),
-                                    Lambda<Func<MaterializerLiftableConstantContext, object>>(
-                                        NewArrayInit(
-                                            typeof(Func<object, object, bool>),
-                                            relationalCollectionShaperExpression.ParentIdentifierValueComparers.Select(vc => vc.ObjectEqualsExpression)),
-                                        Parameter(typeof(MaterializerLiftableConstantContext), "_")),
-                                    "parentIdentifierValueComparers",
-                                    typeof(Func<object, object, bool>[])),
-                                _parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
-                                    relationalCollectionShaperExpression.OuterIdentifierValueComparers.Select(x => (Func<object, object, bool>)x.Equals).ToArray(),
-                                    Lambda<Func<MaterializerLiftableConstantContext, object>>(
-                                        NewArrayInit(
-                                            typeof(Func<object, object, bool>),
-                                            relationalCollectionShaperExpression.OuterIdentifierValueComparers.Select(vc => vc.ObjectEqualsExpression)),
-                                        Parameter(typeof(MaterializerLiftableConstantContext), "_")),
-                                    "parentIdentifierValueComparers",
-                                    typeof(Func<object, object, bool>[])),
-                                _parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
-                                    relationalCollectionShaperExpression.SelfIdentifierValueComparers.Select(x => (Func<object, object, bool>)x.Equals).ToArray(),
-                                    Lambda<Func<MaterializerLiftableConstantContext, object>>(
-                                        NewArrayInit(
-                                            typeof(Func<object, object, bool>),
-                                            relationalCollectionShaperExpression.SelfIdentifierValueComparers.Select(vc => vc.ObjectEqualsExpression)),
-                                        Parameter(typeof(MaterializerLiftableConstantContext), "_")),
-                                    "parentIdentifierValueComparers",
-                                    typeof(Func<object, object, bool>[])),
+                                NewArrayInit(
+                                    typeof(Func<object, object, bool>),
+                                    relationalCollectionShaperExpression.ParentIdentifierValueComparers.Select(vc => vc.ObjectEqualsExpression)),
+                                NewArrayInit(
+                                    typeof(Func<object, object, bool>),
+                                    relationalCollectionShaperExpression.OuterIdentifierValueComparers.Select(vc => vc.ObjectEqualsExpression)),
+                                NewArrayInit(
+                                    typeof(Func<object, object, bool>),
+                                    relationalCollectionShaperExpression.SelfIdentifierValueComparers.Select(vc => vc.ObjectEqualsExpression)),
+
+                                //_parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
+                                //    relationalCollectionShaperExpression.ParentIdentifierValueComparers.Select(x => (Func<object, object, bool>)x.Equals).ToArray(),
+                                //    Lambda<Func<MaterializerLiftableConstantContext, object>>(
+                                //        NewArrayInit(
+                                //            typeof(Func<object, object, bool>),
+                                //            relationalCollectionShaperExpression.ParentIdentifierValueComparers.Select(vc => vc.ObjectEqualsExpression)),
+                                //        Parameter(typeof(MaterializerLiftableConstantContext), "_")),
+                                //    "parentIdentifierValueComparers",
+                                //    typeof(Func<object, object, bool>[])),
+                                //_parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
+                                //    relationalCollectionShaperExpression.OuterIdentifierValueComparers.Select(x => (Func<object, object, bool>)x.Equals).ToArray(),
+                                //    Lambda<Func<MaterializerLiftableConstantContext, object>>(
+                                //        NewArrayInit(
+                                //            typeof(Func<object, object, bool>),
+                                //            relationalCollectionShaperExpression.OuterIdentifierValueComparers.Select(vc => vc.ObjectEqualsExpression)),
+                                //        Parameter(typeof(MaterializerLiftableConstantContext), "_")),
+                                //    "parentIdentifierValueComparers",
+                                //    typeof(Func<object, object, bool>[])),
+                                //_parentVisitor.Dependencies.LiftableConstantFactory.CreateLiftableConstant(
+                                //    relationalCollectionShaperExpression.SelfIdentifierValueComparers.Select(x => (Func<object, object, bool>)x.Equals).ToArray(),
+                                //    Lambda<Func<MaterializerLiftableConstantContext, object>>(
+                                //        NewArrayInit(
+                                //            typeof(Func<object, object, bool>),
+                                //            relationalCollectionShaperExpression.SelfIdentifierValueComparers.Select(vc => vc.ObjectEqualsExpression)),
+                                //        Parameter(typeof(MaterializerLiftableConstantContext), "_")),
+                                //    "parentIdentifierValueComparers",
+                                //    typeof(Func<object, object, bool>[])),
                                 innerShaper));
 
                         _variableShaperMapping[relationalCollectionShaperExpression] = accessor;

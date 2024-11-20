@@ -2440,14 +2440,15 @@ END = N'COUNTRY'
             using var ctx = _factory.CreateDbContext();
         }
 
-        public List<SalesOrderHeader> LoadSalesOrderHeaders()
+        public void LoadSalesOrderHeaders()
         {
             using var ctx = _factory.CreateDbContext();
 
-            return ctx.SalesOrderHeaders.AsNoTracking()
+            ctx.SalesOrderHeaders.AsNoTracking()
                 .Where(p => p.SalesOrderId > 50000 && p.SalesOrderId <= 50300)
-                .Include(p => p.Customer)
-                .Include(p => p.SalesOrderDetails)
+                //.Include(p => p.Customer)
+                .Select(p => p.SalesOrderDetails)
+                //.Include(p => p.SalesOrderDetails)
                 .ToList();
         }
 

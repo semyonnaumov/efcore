@@ -3262,6 +3262,76 @@ public abstract class MigrationsTestBase<TFixture> : IClassFixture<TFixture>
         MigrationsSqlGenerationOptions migrationsSqlGenerationOptions = MigrationsSqlGenerationOptions.Default)
         => Test(_ => { }, buildSourceAction, buildTargetAction, asserter, withConventions, migrationsSqlGenerationOptions);
 
+    protected virtual Task TestComposite(
+        List<Action<ModelBuilder>> buildActions,
+        Action<DatabaseModel> asserter,
+        bool withConventions = true,
+        MigrationsSqlGenerationOptions migrationsSqlGenerationOptions = MigrationsSqlGenerationOptions.Default)
+    {
+        if (buildActions.Count < 3)
+        {
+            throw new InvalidOperationException("You need at least 3 build actions for the composite case.");
+        }
+
+        var context = CreateContext();
+        var modelDiffer = context.GetService<IMigrationsModelDiffer>();
+        var modelRuntimeInitializer = context.GetService<IModelRuntimeInitializer>();
+
+        // build all migration operations going through each intermediate state of the model
+        var operations = new List<MigrationOperation>();
+        for (var i = 0; i < buildActions.Count - 1; i++)
+        {
+            operations.AddRange(GenerateOperations(buildActions[i], buildActions[i + 1], modelDiffer, modelRuntimeInitializer, withConventions));
+        }
+
+        // Build the source model (i.e. model based on first build action), possibly with conventions
+        var sourceModelBuilder = CreateModelBuilder(withConventions);
+        buildActions.First()(sourceModelBuilder);
+        var preSnapshotSourceModel = modelRuntimeInitializer.Initialize(
+            (IModel)sourceModelBuilder.Model, designTime: true, validationLogger: null);
+
+        // Round-trip the source model through a snapshot, compiling it and then extracting it back again.
+        // This simulates the real-world migration flow and can expose errors in snapshot generation
+        var migrationsCodeGenerator = Fixture.TestHelpers.CreateDesignServiceProvider().GetRequiredService<IMigrationsCodeGenerator>();
+        var sourceModelSnapshot = migrationsCodeGenerator.GenerateSnapshot(
+            modelSnapshotNamespace: null, typeof(DbContext), "MigrationsTestSnapshot", preSnapshotSourceModel);
+        var sourceModel = BuildModelFromSnapshotSource(sourceModelSnapshot);
+
+        // Build the target model (i.e. model based on last build action), possibly with conventions
+        var targetModelBuilder = CreateModelBuilder(withConventions);
+        buildActions.Last()(targetModelBuilder);
+        var targetModel = modelRuntimeInitializer.Initialize(
+            (IModel)targetModelBuilder.Model, designTime: true, validationLogger: null);
+
+        return Test(preSnapshotSourceModel, targetModel, operations, asserter, migrationsSqlGenerationOptions);
+    }
+
+    protected virtual IReadOnlyList<MigrationOperation> GenerateOperations(
+        Action<ModelBuilder> buildSourceAction,
+        Action<ModelBuilder> buildTargetAction,
+        IMigrationsModelDiffer modelDiffer,
+        IModelRuntimeInitializer modelRuntimeInitializer,
+        bool withConventions = true)
+    {
+        // Build the source model, possibly with conventions
+        var sourceModelBuilder = CreateModelBuilder(withConventions);
+        buildSourceAction(sourceModelBuilder);
+        var sourceModel = modelRuntimeInitializer.Initialize(
+            (IModel)sourceModelBuilder.Model, designTime: true, validationLogger: null);
+
+        // Build the target model, possibly with conventions
+        var targetModelBuilder = CreateModelBuilder(withConventions);
+        buildTargetAction(targetModelBuilder);
+        var targetModel = modelRuntimeInitializer.Initialize(
+            (IModel)targetModelBuilder.Model, designTime: true, validationLogger: null);
+
+        // Get the migration operations between the two models and test
+        return modelDiffer.GetDifferences(sourceModel.GetRelationalModel(), targetModel.GetRelationalModel());
+    }
+
+
+
+
     protected virtual Task Test(
         Action<ModelBuilder> buildCommonAction,
         Action<ModelBuilder> buildSourceAction,

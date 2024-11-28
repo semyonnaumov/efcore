@@ -2544,10 +2544,21 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
 
             var schema = rawSchema ?? model?.GetDefaultSchema();
 
+            TemporalOperationInformation temporalInformation;
+            if (operation is CreateTableOperation cto)
+            {
+                temporalInformation = BuildTemporalInformationFromMigrationOperation(schema, cto);
+                temporalTableInformationMap[(tableName, rawSchema)] = temporalInformation;
+            }
+            else
+            {
+                temporalInformation = temporalTableInformationMap[(tableName, rawSchema)];
+            }
+
             // we are guaranteed to find entry here - we looped through all the operations earlier,
             // info missing from operations we got from the model
             // and in case of no/incomplete model we created dummy (non-temporal) entries
-            var temporalInformation = temporalTableInformationMap[(tableName, rawSchema)];
+            //var temporalInformation = temporalTableInformationMap[(tableName, rawSchema)];
 
             switch (operation)
             {

@@ -2399,6 +2399,16 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
         var temporalTableInformationMap = new Dictionary<(string TableName, string? Schema), TemporalOperationInformation>();
         var missingTemporalTableInformation = new List<(string TableName, string? Schema)>();
 
+
+
+        var availableTemporalTableInformation = new List<(string TableName, string? Schema)>();
+        foreach (var operation in migrationOperations)
+        {
+
+        }
+
+
+
         foreach (var operation in migrationOperations)
         {
             switch (operation)

@@ -2400,15 +2400,6 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
         var missingTemporalTableInformation = new List<(string TableName, string? Schema)>();
 
 
-
-        var availableTemporalTableInformation = new List<(string TableName, string? Schema)>();
-        foreach (var operation in migrationOperations)
-        {
-
-        }
-
-
-
         foreach (var operation in migrationOperations)
         {
             switch (operation)
@@ -2456,10 +2447,16 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                     var newRawSchema = renameTableOperation.NewSchema;
                     var newSchema = newRawSchema ?? model?.GetDefaultSchema();
 
+                    var temporalTableInformation = BuildTemporalInformationFromMigrationOperation(schema, renameTableOperation);
                     if (!temporalTableInformationMap.ContainsKey((tableName, rawSchema)))
                     {
-                        var temporalTableInformation = BuildTemporalInformationFromMigrationOperation(schema, renameTableOperation);
                         temporalTableInformationMap[(tableName, rawSchema)] = temporalTableInformation;
+                    }
+
+                    // we still need to check here - table with the new name could have existed before and have been deleted
+                    // we want to preserve the original temporal info of that deleted table
+                    if (!temporalTableInformationMap.ContainsKey((newTableName, newRawSchema)))
+                    {
                         temporalTableInformationMap[(newTableName, newRawSchema)] = temporalTableInformation;
                     }
 
@@ -2554,10 +2551,51 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
 
             var schema = rawSchema ?? model?.GetDefaultSchema();
 
-            TemporalOperationInformation temporalInformation;
-            if (operation is CreateTableOperation cto)
+#if DEBUG
+            // extra validation to help with debugging and making the code here more robust
+            // processing temporal migrations is very complicated and we had many issues here in the past
+            // the idea is to make sure that we always keep our knowledge of the temporal state of each table up to date
+            // if annotations we find on the migration operation are not matching what we think should be there (i.e. temporal map we maintain)
+            // this means there is a bug somewhere in the processing
+            if (temporalTableInformationMap.TryGetValue((tableName, rawSchema), out var expectedInfo))
             {
-                temporalInformation = BuildTemporalInformationFromMigrationOperation(schema, cto);
+                var actualInfo = operation switch
+                {
+                    CreateTableOperation or DropTableOperation or RenameTableOperation => BuildTemporalInformationFromMigrationOperation(schema, operation),
+                    AlterTableOperation alterTableOperation => BuildTemporalInformationFromMigrationOperation(schema, alterTableOperation.OldTable),
+                    _ => null
+                };
+
+                if (actualInfo != null
+                    && (expectedInfo.IsTemporalTable != actualInfo.IsTemporalTable
+                        || expectedInfo.HistoryTableName != actualInfo.HistoryTableName
+                        || expectedInfo.HistoryTableSchema != actualInfo.HistoryTableSchema
+                        || expectedInfo.PeriodEndColumnName != actualInfo.PeriodEndColumnName
+                        || expectedInfo.PeriodStartColumnName != actualInfo.PeriodStartColumnName))
+                {
+                    throw new InvalidOperationException("Actual temporal info doesn't match expectations.");
+                }
+            }
+            else
+            {
+                // create table is the only operation that can not have an entry in the temporal info map
+                // this can happen when a previous operation dropped or renamed this table
+                // if that's the case, we remove the entry for it
+                // but if that happens, the only possible subsequent operation involving that tavble is CreateTable
+                if (operation is not CreateTableOperation)
+                {
+                    throw new InvalidOperationException($"Entry in temporalTableInformationMap not found for migration operation {operation}.");
+                }
+            }
+#endif
+
+            TemporalOperationInformation temporalInformation;
+            if (operation is CreateTableOperation)
+            {
+                // for create table we always generate new temporal information from the operation itself
+                // just in case there was a table with that name before that got deleted/renamed
+                // also, temporal state (disabled versioning etc.) should always reset when creating a table
+                temporalInformation = BuildTemporalInformationFromMigrationOperation(schema, operation);
                 temporalTableInformationMap[(tableName, rawSchema)] = temporalInformation;
             }
             else
@@ -2565,22 +2603,10 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                 temporalInformation = temporalTableInformationMap[(tableName, rawSchema)];
             }
 
-            // we are guaranteed to find entry here - we looped through all the operations earlier,
-            // info missing from operations we got from the model
-            // and in case of no/incomplete model we created dummy (non-temporal) entries
-            //var temporalInformation = temporalTableInformationMap[(tableName, rawSchema)];
-
             switch (operation)
             {
                 case CreateTableOperation createTableOperation:
                 {
-                    // for create table we always generate new temporal information from the operation itself
-                    // just in case there was a table with that name before that got deleted/renamed
-                    // this shouldn't happen as we re-use existing tables rather than drop/recreate
-                    // but we are being extra defensive here
-                    // and also, temporal state (disabled versioning etc.) should always reset when creating a table
-                    temporalInformation = BuildTemporalInformationFromMigrationOperation(schema, createTableOperation);
-
                     if (temporalInformation.IsTemporalTable
                         && temporalInformation.HistoryTableSchema != schema
                         && temporalInformation.HistoryTableSchema != null
@@ -2600,45 +2626,33 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                     var isTemporalTable = dropTableOperation[SqlServerAnnotationNames.IsTemporal] as bool? == true;
                     if (isTemporalTable)
                     {
-                        if (temporalInformation is null) throw new InvalidOperationException("shouldnt happen");
-
-                        // if we don't have temporal information, but we know table is temporal
-                        // (based on the annotation found on the operation itself)
-                        // we assume that versioning must be disabled, if we have temporal info we can check properly
-                        if (temporalInformation is null || !temporalInformation.DisabledVersioning)
+                        // no need to set all the knobs since we are removing the temporal entry in the dictionary anyway
+                        if (!temporalInformation.DisabledVersioning)
                         {
                             AddDisableVersioningOperation(tableName, schema, suppressTransaction);
                         }
 
-                        // we don't want to re-enable versioning and period on the deleted table
-                        // so we pretend that versioning and period were not disabled
-                        if (temporalInformation is not null)
-                        {
-                            temporalInformation.DisabledVersioning = false;
-                            temporalInformation.DisabledPeriod = false;
-                        }
-
-                        //if (temporalInformation is not null)
-                        //{
-                        //    temporalInformation.ShouldEnableVersioning = false;
-                        //    temporalInformation.ShouldEnablePeriod = false;
-                        //}
-
                         operations.Add(operation);
 
-                        var historyTableName = dropTableOperation[SqlServerAnnotationNames.TemporalHistoryTableName] as string;
-                        var historyTableSchema =
-                            dropTableOperation[SqlServerAnnotationNames.TemporalHistoryTableSchema] as string ?? schema;
-                        var dropHistoryTableOperation = new DropTableOperation { Name = historyTableName!, Schema = historyTableSchema };
-                        operations.Add(dropHistoryTableOperation);
+                        // if history table exists we should delete it also
+                        // history table could not exist if we converted regular table into temporal and then dropped it
+                        // before we could add the history table
+                        if (temporalInformation.HistoryTableExists)
+                        {
+                            var historyTableName = dropTableOperation[SqlServerAnnotationNames.TemporalHistoryTableName] as string;
+                            var historyTableSchema =
+                                dropTableOperation[SqlServerAnnotationNames.TemporalHistoryTableSchema] as string ?? schema;
+                            var dropHistoryTableOperation = new DropTableOperation { Name = historyTableName!, Schema = historyTableSchema };
+                            operations.Add(dropHistoryTableOperation);
+                        }
                     }
                     else
                     {
                         operations.Add(operation);
                     }
 
-                    // we removed the table, so we no longer need it's temporal information
-                    // there will be no more operations involving this table
+                    // we removed the table, so we no longer need it's temporal information there will be no more operations involving this table
+                    // (unless it gets re-created in later operation, but we will create new temporal information if thats the case)
                     temporalTableInformationMap.Remove((tableName, schema));
 
                     break;
@@ -2658,13 +2672,13 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                             tableName,
                             schema,
                             temporalInformation,
-                            suppressTransaction);//,
-                            //shouldEnableVersioning: true);
+                            suppressTransaction,
+                            shouldEnableVersioning: true);
                     }
 
                     operations.Add(operation);
 
-                    // since table was renamed, update entry in the temporal info map
+                    // old table doesn't exist anymore (it was renamed to something else), so remove the temporal entry for it
                     temporalTableInformationMap[(renameTableOperation.NewName!, renameTableOperation.NewSchema)] = temporalInformation;
                     temporalTableInformationMap.Remove((tableName, schema));
 
@@ -2691,18 +2705,14 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                     {
                         if (!oldIsTemporalTable)
                         {
-                            // converting from regular table to temporal table - enable period and versioning at the end
-                            // other temporal information (history table, period columns etc) is added below
-
-
-
                             // converting from regular table to temporal table - mark versioning and period as disabled
                             // so that they get enabled at the end
                             // other temporal information (history table, period columns etc) is added below
                             temporalInformation.DisabledPeriod = true;
                             temporalInformation.DisabledVersioning = true;
-                            //temporalInformation.ShouldEnablePeriod = true;
-                            //temporalInformation.ShouldEnableVersioning = true;
+                            temporalInformation.ShouldEnablePeriod = true;
+                            temporalInformation.ShouldEnableVersioning = true;
+                            temporalInformation.HistoryTableExists = false;
                         }
                         else
                         {
@@ -2745,20 +2755,19 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                                 tableName,
                                 schema,
                                 temporalInformation,
-                                suppressTransaction);//,
+                                suppressTransaction,
                                 //shouldEnableVersioning: null);
+                                shouldEnableVersioning: false);
 
-                            //if (!temporalInformation.DisabledPeriod)
-                            //{
-                                DisablePeriod(tableName, schema, temporalInformation, suppressTransaction);
-                            //}
+                            // table is no longer temporal so we don't want to re-enable period
+                            DisablePeriod(
+                                tableName,
+                                schema,
+                                temporalInformation,
+                                suppressTransaction,
+                                shouldEnablePeriod: false);
 
-                            // we disabled versioning and period, but we don't want to re-enable them
-                            // since the table is no longer temporal
-                            temporalInformation.DisabledVersioning = false;
-                            temporalInformation.DisabledPeriod = false;
-
-                            if (oldHistoryTableName != null)
+                            if (oldHistoryTableName != null && temporalInformation.HistoryTableExists)
                             {
                                 operations.Add(new DropTableOperation { Name = oldHistoryTableName, Schema = oldHistoryTableSchema });
                             }
@@ -2808,8 +2817,8 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                                 tableName,
                                 schema,
                                 temporalInformation,
-                                suppressTransaction);//,
-                                //shouldEnableVersioning: true);
+                                suppressTransaction,
+                                shouldEnableVersioning: true);
                         }
 
                         // when adding sparse column to temporal table, we need to disable versioning.
@@ -2829,8 +2838,8 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                                 tableName,
                                 schema,
                                 temporalInformation,
-                                suppressTransaction);//,
-                                //shouldEnableVersioning: true);
+                                suppressTransaction,
+                                shouldEnableVersioning: true);
                         }
 
                         operations.Add(addColumnOperation);
@@ -2840,7 +2849,8 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                         // if so, we need to also add the same column to history table
                         if (addColumnOperation.Name != temporalInformation.PeriodStartColumnName
                             && addColumnOperation.Name != temporalInformation.PeriodEndColumnName
-                            && temporalInformation.DisabledVersioning)
+                            && temporalInformation.DisabledVersioning
+                            && temporalInformation.HistoryTableExists)
                         {
                             var addHistoryTableColumnOperation = CopyColumnOperation<AddColumnOperation>(addColumnOperation);
                             addHistoryTableColumnOperation.Table = temporalInformation.HistoryTableName!;
@@ -2873,35 +2883,32 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                         var droppingPeriodColumn = dropColumnOperation.Name == temporalInformation.PeriodStartColumnName
                             || dropColumnOperation.Name == temporalInformation.PeriodEndColumnName;
 
-                        //// if we are dropping non-period column, we should enable versioning at the end.
-                        //// When dropping period column there is no need - we are removing the versioning for this table altogether
+                        // if we are dropping regular column, we should enable versioning at the end.
+                        // When dropping period column there is no need - we are removing the versioning for this table altogether
                         DisableVersioning(
                             tableName,
                             schema,
                             temporalInformation,
-                            suppressTransaction);//,
-                                                 //shouldEnableVersioning: droppingPeriodColumn ? null : true);
+                            suppressTransaction,
+                            shouldEnableVersioning: droppingPeriodColumn ? null : true);
 
-                        // When dropping period column we don't want to re-enable versioning
-                        // since we are removing the versioning for this table altogether
+                        // we only need to disable period if we are removing period columns
+                        // for regular columns, the database does mirroring for us
+                        // if we remove the period columns, it means we will be dropping the table
+                        // also or at least convert it back to regular - no need to enable period later
                         if (droppingPeriodColumn)
                         {
-                            temporalInformation.DisabledVersioning = false;
-                        }
-
-                        if (droppingPeriodColumn && !temporalInformation.DisabledPeriod)
-                        {
-                            DisablePeriod(tableName, schema, temporalInformation, suppressTransaction);
-
-                            // if we remove the period columns, it means we will be dropping the table
-                            // also or at least convert it back to regular - no need to enable period later
-                            //temporalInformation.ShouldEnablePeriod = false;
-                            temporalInformation.DisabledPeriod = false;
+                            DisablePeriod(
+                                tableName,
+                                schema,
+                                temporalInformation,
+                                suppressTransaction,
+                                shouldEnablePeriod: null);
                         }
 
                         operations.Add(operation);
 
-                        if (!droppingPeriodColumn)
+                        if (!droppingPeriodColumn && temporalInformation.HistoryTableExists)
                         {
                             operations.Add(
                                 new DropColumnOperation
@@ -2926,9 +2933,12 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
 
                     // if we disabled period for the temporal table and now we are renaming the column,
                     // we need to also rename this same column in history table
+                    // but only if history table exists and will exist by the end of these operations
+                    // (i.e. we are not in the process of converting temporal table to regular)
                     if (temporalInformation.IsTemporalTable
                         && temporalInformation.DisabledVersioning
-                        )//&& temporalInformation.ShouldEnableVersioning)
+                        && temporalInformation.HistoryTableExists
+                        && temporalInformation.ShouldEnableVersioning)
                     {
                         var renameHistoryTableColumnOperation = new RenameColumnOperation
                         {
@@ -2981,8 +2991,8 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                                 tableName!,
                                 schema,
                                 temporalInformation,
-                                suppressTransaction);//,
-                                //shouldEnableVersioning: true);
+                                suppressTransaction,
+                                shouldEnableVersioning: true);
                         }
 
                         if (changeToSparse)
@@ -3000,7 +3010,7 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                         //
                         // if the column is not period we just remove temporal information - it's no longer needed and could affect the generated sql
                         // we will generate all the necessary operations involved with temporal tables here
-                        if (temporalInformation.DisabledVersioning )// && temporalInformation.ShouldEnableVersioning)
+                        if (temporalInformation.DisabledVersioning && temporalInformation.HistoryTableExists)// && temporalInformation.ShouldEnableVersioning)
                         {
                             var alterHistoryTableColumn = CopyColumnOperation<AlterColumnOperation>(alterColumnOperation);
                             alterHistoryTableColumn.Table = temporalInformation.HistoryTableName!;
@@ -3028,8 +3038,9 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                             tableName!,
                             schema,
                             temporalInformation,
-                            suppressTransaction);//,
-                            //shouldEnableVersioning: true);
+                            suppressTransaction,
+                            shouldEnableVersioning: true);
+
                     }
 
                     operations.Add(operation);
@@ -3041,8 +3052,7 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
             }
         }
 
-        foreach (var temporalInformation in temporalTableInformationMap.Where(x => x.Value.IsTemporalTable && x.Value.DisabledPeriod))
-        //foreach (var temporalInformation in temporalTableInformationMap.Where(x => x.Value.ShouldEnablePeriod))
+        foreach (var temporalInformation in temporalTableInformationMap.Where(x => x.Value.ShouldEnablePeriod))
         {
             EnablePeriod(
                 temporalInformation.Key.TableName,
@@ -3052,9 +3062,18 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                 temporalInformation.Value.SuppressTransaction);
         }
 
-        foreach (var temporalInformation in temporalTableInformationMap.Where(x => x.Value.IsTemporalTable && x.Value.DisabledVersioning))
-        //foreach (var temporalInformation in temporalTableInformationMap.Where(x => x.Value.ShouldEnableVersioning))
+        foreach (var temporalInformation in temporalTableInformationMap.Where(x => x.Value.ShouldEnableVersioning))
         {
+            if (temporalInformation.Value.IsTemporalTable
+                && !temporalInformation.Value.HistoryTableExists
+                && temporalInformation.Value.HistoryTableSchema != temporalInformation.Key.Schema
+                && temporalInformation.Value.HistoryTableSchema != null
+                && !availableSchemas.Contains(temporalInformation.Value.HistoryTableSchema))
+            {
+                operations.Add(new EnsureSchemaOperation { Name = temporalInformation.Value.HistoryTableSchema });
+                availableSchemas.Add(temporalInformation.Value.HistoryTableSchema);
+            }
+
             EnableVersioning(
                 temporalInformation.Key.TableName,
                 temporalInformation.Key.Schema,
@@ -3075,13 +3094,22 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
             var periodStartColumnName = operation[SqlServerAnnotationNames.TemporalPeriodStartColumnName] as string;
             var periodEndColumnName = operation[SqlServerAnnotationNames.TemporalPeriodEndColumnName] as string;
 
+            // when building temporal information from migration operartion (i.e. the first time we see that table)
+            // we assume history table exists for temporal tables and doesnt exist for regular tables
+            // during migration processing we could end up in a state when temporal table doesn't have a history table yet
+            // e.g. when we are converting normal table to temporal and at the same time manipulating columns
+            // in that case we don't want to mirror the column manipulations onto the non-existing history table
+            // so we need to capture the info whether it exists or not
+            var historyTableExists = isTemporalTable;
+
             return new TemporalOperationInformation
             {
                 IsTemporalTable = isTemporalTable,
                 HistoryTableName = historyTableName,
                 HistoryTableSchema = historyTableSchema,
                 PeriodStartColumnName = periodStartColumnName,
-                PeriodEndColumnName = periodEndColumnName
+                PeriodEndColumnName = periodEndColumnName,
+                HistoryTableExists = historyTableExists,
             };
         }
 
@@ -3089,8 +3117,8 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
             string tableName,
             string? schema,
             TemporalOperationInformation temporalInformation,
-            bool suppressTransaction)//,
-            //bool? shouldEnableVersioning)
+            bool suppressTransaction,
+            bool? shouldEnableVersioning)
         {
             if (!temporalInformation.DisabledVersioning
                 )//&& !temporalInformation.ShouldEnableVersioning)
@@ -3098,15 +3126,16 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                 temporalInformation.DisabledVersioning = true;
 
                 AddDisableVersioningOperation(tableName, schema, suppressTransaction);
+            }
 
-                //if (shouldEnableVersioning != null)
-                //{
-                //    temporalInformation.ShouldEnableVersioning = shouldEnableVersioning.Value;
-                //    if (shouldEnableVersioning.Value)
-                //    {
-                //        temporalInformation.SuppressTransaction = suppressTransaction;
-                //    }
-                //}
+            if (shouldEnableVersioning != null)
+            {
+                temporalInformation.ShouldEnableVersioning = shouldEnableVersioning.Value;
+                if (shouldEnableVersioning.Value)
+                {
+                    // TODO: what is this for?
+                    temporalInformation.SuppressTransaction = suppressTransaction;
+                }
             }
         }
 
@@ -3159,7 +3188,8 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
             string table,
             string? schema,
             TemporalOperationInformation temporalInformation,
-            bool suppressTransaction)
+            bool suppressTransaction,
+            bool? shouldEnablePeriod)
         {
             if (!temporalInformation.DisabledPeriod)
             {
@@ -3175,6 +3205,16 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                             .ToString(),
                         SuppressTransaction = suppressTransaction
                     });
+            }
+
+            if (shouldEnablePeriod != null)
+            {
+                temporalInformation.ShouldEnablePeriod = shouldEnablePeriod.Value;
+                if (shouldEnablePeriod.Value)
+                {
+                    // TODO: what is this for?
+                    temporalInformation.SuppressTransaction = suppressTransaction;
+                }
             }
         }
 
@@ -3305,8 +3345,10 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
         public bool DisabledVersioning { get; set; }
         public bool DisabledPeriod { get; set; }
 
-        //public bool ShouldEnableVersioning { get; set; }
-        //public bool ShouldEnablePeriod { get; set; }
+        public bool ShouldEnableVersioning { get; set; }
+        public bool ShouldEnablePeriod { get; set; }
+
+        public bool HistoryTableExists { get; set; }
         public bool SuppressTransaction { get; set; }
     }
 }

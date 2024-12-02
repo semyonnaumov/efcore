@@ -11196,6 +11196,136 @@ EXEC sp_rename N'[Customers].[NewSystemTimeStart]', N'FinalSystemTimeStart', 'CO
     }
 
     [ConditionalFact]
+    public virtual async Task Temporal_multiop_create_regular_convert_to_temporal_rename_table_drop_column()
+    {
+        await TestComposite(
+            [
+                builder => builder.Entity(
+                    "Customer", e =>
+                    {
+                        e.Property<int>("Id").ValueGeneratedOnAdd();
+                        e.Property<string>("Name");
+                        e.Property<long>("Number");
+                        e.HasKey("Id");
+
+                        e.ToTable("Customers");
+                    }),
+
+                builder => builder.Entity(
+                    "Customer", e =>
+                    {
+                        e.Property<int>("Id").ValueGeneratedOnAdd();
+                        e.Property<string>("Name");
+                        e.Property<long>("Number");
+                        e.Property<DateTime>("SystemTimeStart").ValueGeneratedOnAddOrUpdate();
+                        e.Property<DateTime>("SystemTimeEnd").ValueGeneratedOnAddOrUpdate();
+                        e.HasKey("Id");
+
+                        e.ToTable(
+                            "Customers", tb => tb.IsTemporal(
+                                ttb =>
+                                {
+                                    ttb.UseHistoryTable("HistoryTable", "historySchema");
+                                    ttb.HasPeriodStart("SystemTimeStart");
+                                    ttb.HasPeriodEnd("SystemTimeEnd");
+                                }));
+                    }),
+
+                builder => builder.Entity(
+                    "Customer", e =>
+                    {
+                        e.Property<int>("Id").ValueGeneratedOnAdd();
+                        e.Property<string>("Name");
+                        e.Property<long>("Number");
+                        e.Property<DateTime>("SystemTimeStart").ValueGeneratedOnAddOrUpdate();
+                        e.Property<DateTime>("SystemTimeEnd").ValueGeneratedOnAddOrUpdate();
+                        e.HasKey("Id");
+
+                        e.ToTable(
+                            "RenamedCustomers", tb => tb.IsTemporal(
+                                ttb =>
+                                {
+                                    ttb.UseHistoryTable("HistoryTable", "historySchema");
+                                    ttb.HasPeriodStart("SystemTimeStart");
+                                    ttb.HasPeriodEnd("SystemTimeEnd");
+                                }));
+                    }),
+
+
+                builder => builder.Entity(
+                    "Customer", e =>
+                    {
+                        e.Property<int>("Id").ValueGeneratedOnAdd();
+                        e.Property<string>("Name");
+                        e.Property<DateTime>("SystemTimeStart").ValueGeneratedOnAddOrUpdate();
+                        e.Property<DateTime>("SystemTimeEnd").ValueGeneratedOnAddOrUpdate();
+                        e.HasKey("Id");
+
+                        e.ToTable(
+                            "RenamedCustomers", tb => tb.IsTemporal(
+                                ttb =>
+                                {
+                                    ttb.UseHistoryTable("HistoryTable", "historySchema");
+                                    ttb.HasPeriodStart("SystemTimeStart");
+                                    ttb.HasPeriodEnd("SystemTimeEnd");
+                                }));
+                    }),
+                ],
+            model => { });
+
+        AssertSql(
+"""
+ALTER TABLE [Customers] ADD [SystemTimeEnd] datetime2 NOT NULL DEFAULT '9999-12-31T23:59:59.9999999';
+""",
+                //
+                """
+ALTER TABLE [Customers] ADD [SystemTimeStart] datetime2 NOT NULL DEFAULT '0001-01-01T00:00:00.0000000';
+""",
+                //
+                """
+ALTER TABLE [Customers] DROP CONSTRAINT [PK_Customers];
+""",
+                //
+                """
+EXEC sp_rename N'[Customers]', N'RenamedCustomers', 'OBJECT';
+""",
+                //
+                """
+ALTER TABLE [RenamedCustomers] ADD CONSTRAINT [PK_RenamedCustomers] PRIMARY KEY ([Id]);
+""",
+                //
+                """
+DECLARE @var0 sysname;
+SELECT @var0 = [d].[name]
+FROM [sys].[default_constraints] [d]
+INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+WHERE ([d].[parent_object_id] = OBJECT_ID(N'[RenamedCustomers]') AND [c].[name] = N'Number');
+IF @var0 IS NOT NULL EXEC(N'ALTER TABLE [RenamedCustomers] DROP CONSTRAINT [' + @var0 + '];');
+ALTER TABLE [RenamedCustomers] DROP COLUMN [Number];
+""",
+                //
+                """
+ALTER TABLE [RenamedCustomers] ADD PERIOD FOR SYSTEM_TIME ([SystemTimeStart], [SystemTimeEnd])
+""",
+                //
+                """
+ALTER TABLE [RenamedCustomers] ALTER COLUMN [SystemTimeStart] ADD HIDDEN
+""",
+                //
+                """
+ALTER TABLE [RenamedCustomers] ALTER COLUMN [SystemTimeEnd] ADD HIDDEN
+""",
+                //
+                """
+IF SCHEMA_ID(N'historySchema') IS NULL EXEC(N'CREATE SCHEMA [historySchema];');
+""",
+                //
+                """
+ALTER TABLE [RenamedCustomers] SET (SYSTEM_VERSIONING = ON (HISTORY_TABLE = [historySchema].[HistoryTable]))
+""");
+    }
+
+    [ConditionalFact]
     public virtual async Task Temporal_multiop_drop_temporal_table_and_add_slightly_different_table_with_the_same_name_in_one_migration()
     {
         await TestComposite(
@@ -11314,8 +11444,6 @@ CREATE TABLE [Customers] (
 ) WITH (SYSTEM_VERSIONING = ON (HISTORY_TABLE = [finalHistorySchema].[FinalHistoryTable]));
 """);
     }
-
-
 
     [ConditionalFact]
     public virtual async Task Temporal_multiop_drop_temporal_create_normal_add_column_rename_convert_to_temporal_drop_create_again_as_temporal_convert_to_normal_edit_drop()
@@ -11449,9 +11577,671 @@ CREATE TABLE [Customers] (
 
         AssertSql(
 """
-ALT
+ALTER TABLE [Customers] SET (SYSTEM_VERSIONING = OFF)
+""",
+                //
+                """
+DROP TABLE [Customers];
+""",
+                //
+                """
+DROP TABLE [historySchema].[HistoryTable];
+""",
+                //
+                """
+CREATE TABLE [Customers] (
+    [Id] int NOT NULL IDENTITY,
+    [Name] nvarchar(max) NULL,
+    CONSTRAINT [PK_Customers] PRIMARY KEY ([Id])
+);
+""",
+                //
+                """
+ALTER TABLE [Customers] ADD [Extra] nvarchar(max) NULL;
+""",
+                //
+                """
+ALTER TABLE [Customers] DROP CONSTRAINT [PK_Customers];
+""",
+                //
+                """
+EXEC sp_rename N'[Customers]', N'RenamedCustomers', 'OBJECT';
+""",
+                //
+                """
+ALTER TABLE [RenamedCustomers] ADD CONSTRAINT [PK_RenamedCustomers] PRIMARY KEY ([Id]);
+""",
+                //
+                """
+ALTER TABLE [RenamedCustomers] ADD [SystemTimeEnd] datetime2 NOT NULL DEFAULT '9999-12-31T23:59:59.9999999';
+""",
+                //
+                """
+ALTER TABLE [RenamedCustomers] ADD [SystemTimeStart] datetime2 NOT NULL DEFAULT '0001-01-01T00:00:00.0000000';
+""",
+                //
+                """
+DROP TABLE [RenamedCustomers];
+""",
+                //
+                """
+IF SCHEMA_ID(N'historySchema') IS NULL EXEC(N'CREATE SCHEMA [historySchema];');
+""",
+                //
+                """
+CREATE TABLE [BrandNewCustomers] (
+    [Id] int NOT NULL IDENTITY,
+    [Extra] nvarchar(max) NULL,
+    [Name] nvarchar(max) NULL,
+    [SystemTimeEnd] datetime2 GENERATED ALWAYS AS ROW END HIDDEN NOT NULL,
+    [SystemTimeStart] datetime2 GENERATED ALWAYS AS ROW START HIDDEN NOT NULL,
+    CONSTRAINT [PK_BrandNewCustomers] PRIMARY KEY ([Id]),
+    PERIOD FOR SYSTEM_TIME([SystemTimeStart], [SystemTimeEnd])
+) WITH (SYSTEM_VERSIONING = ON (HISTORY_TABLE = [historySchema].[HistoryTable]));
+""",
+                //
+                """
+ALTER TABLE [BrandNewCustomers] SET (SYSTEM_VERSIONING = OFF)
+""",
+                //
+                """
+ALTER TABLE [BrandNewCustomers] DROP PERIOD FOR SYSTEM_TIME
+""",
+                //
+                """
+DECLARE @var0 sysname;
+SELECT @var0 = [d].[name]
+FROM [sys].[default_constraints] [d]
+INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+WHERE ([d].[parent_object_id] = OBJECT_ID(N'[BrandNewCustomers]') AND [c].[name] = N'SystemTimeEnd');
+IF @var0 IS NOT NULL EXEC(N'ALTER TABLE [BrandNewCustomers] DROP CONSTRAINT [' + @var0 + '];');
+ALTER TABLE [BrandNewCustomers] DROP COLUMN [SystemTimeEnd];
+""",
+                //
+                """
+DECLARE @var1 sysname;
+SELECT @var1 = [d].[name]
+FROM [sys].[default_constraints] [d]
+INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+WHERE ([d].[parent_object_id] = OBJECT_ID(N'[BrandNewCustomers]') AND [c].[name] = N'SystemTimeStart');
+IF @var1 IS NOT NULL EXEC(N'ALTER TABLE [BrandNewCustomers] DROP CONSTRAINT [' + @var1 + '];');
+ALTER TABLE [BrandNewCustomers] DROP COLUMN [SystemTimeStart];
+""",
+                //
+                """
+DROP TABLE [historySchema].[HistoryTable];
+""",
+                //
+                """
+DECLARE @var2 sysname;
+SELECT @var2 = [d].[name]
+FROM [sys].[default_constraints] [d]
+INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+WHERE ([d].[parent_object_id] = OBJECT_ID(N'[BrandNewCustomers]') AND [c].[name] = N'Extra');
+IF @var2 IS NOT NULL EXEC(N'ALTER TABLE [BrandNewCustomers] DROP CONSTRAINT [' + @var2 + '];');
+ALTER TABLE [BrandNewCustomers] DROP COLUMN [Extra];
+""",
+                //
+                """
+DROP TABLE [BrandNewCustomers];
 """);
     }
+
+    [ConditionalFact]
+    public virtual async Task Temporal_multiop_many_renames()
+    {
+        await TestComposite(
+            [
+                builder => builder.Entity(
+                    "Customer", e =>
+                    {
+                        e.Property<int>("Id").ValueGeneratedOnAdd();
+                        e.Property<string>("Name");
+                        e.Property<DateTime>("SystemTimeStart").ValueGeneratedOnAddOrUpdate();
+                        e.Property<DateTime>("SystemTimeEnd").ValueGeneratedOnAddOrUpdate();
+                        e.HasKey("Id");
+
+                        e.ToTable(
+                            "CustomersOne", tb => tb.IsTemporal(
+                                ttb =>
+                                {
+                                    ttb.UseHistoryTable("HistoryTable", "historySchema");
+                                    ttb.HasPeriodStart("SystemTimeStart");
+                                    ttb.HasPeriodEnd("SystemTimeEnd");
+                                }));
+                    }),
+                builder => builder.Entity(
+                    "Customer", e =>
+                    {
+                        e.Property<int>("Id").ValueGeneratedOnAdd();
+                        e.Property<string>("Name");
+                        e.Property<DateTime>("SystemTimeStart").ValueGeneratedOnAddOrUpdate();
+                        e.Property<DateTime>("SystemTimeEnd").ValueGeneratedOnAddOrUpdate();
+                        e.HasKey("Id");
+
+                        e.ToTable(
+                            "CustomersTwo", tb => tb.IsTemporal(
+                                ttb =>
+                                {
+                                    ttb.UseHistoryTable("HistoryTable", "historySchema");
+                                    ttb.HasPeriodStart("SystemTimeStart");
+                                    ttb.HasPeriodEnd("SystemTimeEnd");
+                                }));
+                    }),
+                builder => builder.Entity(
+                    "Customer", e =>
+                    {
+                        e.Property<int>("Id").ValueGeneratedOnAdd();
+                        e.Property<string>("Name");
+                        e.Property<DateTime>("SystemTimeStart").ValueGeneratedOnAddOrUpdate();
+                        e.Property<DateTime>("SystemTimeEnd").ValueGeneratedOnAddOrUpdate();
+                        e.HasKey("Id");
+
+                        e.ToTable(
+                            "CustomersThree", tb => tb.IsTemporal(
+                                ttb =>
+                                {
+                                    ttb.UseHistoryTable("HistoryTable", "historySchema");
+                                    ttb.HasPeriodStart("SystemTimeStart");
+                                    ttb.HasPeriodEnd("SystemTimeEnd");
+                                }));
+                    }),
+                builder => builder.Entity(
+                    "Customer", e =>
+                    {
+                        e.Property<int>("Id").ValueGeneratedOnAdd();
+                        e.Property<string>("Name");
+                        e.HasKey("Id");
+
+                        e.ToTable("CustomersFour");
+                    }),
+                builder => builder.Entity(
+                    "Customer", e =>
+                    {
+                        e.Property<int>("Id").ValueGeneratedOnAdd();
+                        e.Property<string>("Name");
+                        e.HasKey("Id");
+
+                        e.ToTable("CustomersFive");
+                    }),
+                builder => builder.Entity(
+                    "Customer", e =>
+                    {
+                        e.Property<int>("Id").ValueGeneratedOnAdd();
+                        e.Property<string>("Name");
+                        e.HasKey("Id");
+
+                        e.ToTable("CustomersSix");
+                    }),
+            ],
+            model => { });
+
+        AssertSql(
+"""
+ALTER TABLE [CustomersOne] SET (SYSTEM_VERSIONING = OFF)
+""",
+                //
+                """
+ALTER TABLE [CustomersOne] DROP CONSTRAINT [PK_CustomersOne];
+""",
+                //
+                """
+EXEC sp_rename N'[CustomersOne]', N'CustomersTwo', 'OBJECT';
+""",
+                //
+                """
+ALTER TABLE [CustomersTwo] ADD CONSTRAINT [PK_CustomersTwo] PRIMARY KEY ([Id]);
+""",
+                //
+                """
+ALTER TABLE [CustomersTwo] DROP CONSTRAINT [PK_CustomersTwo];
+""",
+                //
+                """
+EXEC sp_rename N'[CustomersTwo]', N'CustomersThree', 'OBJECT';
+""",
+                //
+                """
+ALTER TABLE [CustomersThree] ADD CONSTRAINT [PK_CustomersThree] PRIMARY KEY ([Id]);
+""",
+                //
+                """
+ALTER TABLE [CustomersThree] DROP CONSTRAINT [PK_CustomersThree];
+""",
+                //
+                """
+ALTER TABLE [CustomersThree] DROP PERIOD FOR SYSTEM_TIME
+""",
+                //
+                """
+DECLARE @var0 sysname;
+SELECT @var0 = [d].[name]
+FROM [sys].[default_constraints] [d]
+INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+WHERE ([d].[parent_object_id] = OBJECT_ID(N'[CustomersThree]') AND [c].[name] = N'SystemTimeEnd');
+IF @var0 IS NOT NULL EXEC(N'ALTER TABLE [CustomersThree] DROP CONSTRAINT [' + @var0 + '];');
+ALTER TABLE [CustomersThree] DROP COLUMN [SystemTimeEnd];
+""",
+                //
+                """
+DECLARE @var1 sysname;
+SELECT @var1 = [d].[name]
+FROM [sys].[default_constraints] [d]
+INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+WHERE ([d].[parent_object_id] = OBJECT_ID(N'[CustomersThree]') AND [c].[name] = N'SystemTimeStart');
+IF @var1 IS NOT NULL EXEC(N'ALTER TABLE [CustomersThree] DROP CONSTRAINT [' + @var1 + '];');
+ALTER TABLE [CustomersThree] DROP COLUMN [SystemTimeStart];
+""",
+                //
+                """
+EXEC sp_rename N'[CustomersThree]', N'CustomersFour', 'OBJECT';
+""",
+                //
+                """
+DROP TABLE [historySchema].[HistoryTable];
+""",
+                //
+                """
+ALTER TABLE [CustomersFour] ADD CONSTRAINT [PK_CustomersFour] PRIMARY KEY ([Id]);
+""",
+                //
+                """
+ALTER TABLE [CustomersFour] DROP CONSTRAINT [PK_CustomersFour];
+""",
+                //
+                """
+EXEC sp_rename N'[CustomersFour]', N'CustomersFive', 'OBJECT';
+""",
+                //
+                """
+ALTER TABLE [CustomersFive] ADD CONSTRAINT [PK_CustomersFive] PRIMARY KEY ([Id]);
+""",
+                //
+                """
+ALTER TABLE [CustomersFive] DROP CONSTRAINT [PK_CustomersFive];
+""",
+                //
+                """
+EXEC sp_rename N'[CustomersFive]', N'CustomersSix', 'OBJECT';
+""",
+                //
+                """
+ALTER TABLE [CustomersSix] ADD CONSTRAINT [PK_CustomersSix] PRIMARY KEY ([Id]);
+""");
+    }
+
+    [ConditionalFact]
+    public virtual async Task Temporal_multiop_convert_temporal_to_regular_and_back()
+    {
+        await TestComposite(
+            [
+                builder => builder.Entity(
+                    "Customer", e =>
+                    {
+                        e.Property<int>("Id").ValueGeneratedOnAdd();
+                        e.Property<string>("Name");
+                        e.Property<DateTime>("SystemTimeStart").ValueGeneratedOnAddOrUpdate();
+                        e.Property<DateTime>("SystemTimeEnd").ValueGeneratedOnAddOrUpdate();
+                        e.HasKey("Id");
+
+                        e.ToTable(
+                            "Customers", tb => tb.IsTemporal(
+                                ttb =>
+                                {
+                                    ttb.UseHistoryTable("HistoryTable", "historySchema");
+                                    ttb.HasPeriodStart("SystemTimeStart");
+                                    ttb.HasPeriodEnd("SystemTimeEnd");
+                                }));
+                    }),
+                builder => builder.Entity(
+                    "Customer", e =>
+                    {
+                        e.Property<int>("Id").ValueGeneratedOnAdd();
+                        e.Property<string>("Name");
+                        e.HasKey("Id");
+
+                        e.ToTable("Customers");
+                    }),
+                builder => builder.Entity(
+                    "Customer", e =>
+                    {
+                        e.Property<int>("Id").ValueGeneratedOnAdd();
+                        e.Property<string>("Name");
+                        e.Property<DateTime>("SystemTimeStart").ValueGeneratedOnAddOrUpdate();
+                        e.Property<DateTime>("SystemTimeEnd").ValueGeneratedOnAddOrUpdate();
+                        e.HasKey("Id");
+
+                        e.ToTable(
+                            "Customers", tb => tb.IsTemporal(
+                                ttb =>
+                                {
+                                    ttb.UseHistoryTable("HistoryTable", "historySchema");
+                                    ttb.HasPeriodStart("SystemTimeStart");
+                                    ttb.HasPeriodEnd("SystemTimeEnd");
+                                }));
+                    }),
+            ],
+            model => { });
+
+        AssertSql(
+"""
+ALTER TABLE [Customers] SET (SYSTEM_VERSIONING = OFF)
+""",
+                //
+                """
+ALTER TABLE [Customers] DROP PERIOD FOR SYSTEM_TIME
+""",
+                //
+                """
+DECLARE @var0 sysname;
+SELECT @var0 = [d].[name]
+FROM [sys].[default_constraints] [d]
+INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+WHERE ([d].[parent_object_id] = OBJECT_ID(N'[Customers]') AND [c].[name] = N'SystemTimeEnd');
+IF @var0 IS NOT NULL EXEC(N'ALTER TABLE [Customers] DROP CONSTRAINT [' + @var0 + '];');
+ALTER TABLE [Customers] DROP COLUMN [SystemTimeEnd];
+""",
+                //
+                """
+DECLARE @var1 sysname;
+SELECT @var1 = [d].[name]
+FROM [sys].[default_constraints] [d]
+INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+WHERE ([d].[parent_object_id] = OBJECT_ID(N'[Customers]') AND [c].[name] = N'SystemTimeStart');
+IF @var1 IS NOT NULL EXEC(N'ALTER TABLE [Customers] DROP CONSTRAINT [' + @var1 + '];');
+ALTER TABLE [Customers] DROP COLUMN [SystemTimeStart];
+""",
+                //
+                """
+DROP TABLE [historySchema].[HistoryTable];
+""",
+                //
+                """
+ALTER TABLE [Customers] ADD [SystemTimeEnd] datetime2 NOT NULL DEFAULT '9999-12-31T23:59:59.9999999';
+""",
+                //
+                """
+ALTER TABLE [Customers] ADD [SystemTimeStart] datetime2 NOT NULL DEFAULT '0001-01-01T00:00:00.0000000';
+""",
+                //
+                """
+ALTER TABLE [Customers] ADD PERIOD FOR SYSTEM_TIME ([SystemTimeStart], [SystemTimeEnd])
+""",
+                //
+                """
+ALTER TABLE [Customers] ALTER COLUMN [SystemTimeStart] ADD HIDDEN
+""",
+                //
+                """
+ALTER TABLE [Customers] ALTER COLUMN [SystemTimeEnd] ADD HIDDEN
+""",
+                //
+                """
+IF SCHEMA_ID(N'historySchema') IS NULL EXEC(N'CREATE SCHEMA [historySchema];');
+""",
+                //
+                """
+ALTER TABLE [Customers] SET (SYSTEM_VERSIONING = ON (HISTORY_TABLE = [historySchema].[HistoryTable]))
+""");
+    }
+
+    [ConditionalFact]
+    public virtual async Task Temporal_multiop_convert_regular_to_temporal_and_back()
+    {
+        await TestComposite(
+            [
+                builder => builder.Entity(
+                    "Customer", e =>
+                    {
+                        e.Property<int>("Id").ValueGeneratedOnAdd();
+                        e.Property<string>("Name");
+                        e.HasKey("Id");
+
+                        e.ToTable("Customers");
+                    }),
+                builder => builder.Entity(
+                    "Customer", e =>
+                    {
+                        e.Property<int>("Id").ValueGeneratedOnAdd();
+                        e.Property<string>("Name");
+                        e.Property<DateTime>("SystemTimeStart").ValueGeneratedOnAddOrUpdate();
+                        e.Property<DateTime>("SystemTimeEnd").ValueGeneratedOnAddOrUpdate();
+                        e.HasKey("Id");
+
+                        e.ToTable(
+                            "Customers", tb => tb.IsTemporal(
+                                ttb =>
+                                {
+                                    ttb.UseHistoryTable("HistoryTable", "historySchema");
+                                    ttb.HasPeriodStart("SystemTimeStart");
+                                    ttb.HasPeriodEnd("SystemTimeEnd");
+                                }));
+                    }),
+                builder => builder.Entity(
+                    "Customer", e =>
+                    {
+                        e.Property<int>("Id").ValueGeneratedOnAdd();
+                        e.Property<string>("Name");
+                        e.HasKey("Id");
+
+                        e.ToTable("Customers");
+                    }),
+            ],
+            model => { });
+
+        AssertSql(
+"""
+ALTER TABLE [Customers] ADD [SystemTimeEnd] datetime2 NOT NULL DEFAULT '9999-12-31T23:59:59.9999999';
+""",
+                //
+                """
+ALTER TABLE [Customers] ADD [SystemTimeStart] datetime2 NOT NULL DEFAULT '0001-01-01T00:00:00.0000000';
+""",
+                //
+                """
+DECLARE @var0 sysname;
+SELECT @var0 = [d].[name]
+FROM [sys].[default_constraints] [d]
+INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+WHERE ([d].[parent_object_id] = OBJECT_ID(N'[Customers]') AND [c].[name] = N'SystemTimeEnd');
+IF @var0 IS NOT NULL EXEC(N'ALTER TABLE [Customers] DROP CONSTRAINT [' + @var0 + '];');
+ALTER TABLE [Customers] DROP COLUMN [SystemTimeEnd];
+""",
+                //
+                """
+DECLARE @var1 sysname;
+SELECT @var1 = [d].[name]
+FROM [sys].[default_constraints] [d]
+INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+WHERE ([d].[parent_object_id] = OBJECT_ID(N'[Customers]') AND [c].[name] = N'SystemTimeStart');
+IF @var1 IS NOT NULL EXEC(N'ALTER TABLE [Customers] DROP CONSTRAINT [' + @var1 + '];');
+ALTER TABLE [Customers] DROP COLUMN [SystemTimeStart];
+""");
+    }
+
+    [ConditionalFact]
+    public virtual async Task Temporal_multiop_add_sparse_column_to_temporal_table_then_remove_it()
+    {
+        await TestComposite(
+            [
+                builder => builder.Entity(
+                    "Customer", e =>
+                    {
+                        e.Property<int>("Id").ValueGeneratedOnAdd();
+                        e.Property<string>("Name");
+                        e.Property<DateTime>("SystemTimeStart").ValueGeneratedOnAddOrUpdate();
+                        e.Property<DateTime>("SystemTimeEnd").ValueGeneratedOnAddOrUpdate();
+                        e.HasKey("Id");
+
+                        e.ToTable(
+                            "Customers", tb => tb.IsTemporal(
+                                ttb =>
+                                {
+                                    ttb.UseHistoryTable("HistoryTable", "historySchema");
+                                    ttb.HasPeriodStart("SystemTimeStart");
+                                    ttb.HasPeriodEnd("SystemTimeEnd");
+                                }));
+                    }),
+                builder => builder.Entity(
+                    "Customer", e =>
+                    {
+                        e.Property<int>("Id").ValueGeneratedOnAdd();
+                        e.Property<string>("Name");
+                        e.Property<int?>("MyColumn").IsSparse();
+                        e.Property<DateTime>("SystemTimeStart").ValueGeneratedOnAddOrUpdate();
+                        e.Property<DateTime>("SystemTimeEnd").ValueGeneratedOnAddOrUpdate();
+                        e.HasKey("Id");
+
+                        e.ToTable(
+                            "Customers", tb => tb.IsTemporal(
+                                ttb =>
+                                {
+                                    ttb.UseHistoryTable("HistoryTable", "historySchema");
+                                    ttb.HasPeriodStart("SystemTimeStart");
+                                    ttb.HasPeriodEnd("SystemTimeEnd");
+                                }));
+                    }),
+                builder => builder.Entity(
+                    "Customer", e =>
+                    {
+                        e.Property<int>("Id").ValueGeneratedOnAdd();
+                        e.Property<string>("Name");
+                        e.Property<DateTime>("SystemTimeStart").ValueGeneratedOnAddOrUpdate();
+                        e.Property<DateTime>("SystemTimeEnd").ValueGeneratedOnAddOrUpdate();
+                        e.HasKey("Id");
+
+                        e.ToTable(
+                            "Customers", tb => tb.IsTemporal(
+                                ttb =>
+                                {
+                                    ttb.UseHistoryTable("HistoryTable", "historySchema");
+                                    ttb.HasPeriodStart("SystemTimeStart");
+                                    ttb.HasPeriodEnd("SystemTimeEnd");
+                                }));
+                    }),
+            ],
+            model => { });
+
+        AssertSql(
+"""
+ALTER TABLE [Customers] SET (SYSTEM_VERSIONING = OFF)
+""",
+                //
+                """
+IF EXISTS (SELECT 1 FROM [sys].[tables] [t] INNER JOIN [sys].[partitions] [p] ON [t].[object_id] = [p].[object_id] WHERE [t].[name] = 'HistoryTable' AND [t].[schema_id] = schema_id('historySchema') AND data_compression <> 0)
+EXEC(N'ALTER TABLE [historySchema].[HistoryTable] REBUILD PARTITION = ALL WITH (DATA_COMPRESSION = NONE);');
+""",
+                //
+                """
+ALTER TABLE [Customers] ADD [MyColumn] int SPARSE NULL;
+""",
+                //
+                """
+ALTER TABLE [historySchema].[HistoryTable] ADD [MyColumn] int SPARSE NULL;
+""",
+                //
+                """
+DECLARE @var0 sysname;
+SELECT @var0 = [d].[name]
+FROM [sys].[default_constraints] [d]
+INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+WHERE ([d].[parent_object_id] = OBJECT_ID(N'[Customers]') AND [c].[name] = N'MyColumn');
+IF @var0 IS NOT NULL EXEC(N'ALTER TABLE [Customers] DROP CONSTRAINT [' + @var0 + '];');
+ALTER TABLE [Customers] DROP COLUMN [MyColumn];
+""",
+                //
+                """
+DECLARE @var1 sysname;
+SELECT @var1 = [d].[name]
+FROM [sys].[default_constraints] [d]
+INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+WHERE ([d].[parent_object_id] = OBJECT_ID(N'[historySchema].[HistoryTable]') AND [c].[name] = N'MyColumn');
+IF @var1 IS NOT NULL EXEC(N'ALTER TABLE [historySchema].[HistoryTable] DROP CONSTRAINT [' + @var1 + '];');
+ALTER TABLE [historySchema].[HistoryTable] DROP COLUMN [MyColumn];
+""",
+                //
+                """
+ALTER TABLE [Customers] SET (SYSTEM_VERSIONING = ON (HISTORY_TABLE = [historySchema].[HistoryTable]))
+""");
+    }
+
+
+
+
+
+
+
+
+
+
+
+    [ConditionalFact]
+    public virtual async Task Temporal_multiop_add_sparse_column_to_temporal_then_convert_to_regular()
+    {
+        await TestComposite(
+            [
+                builder => builder.Entity(
+                    "Customer", e =>
+                    {
+                        e.Property<int>("Id").ValueGeneratedOnAdd();
+                        e.Property<string>("Name");
+                        e.Property<DateTime>("SystemTimeStart").ValueGeneratedOnAddOrUpdate();
+                        e.Property<DateTime>("SystemTimeEnd").ValueGeneratedOnAddOrUpdate();
+                        e.HasKey("Id");
+
+                        e.ToTable(
+                            "Customers", tb => tb.IsTemporal(
+                                ttb =>
+                                {
+                                    ttb.UseHistoryTable("HistoryTable", "historySchema");
+                                    ttb.HasPeriodStart("SystemTimeStart");
+                                    ttb.HasPeriodEnd("SystemTimeEnd");
+                                }));
+                    }),
+                builder => builder.Entity(
+                    "Customer", e =>
+                    {
+                        e.Property<int>("Id").ValueGeneratedOnAdd();
+                        e.Property<string>("Name");
+                        e.Property<int?>("MyColumn").IsSparse();
+                        e.Property<DateTime>("SystemTimeStart").ValueGeneratedOnAddOrUpdate();
+                        e.Property<DateTime>("SystemTimeEnd").ValueGeneratedOnAddOrUpdate();
+                        e.HasKey("Id");
+
+                        e.ToTable(
+                            "Customers", tb => tb.IsTemporal(
+                                ttb =>
+                                {
+                                    ttb.UseHistoryTable("HistoryTable", "historySchema");
+                                    ttb.HasPeriodStart("SystemTimeStart");
+                                    ttb.HasPeriodEnd("SystemTimeEnd");
+                                }));
+                    }),
+                builder => builder.Entity(
+                    "Customer", e =>
+                    {
+                        e.Property<int>("Id").ValueGeneratedOnAdd();
+                        e.Property<string>("Name");
+                        e.HasKey("Id");
+
+                        e.ToTable("Customers");
+                    }),
+            ],
+            model => { });
+
+        AssertSql(
+"""
+ALTER TABLE [CustomTable]))
+""");
+    }
+
+
+
+
+
+
+
+
 
 
 

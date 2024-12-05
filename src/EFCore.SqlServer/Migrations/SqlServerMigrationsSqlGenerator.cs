@@ -2414,6 +2414,13 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
         var temporalTableInformationMap = new Dictionary<(string TableName, string? Schema), TemporalOperationInformation>();
         var participatingTables = new List<(string TableName, string? Schema)>();
 
+        // default schema can also change as part of migration operations
+        // we need to do similar approach for it - find what is the initial default schema
+        // which is first EnsureSchemaOperation or default schema from the model if no ESO are present
+        // as we are are looping over migration ops we need to update the default schema as it changes, so that we always
+        // put a correct entry into the temporalTableInformationMap (which contains table and schema)
+        var defaultSchema = migrationOperations.OfType<EnsureSchemaOperation>().FirstOrDefault()?.Name ?? model?.GetDefaultSchema();
+
         foreach (var operation in migrationOperations)
         {
             switch (operation)
@@ -2422,7 +2429,7 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                 {
                     var tableName = createTableOperation.Name;
                     var rawSchema = createTableOperation.Schema;
-                    var schema = rawSchema ?? model?.GetDefaultSchema();
+                    var schema = rawSchema ?? defaultSchema;// model?.GetDefaultSchema();
                     if (!temporalTableInformationMap.ContainsKey((tableName, rawSchema)))
                     {
                         var temporalTableInformation = BuildTemporalInformationFromMigrationOperation(schema, createTableOperation);
@@ -2436,7 +2443,7 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                 {
                     var tableName = dropTableOperation.Name;
                     var rawSchema = dropTableOperation.Schema;
-                    var schema = rawSchema ?? model?.GetDefaultSchema();
+                    var schema = rawSchema ?? defaultSchema;// model?.GetDefaultSchema();
                     if (!temporalTableInformationMap.ContainsKey((tableName, rawSchema)))
                     {
                         var temporalTableInformation = BuildTemporalInformationFromMigrationOperation(schema, dropTableOperation);
@@ -2450,10 +2457,10 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                 {
                     var tableName = renameTableOperation.Name;
                     var rawSchema = renameTableOperation.Schema;
-                    var schema = rawSchema ?? model?.GetDefaultSchema();
+                    var schema = rawSchema ?? defaultSchema;//  model?.GetDefaultSchema();
                     var newTableName = renameTableOperation.NewName!;
                     var newRawSchema = renameTableOperation.NewSchema;
-                    var newSchema = newRawSchema ?? model?.GetDefaultSchema();
+                    var newSchema = newRawSchema ?? defaultSchema;//  model?.GetDefaultSchema();
 
                     var temporalTableInformation = BuildTemporalInformationFromMigrationOperation(schema, renameTableOperation);
                     if (!temporalTableInformationMap.ContainsKey((tableName, rawSchema)))
@@ -2475,7 +2482,7 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                 {
                     var tableName = alterTableOperation.Name;
                     var rawSchema = alterTableOperation.Schema;
-                    var schema = rawSchema ?? model?.GetDefaultSchema();
+                    var schema = rawSchema ?? defaultSchema;// model?.GetDefaultSchema();
                     if (!temporalTableInformationMap.ContainsKey((tableName, rawSchema)))
                     {
                         // we create the temporal info based on the OLD table here - we want the initial state
@@ -2499,10 +2506,15 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                     break;
                 }
 
+                case EnsureSchemaOperation ensureSchemaOperation:
+                {
+                    defaultSchema = ensureSchemaOperation.Name;
+                    break;
+                }
+
                 // drop/rename index
                 // drop/rename/restart sequence
                 // drop database
-                // ensure schema
                 // (custom) sql
                 // for these we just add operation to the list without any processing
                 default:

@@ -2406,11 +2406,13 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
         // to fix that, we loop through all the operations and extract initial temporal state for relevant tables
         // if we don't encounter any table operations, then we can take information from the model
         // since migration hasn't changed it at all - be we can only know that after looping though all ops
-        // once we have the initial state of the table, we can update it each time we encounter a table operation
-        // and we can use what we stored when dealing with all other operations (that don't contain temporal annotations themselves)
+        // when we process the operations properly, once we have the initial state of the table we can update it each time
+        // we encounter a table operation and we can use what we stored when dealing with all other operations
+        // (that don't contain temporal annotations themselves)
+        // for table operations it's also good idea to compare what annotation constains with what we think should be there
+        // to catch potential bugs 
         var temporalTableInformationMap = new Dictionary<(string TableName, string? Schema), TemporalOperationInformation>();
-        var missingTemporalTableInformation = new List<(string TableName, string? Schema)>();
-
+        var participatingTables = new List<(string TableName, string? Schema)>();
 
         foreach (var operation in migrationOperations)
         {
@@ -2427,11 +2429,6 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                         temporalTableInformationMap[(tableName, rawSchema)] = temporalTableInformation;
                     }
 
-                    // no need to remove from missingTemporalTableInformation - CreateTable should be first operation for this table
-                    // so there can't be entry for it in missingTemporalTableInformation (they are added by other/earlier operations on that table)
-                    // the only possibility is that we had a table before, dropped it and now creating a new table with the same name
-                    // but in this case we would have generated the necessary information from the DropTableOperation
-                    // and also removed the missingTemporalTableInformation entry if there was one before
                     break;
                 }
 
@@ -2446,7 +2443,6 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                         temporalTableInformationMap[(tableName, rawSchema)] = temporalTableInformation;
                     }
 
-                    missingTemporalTableInformation.Remove((tableName, rawSchema));
                     break;
                 }
 
@@ -2472,9 +2468,6 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                         temporalTableInformationMap[(newTableName, newRawSchema)] = temporalTableInformation;
                     }
 
-                    missingTemporalTableInformation.Remove((tableName, rawSchema));
-                    missingTemporalTableInformation.Remove((newTableName, newRawSchema));
-
                     break;
                 }
 
@@ -2490,25 +2483,30 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                         temporalTableInformationMap[(tableName, rawSchema)] = temporalTableInformation;
                     }
 
-                    missingTemporalTableInformation.Remove((tableName, schema));
                     break;
                 }
 
-                default:
+                case ITableMigrationOperation tableMigrationOperation:
                 {
-                    if (operation is ITableMigrationOperation tableMigrationOperation)
+                    var tableName = tableMigrationOperation.Table;
+                    var rawSchema = tableMigrationOperation.Schema;
+
+                    if (!participatingTables.Contains((tableName, rawSchema)))
                     {
-                        var tableName = tableMigrationOperation.Table;
-                        var rawSchema = tableMigrationOperation.Schema;
-                        if (!temporalTableInformationMap.ContainsKey((tableName, rawSchema))
-                            && !missingTemporalTableInformation.Contains((tableName, rawSchema)))
-                        {
-                            missingTemporalTableInformation.Add((tableName, rawSchema));
-                        }
+                        participatingTables.Add((tableName, rawSchema));
                     }
 
                     break;
                 }
+
+                // drop/rename index
+                // drop/rename/restart sequence
+                // drop database
+                // ensure schema
+                // (custom) sql
+                // for these we just add operation to the list without any processing
+                default:
+                    break;
             }
         }
 
@@ -2516,7 +2514,8 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
         // if we can't figure out proper temporal info from table annotations,
         // and we don't have it in relational model (for whatever reason) we assume table is not temporal
         // this last step is purely defensive and shouldn't happen in real situations
-        foreach (var missingInfo in missingTemporalTableInformation)
+        //foreach (var missingInfo in missingTemporalTableInformation)
+        foreach (var missingInfo in participatingTables.Where(x => !temporalTableInformationMap.ContainsKey(x)))
         {
             var table = model?.GetRelationalModel().FindTable(missingInfo.TableName, missingInfo.Schema)!;
             if (table != null)
@@ -2545,11 +2544,6 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
         // information we stored in the initial pass and updated in when processing table ops that happened earlier
         foreach (var operation in migrationOperations)
         {
-            //if (operations.Count > 4)
-            //{
-            //    throw new InvalidOperationException();
-            //}
-
             if (operation is EnsureSchemaOperation ensureSchemaOperation)
             {
                 availableSchemas.Add(ensureSchemaOperation.Name);
@@ -3013,6 +3007,7 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
 
                         operations.Add(alterColumnOperation);
 
+                        // mirror the operation to the history table (assuming it exists and that we disabled versioning)
                         if (temporalInformation.DisabledVersioning && temporalInformation.HistoryTableExists)
                         {
                             var alterHistoryTableColumn = CopyColumnOperation<AlterColumnOperation>(alterColumnOperation);
@@ -3024,25 +3019,6 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
 
                             operations.Add(alterHistoryTableColumn);
                         }
-
-                        //// when modifying a period column, we need to perform the operations as a normal column first, and only later enable period
-                        //// removing the period information now, so that when we generate SQL that modifies the column we won't be making them auto generated as period
-                        //// (making column auto generated is not allowed in ALTER COLUMN statement)
-                        //// in later operation we enable the period and the period columns get set to auto generated automatically
-                        ////
-                        //// if the column is not period we just remove temporal information - it's no longer needed and could affect the generated sql
-                        //// we will generate all the necessary operations involved with temporal tables here
-                        //if (temporalInformation.DisabledVersioning && temporalInformation.HistoryTableExists)
-                        //{
-                        //    var alterHistoryTableColumn = CopyColumnOperation<AlterColumnOperation>(alterColumnOperation);
-                        //    alterHistoryTableColumn.Table = temporalInformation.HistoryTableName!;
-                        //    alterHistoryTableColumn.Schema = temporalInformation.HistoryTableSchema;
-                        //    alterHistoryTableColumn.OldColumn = CopyColumnOperation<AddColumnOperation>(alterColumnOperation.OldColumn);
-                        //    alterHistoryTableColumn.OldColumn.Table = temporalInformation.HistoryTableName!;
-                        //    alterHistoryTableColumn.OldColumn.Schema = temporalInformation.HistoryTableSchema;
-
-                        //    operations.Add(alterHistoryTableColumn);
-                        //}
                     }
                     else
                     {

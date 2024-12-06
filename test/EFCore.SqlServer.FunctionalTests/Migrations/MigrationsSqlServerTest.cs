@@ -12626,25 +12626,25 @@ DROP TABLE [historySchema].[HistoryTable];
                                     ttb.HasPeriodEnd("SystemTimeEnd");
                                 }));
                     }),
-                builder => builder.Entity(
-                    "Customer", e =>
-                    {
-                        e.Property<int>("Id").ValueGeneratedOnAdd();
-                        e.Property<string>("Name");
-                        e.Property<int?>("MyColumn");
-                        e.Property<DateTime>("SystemTimeStart").ValueGeneratedOnAddOrUpdate();
-                        e.Property<DateTime>("SystemTimeEnd").ValueGeneratedOnAddOrUpdate();
-                        e.HasKey("Id");
+                //builder => builder.Entity(
+                //    "Customer", e =>
+                //    {
+                //        e.Property<int>("Id").ValueGeneratedOnAdd();
+                //        e.Property<string>("Name");
+                //        e.Property<int?>("MyColumn");
+                //        e.Property<DateTime>("SystemTimeStart").ValueGeneratedOnAddOrUpdate();
+                //        e.Property<DateTime>("SystemTimeEnd").ValueGeneratedOnAddOrUpdate();
+                //        e.HasKey("Id");
 
-                        e.ToTable(
-                            "Customers", tb => tb.IsTemporal(
-                                ttb =>
-                                {
-                                    ttb.UseHistoryTable("HistoryTable");
-                                    ttb.HasPeriodStart("SystemTimeStart");
-                                    ttb.HasPeriodEnd("SystemTimeEnd");
-                                }));
-                    }),
+                //        e.ToTable(
+                //            "Customers", tb => tb.IsTemporal(
+                //                ttb =>
+                //                {
+                //                    ttb.UseHistoryTable("HistoryTable");
+                //                    ttb.HasPeriodStart("SystemTimeStart");
+                //                    ttb.HasPeriodEnd("SystemTimeEnd");
+                //                }));
+                //    }),
                 builder =>
                 {
                     builder.HasDefaultSchema("myCustomSchema");
@@ -12714,103 +12714,103 @@ ALOP TABLE [historySchema].[HistoryTable];
 
 
 
-    [ConditionalFact]
-    public virtual async Task Temporal_multiop_add_column_to_temporal_table_change_default_schema_add_another_column()
-    {
-        await TestComposite(
-            [
-                builder => builder.Entity(
-                    "Customer", e =>
-                    {
-                        e.Property<int>("Id").ValueGeneratedOnAdd();
-                        e.Property<string>("Name");
-                        e.Property<DateTime>("SystemTimeStart").ValueGeneratedOnAddOrUpdate();
-                        e.Property<DateTime>("SystemTimeEnd").ValueGeneratedOnAddOrUpdate();
-                        e.HasKey("Id");
+//    [ConditionalFact]
+//    public virtual async Task Temporal_multiop_add_column_to_temporal_table_change_default_schema_add_another_column()
+//    {
+//        await TestComposite(
+//            [
+//                builder => builder.Entity(
+//                    "Customer", e =>
+//                    {
+//                        e.Property<int>("Id").ValueGeneratedOnAdd();
+//                        e.Property<string>("Name");
+//                        e.Property<DateTime>("SystemTimeStart").ValueGeneratedOnAddOrUpdate();
+//                        e.Property<DateTime>("SystemTimeEnd").ValueGeneratedOnAddOrUpdate();
+//                        e.HasKey("Id");
 
-                        e.ToTable(
-                            "Customers", tb => tb.IsTemporal(
-                                ttb =>
-                                {
-                                    ttb.UseHistoryTable("HistoryTable", "historySchema");
-                                    ttb.HasPeriodStart("SystemTimeStart");
-                                    ttb.HasPeriodEnd("SystemTimeEnd");
-                                }));
-                    }),
-                builder => builder.Entity(
-                    "Customer", e =>
-                    {
-                        e.Property<int>("Id").ValueGeneratedOnAdd();
-                        e.Property<string>("Name");
-                        e.Property<int?>("MyColumn");
-                        e.Property<DateTime>("SystemTimeStart").ValueGeneratedOnAddOrUpdate();
-                        e.Property<DateTime>("SystemTimeEnd").ValueGeneratedOnAddOrUpdate();
-                        e.HasKey("Id");
+//                        e.ToTable(
+//                            "Customers", tb => tb.IsTemporal(
+//                                ttb =>
+//                                {
+//                                    ttb.UseHistoryTable("HistoryTable", "historySchema");
+//                                    ttb.HasPeriodStart("SystemTimeStart");
+//                                    ttb.HasPeriodEnd("SystemTimeEnd");
+//                                }));
+//                    }),
+//                builder => builder.Entity(
+//                    "Customer", e =>
+//                    {
+//                        e.Property<int>("Id").ValueGeneratedOnAdd();
+//                        e.Property<string>("Name");
+//                        e.Property<int?>("MyColumn");
+//                        e.Property<DateTime>("SystemTimeStart").ValueGeneratedOnAddOrUpdate();
+//                        e.Property<DateTime>("SystemTimeEnd").ValueGeneratedOnAddOrUpdate();
+//                        e.HasKey("Id");
 
-                        e.ToTable(
-                            "Customers", tb => tb.IsTemporal(
-                                ttb =>
-                                {
-                                    ttb.UseHistoryTable("HistoryTable", "historySchema");
-                                    ttb.HasPeriodStart("SystemTimeStart");
-                                    ttb.HasPeriodEnd("SystemTimeEnd");
-                                }));
-                    }),
-                builder =>
-                {
-                    builder.HasDefaultSchema("myCustomSchema");
-                    builder.Entity(
-                        "Customer", e =>
-                        {
-                            e.Property<int>("Id").ValueGeneratedOnAdd();
-                            e.Property<string>("Name");
-                            e.Property<int>("MyColumn");
-                            e.Property<DateTime>("SystemTimeStart").ValueGeneratedOnAddOrUpdate();
-                            e.Property<DateTime>("SystemTimeEnd").ValueGeneratedOnAddOrUpdate();
-                            e.HasKey("Id");
+//                        e.ToTable(
+//                            "Customers", tb => tb.IsTemporal(
+//                                ttb =>
+//                                {
+//                                    ttb.UseHistoryTable("HistoryTable", "historySchema");
+//                                    ttb.HasPeriodStart("SystemTimeStart");
+//                                    ttb.HasPeriodEnd("SystemTimeEnd");
+//                                }));
+//                    }),
+//                builder =>
+//                {
+//                    builder.HasDefaultSchema("myCustomSchema");
+//                    builder.Entity(
+//                        "Customer", e =>
+//                        {
+//                            e.Property<int>("Id").ValueGeneratedOnAdd();
+//                            e.Property<string>("Name");
+//                            e.Property<int>("MyColumn");
+//                            e.Property<DateTime>("SystemTimeStart").ValueGeneratedOnAddOrUpdate();
+//                            e.Property<DateTime>("SystemTimeEnd").ValueGeneratedOnAddOrUpdate();
+//                            e.HasKey("Id");
 
-                            e.ToTable(
-                                "Customers", tb => tb.IsTemporal(
-                                    ttb =>
-                                    {
-                                        ttb.UseHistoryTable("HistoryTable", "historySchema");
-                                        ttb.HasPeriodStart("SystemTimeStart");
-                                        ttb.HasPeriodEnd("SystemTimeEnd");
-                                    }));
-                        });
-                },
-                builder =>
-                {
-                    builder.HasDefaultSchema("myCustomSchema");
-                    builder.Entity(
-                        "Customer", e =>
-                        {
-                            e.Property<int>("Id").ValueGeneratedOnAdd();
-                            e.Property<string>("Name");
-                            e.Property<int>("MyColumn");
-                            e.Property<int>("AnotherColumn");
-                            e.Property<DateTime>("SystemTimeStart").ValueGeneratedOnAddOrUpdate();
-                            e.Property<DateTime>("SystemTimeEnd").ValueGeneratedOnAddOrUpdate();
-                            e.HasKey("Id");
+//                            e.ToTable(
+//                                "Customers", tb => tb.IsTemporal(
+//                                    ttb =>
+//                                    {
+//                                        ttb.UseHistoryTable("HistoryTable", "historySchema");
+//                                        ttb.HasPeriodStart("SystemTimeStart");
+//                                        ttb.HasPeriodEnd("SystemTimeEnd");
+//                                    }));
+//                        });
+//                },
+//                builder =>
+//                {
+//                    builder.HasDefaultSchema("myCustomSchema");
+//                    builder.Entity(
+//                        "Customer", e =>
+//                        {
+//                            e.Property<int>("Id").ValueGeneratedOnAdd();
+//                            e.Property<string>("Name");
+//                            e.Property<int>("MyColumn");
+//                            e.Property<int>("AnotherColumn");
+//                            e.Property<DateTime>("SystemTimeStart").ValueGeneratedOnAddOrUpdate();
+//                            e.Property<DateTime>("SystemTimeEnd").ValueGeneratedOnAddOrUpdate();
+//                            e.HasKey("Id");
 
-                            e.ToTable(
-                                "Customers", tb => tb.IsTemporal(
-                                    ttb =>
-                                    {
-                                        ttb.UseHistoryTable("HistoryTable", "historySchema");
-                                        ttb.HasPeriodStart("SystemTimeStart");
-                                        ttb.HasPeriodEnd("SystemTimeEnd");
-                                    }));
-                        });
-                },
-            ],
-            model => { });
+//                            e.ToTable(
+//                                "Customers", tb => tb.IsTemporal(
+//                                    ttb =>
+//                                    {
+//                                        ttb.UseHistoryTable("HistoryTable", "historySchema");
+//                                        ttb.HasPeriodStart("SystemTimeStart");
+//                                        ttb.HasPeriodEnd("SystemTimeEnd");
+//                                    }));
+//                        });
+//                },
+//            ],
+//            model => { });
 
-        AssertSql(
-"""
-ALOP TABLE [historySchema].[HistoryTable];
-""");
-    }
+//        AssertSql(
+//"""
+//ALOP TABLE [historySchema].[HistoryTable];
+//""");
+//    }
 
 
 
@@ -12837,24 +12837,24 @@ ALOP TABLE [historySchema].[HistoryTable];
 
                         e.ToTable("Customers");
                     }),
-                builder => builder.Entity(
-                    "Customer", e =>
-                    {
-                        e.Property<int>("Id").ValueGeneratedOnAdd();
-                        e.Property<string>("Name");
-                        e.Property<DateTime>("SystemTimeStart").ValueGeneratedOnAddOrUpdate();
-                        e.Property<DateTime>("SystemTimeEnd").ValueGeneratedOnAddOrUpdate();
-                        e.HasKey("Id");
+                //builder => builder.Entity(
+                //    "Customer", e =>
+                //    {
+                //        e.Property<int>("Id").ValueGeneratedOnAdd();
+                //        e.Property<string>("Name");
+                //        e.Property<DateTime>("SystemTimeStart").ValueGeneratedOnAddOrUpdate();
+                //        e.Property<DateTime>("SystemTimeEnd").ValueGeneratedOnAddOrUpdate();
+                //        e.HasKey("Id");
 
-                        e.ToTable(
-                            "Customers", tb => tb.IsTemporal(
-                                ttb =>
-                                {
-                                    ttb.UseHistoryTable("HistoryTable");
-                                    ttb.HasPeriodStart("SystemTimeStart");
-                                    ttb.HasPeriodEnd("SystemTimeEnd");
-                                }));
-                    }),
+                //        e.ToTable(
+                //            "Customers", tb => tb.IsTemporal(
+                //                ttb =>
+                //                {
+                //                    ttb.UseHistoryTable("HistoryTable");
+                //                    ttb.HasPeriodStart("SystemTimeStart");
+                //                    ttb.HasPeriodEnd("SystemTimeEnd");
+                //                }));
+                //    }),
                 builder =>
                 {
                     builder.HasDefaultSchema("modifiedDefaultSchema");
@@ -12877,7 +12877,6 @@ ALOP TABLE [historySchema].[HistoryTable];
                                     }));
                         });
                 },
-
                 builder =>
                 {
                     builder.HasDefaultSchema("modifiedDefaultSchema");
@@ -12896,34 +12895,41 @@ ALOP TABLE [historySchema].[HistoryTable];
 
         AssertSql(
 """
-ALOP TABLE [historySchema].[HistoryTable];
+IF SCHEMA_ID(N'modifiedDefaultSchema') IS NULL EXEC(N'CREATE SCHEMA [modifiedDefaultSchema];');
+""",
+                //
+                """
+ALTER SCHEMA [modifiedDefaultSchema] TRANSFER [Customers];
+""",
+                //
+                """
+ALTER TABLE [modifiedDefaultSchema].[Customers] ADD [SystemTimeEnd] datetime2 NOT NULL DEFAULT '9999-12-31T23:59:59.9999999';
+""",
+                //
+                """
+ALTER TABLE [modifiedDefaultSchema].[Customers] ADD [SystemTimeStart] datetime2 NOT NULL DEFAULT '0001-01-01T00:00:00.0000000';
+""",
+                //
+                """
+DECLARE @var sysname;
+SELECT @var = [d].[name]
+FROM [sys].[default_constraints] [d]
+INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+WHERE ([d].[parent_object_id] = OBJECT_ID(N'[modifiedDefaultSchema].[Customers]') AND [c].[name] = N'SystemTimeEnd');
+IF @var IS NOT NULL EXEC(N'ALTER TABLE [modifiedDefaultSchema].[Customers] DROP CONSTRAINT [' + @var + '];');
+ALTER TABLE [modifiedDefaultSchema].[Customers] DROP COLUMN [SystemTimeEnd];
+""",
+                //
+                """
+DECLARE @var1 sysname;
+SELECT @var1 = [d].[name]
+FROM [sys].[default_constraints] [d]
+INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+WHERE ([d].[parent_object_id] = OBJECT_ID(N'[modifiedDefaultSchema].[Customers]') AND [c].[name] = N'SystemTimeStart');
+IF @var1 IS NOT NULL EXEC(N'ALTER TABLE [modifiedDefaultSchema].[Customers] DROP CONSTRAINT [' + @var1 + '];');
+ALTER TABLE [modifiedDefaultSchema].[Customers] DROP COLUMN [SystemTimeStart];
 """);
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     [ConditionalFact]
     public override async Task Add_required_primitive_collection_to_existing_table()

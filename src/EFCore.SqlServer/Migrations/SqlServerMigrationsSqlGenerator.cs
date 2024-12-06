@@ -2414,12 +2414,9 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
         var temporalTableInformationMap = new Dictionary<(string TableName, string? Schema), TemporalOperationInformation>();
         var participatingTables = new List<(string TableName, string? Schema)>();
 
-        // default schema can also change as part of migration operations
-        // we need to do similar approach for it - find what is the initial default schema
-        // which is first EnsureSchemaOperation or default schema from the model if no ESO are present
-        // as we are are looping over migration ops we need to update the default schema as it changes, so that we always
-        // put a correct entry into the temporalTableInformationMap (which contains table and schema)
-        var defaultSchema = migrationOperations.OfType<EnsureSchemaOperation>().FirstOrDefault()?.Name ?? model?.GetDefaultSchema();
+        // If default schema changed as part of this migration, we assume the new schema should affect all operation
+        // i.e. it's set before any table operations are executed. That's why it's ok to use the default schema of a target model
+        var defaultSchema = model?.GetDefaultSchema();
 
         foreach (var operation in migrationOperations)
         {
@@ -2506,15 +2503,10 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                     break;
                 }
 
-                case EnsureSchemaOperation ensureSchemaOperation:
-                {
-                    defaultSchema = ensureSchemaOperation.Name;
-                    break;
-                }
-
                 // drop/rename index
                 // drop/rename/restart sequence
                 // drop database
+                // ensure schema
                 // (custom) sql
                 // for these we just add operation to the list without any processing
                 default:
@@ -2683,17 +2675,13 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
 
                 case RenameTableOperation renameTableOperation:
                 {
-                    if (temporalInformation is null)
-                    {
-                        temporalInformation = BuildTemporalInformationFromMigrationOperation(schema, renameTableOperation);
-                    }
-
                     var isTemporalTable = renameTableOperation[SqlServerAnnotationNames.IsTemporal] as bool? == true;
                     if (isTemporalTable)
                     {
+                        // we want to disable using the OLD name and schema - we haven't done the rename yet
                         DisableVersioning(
-                            tableName,
-                            schema,
+                            renameTableOperation.Name,
+                            renameTableOperation.Schema,
                             temporalInformation,
                             suppressTransaction,
                             shouldEnableVersioning: true);
@@ -2703,7 +2691,8 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
 
                     // old table doesn't exist anymore (it was renamed to something else), so remove the temporal entry for it
                     temporalTableInformationMap[(renameTableOperation.NewName!, renameTableOperation.NewSchema)] = temporalInformation;
-                    temporalTableInformationMap.Remove((tableName, schema));
+                    //temporalTableInformationMap.Remove((tableName, schema));
+                    temporalTableInformationMap.Remove((renameTableOperation.Name, renameTableOperation.Schema));
 
                     break;
                 }

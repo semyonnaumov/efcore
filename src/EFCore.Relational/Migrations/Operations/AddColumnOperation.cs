@@ -9,5 +9,5 @@ namespace Microsoft.EntityFrameworkCore.Migrations.Operations;
 /// <remarks>
 ///     See <see href="https://aka.ms/efcore-docs-migrations">Database migrations</see> for more information and examples.
 /// </remarks>
-[DebuggerDisplay("ALTER TABLE {Table} ADD {Name}")]
+[DebuggerDisplay("ALTER TABLE {Schema}.{Table} ADD {Name}")]
 public class AddColumnOperation : ColumnOperation;

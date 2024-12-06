@@ -9,7 +9,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations.Operations;
 /// <remarks>
 ///     See <see href="https://aka.ms/efcore-docs-migrations">Database migrations</see> for more information and examples.
 /// </remarks>
-[DebuggerDisplay("ALTER TABLE {Name} RENAME TO {NewName}")]
+[DebuggerDisplay("ALTER TABLE {Schema}.{Name} RENAME TO {NewSchema}.{NewName}")]
 public class RenameTableOperation : MigrationOperation, ITableMigrationOperation
 {
     /// <summary>

@@ -9,7 +9,7 @@ namespace Microsoft.EntityFrameworkCore.Migrations.Operations;
 /// <remarks>
 ///     See <see href="https://aka.ms/efcore-docs-migrations">Database migrations</see> for more information and examples.
 /// </remarks>
-[DebuggerDisplay("ALTER TABLE {Name}")]
+[DebuggerDisplay("ALTER TABLE {Schema}.{Name}")]
 public class AlterTableOperation : TableOperation, IAlterMigrationOperation
 {
     /// <summary>

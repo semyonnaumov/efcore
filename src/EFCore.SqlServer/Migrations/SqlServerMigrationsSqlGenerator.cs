@@ -2416,7 +2416,7 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
 
         // If default schema changed as part of this migration, we assume the new schema should affect all operation
         // i.e. it's set before any table operations are executed. That's why it's ok to use the default schema of a target model
-        var defaultSchema = model?.GetDefaultSchema();
+        //var defaultSchema = model?.GetDefaultSchema();
 
         foreach (var operation in migrationOperations)
         {
@@ -2426,10 +2426,10 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                 {
                     var tableName = createTableOperation.Name;
                     var rawSchema = createTableOperation.Schema;
-                    var schema = rawSchema ?? defaultSchema;// model?.GetDefaultSchema();
+                    //var schema = rawSchema ?? defaultSchema;// model?.GetDefaultSchema();
                     if (!temporalTableInformationMap.ContainsKey((tableName, rawSchema)))
                     {
-                        var temporalTableInformation = BuildTemporalInformationFromMigrationOperation(schema, createTableOperation);
+                        var temporalTableInformation = BuildTemporalInformationFromMigrationOperation(/*schema,*/ createTableOperation);
                         temporalTableInformationMap[(tableName, rawSchema)] = temporalTableInformation;
                     }
 
@@ -2440,10 +2440,10 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                 {
                     var tableName = dropTableOperation.Name;
                     var rawSchema = dropTableOperation.Schema;
-                    var schema = rawSchema ?? defaultSchema;// model?.GetDefaultSchema();
+                    //var schema = rawSchema ?? defaultSchema;// model?.GetDefaultSchema();
                     if (!temporalTableInformationMap.ContainsKey((tableName, rawSchema)))
                     {
-                        var temporalTableInformation = BuildTemporalInformationFromMigrationOperation(schema, dropTableOperation);
+                        var temporalTableInformation = BuildTemporalInformationFromMigrationOperation(/*schema,*/ dropTableOperation);
                         temporalTableInformationMap[(tableName, rawSchema)] = temporalTableInformation;
                     }
 
@@ -2454,12 +2454,12 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                 {
                     var tableName = renameTableOperation.Name;
                     var rawSchema = renameTableOperation.Schema;
-                    var schema = rawSchema ?? defaultSchema;//  model?.GetDefaultSchema();
+                    //var schema = rawSchema ?? defaultSchema;//  model?.GetDefaultSchema();
                     var newTableName = renameTableOperation.NewName!;
                     var newRawSchema = renameTableOperation.NewSchema;
-                    var newSchema = newRawSchema ?? defaultSchema;//  model?.GetDefaultSchema();
+                    //var newSchema = newRawSchema ?? defaultSchema;//  model?.GetDefaultSchema();
 
-                    var temporalTableInformation = BuildTemporalInformationFromMigrationOperation(schema, renameTableOperation);
+                    var temporalTableInformation = BuildTemporalInformationFromMigrationOperation(/*schema,*/ renameTableOperation);
                     if (!temporalTableInformationMap.ContainsKey((tableName, rawSchema)))
                     {
                         temporalTableInformationMap[(tableName, rawSchema)] = temporalTableInformation;
@@ -2479,11 +2479,11 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                 {
                     var tableName = alterTableOperation.Name;
                     var rawSchema = alterTableOperation.Schema;
-                    var schema = rawSchema ?? defaultSchema;// model?.GetDefaultSchema();
+                    //var schema = rawSchema ?? defaultSchema;// model?.GetDefaultSchema();
                     if (!temporalTableInformationMap.ContainsKey((tableName, rawSchema)))
                     {
                         // we create the temporal info based on the OLD table here - we want the initial state
-                        var temporalTableInformation = BuildTemporalInformationFromMigrationOperation(schema, alterTableOperation.OldTable);
+                        var temporalTableInformation = BuildTemporalInformationFromMigrationOperation(/*schema,*/ alterTableOperation.OldTable);
                         temporalTableInformationMap[(tableName, rawSchema)] = temporalTableInformation;
                     }
 
@@ -2526,7 +2526,7 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
             {
                 var schema = missingInfo.Schema ?? model?.GetDefaultSchema();
 
-                var temporalTableInformation = BuildTemporalInformationFromMigrationOperation(schema, table);
+                var temporalTableInformation = BuildTemporalInformationFromMigrationOperation(/*schema,*/ table);
                 temporalTableInformationMap[(missingInfo.TableName, missingInfo.Schema)] = temporalTableInformation;
             }
             else
@@ -2564,7 +2564,7 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
 
             var suppressTransaction = IsMemoryOptimized(operation, model, rawSchema, tableName);
 
-            var schema = rawSchema ?? model?.GetDefaultSchema();
+            var schema = rawSchema;// ?? model?.GetDefaultSchema();
 
 #if DEBUG
             // extra validation to help with debugging and making the code here more robust
@@ -2576,8 +2576,8 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
             {
                 var actualInfo = operation switch
                 {
-                    CreateTableOperation or DropTableOperation or RenameTableOperation => BuildTemporalInformationFromMigrationOperation(schema, operation),
-                    AlterTableOperation alterTableOperation => BuildTemporalInformationFromMigrationOperation(schema, alterTableOperation.OldTable),
+                    CreateTableOperation or DropTableOperation or RenameTableOperation => BuildTemporalInformationFromMigrationOperation(/*schema,*/ operation),
+                    AlterTableOperation alterTableOperation => BuildTemporalInformationFromMigrationOperation(/*schema,*/ alterTableOperation.OldTable),
                     _ => null
                 };
 
@@ -2610,7 +2610,7 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                 // for create table we always generate new temporal information from the operation itself
                 // just in case there was a table with that name before that got deleted/renamed
                 // also, temporal state (disabled versioning etc.) should always reset when creating a table
-                temporalInformation = BuildTemporalInformationFromMigrationOperation(schema, operation);
+                temporalInformation = BuildTemporalInformationFromMigrationOperation(/*schema, */operation);
                 temporalTableInformationMap[(tableName, rawSchema)] = temporalInformation;
             }
             else
@@ -2709,9 +2709,9 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                     var oldHistoryTableName =
                         alterTableOperation.OldTable[SqlServerAnnotationNames.TemporalHistoryTableName] as string;
                     var oldHistoryTableSchema =
-                        alterTableOperation.OldTable[SqlServerAnnotationNames.TemporalHistoryTableSchema] as string
-                        ?? alterTableOperation.OldTable.Schema
-                        ?? model?[RelationalAnnotationNames.DefaultSchema] as string;
+                        alterTableOperation.OldTable[SqlServerAnnotationNames.TemporalHistoryTableSchema] as string;
+                        //?? alterTableOperation.OldTable.Schema
+                        //?? model?[RelationalAnnotationNames.DefaultSchema] as string;
 
                     if (isTemporalTable)
                     {
@@ -3084,12 +3084,12 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
         return operations;
 
         static TemporalOperationInformation BuildTemporalInformationFromMigrationOperation(
-            string? schema,
+            //string? schema,
             IAnnotatable operation)
         {
             var isTemporalTable = operation[SqlServerAnnotationNames.IsTemporal] as bool? == true;
             var historyTableName = operation[SqlServerAnnotationNames.TemporalHistoryTableName] as string;
-            var historyTableSchema = operation[SqlServerAnnotationNames.TemporalHistoryTableSchema] as string ?? schema;
+            var historyTableSchema = operation[SqlServerAnnotationNames.TemporalHistoryTableSchema] as string;// ?? schema;
             var periodStartColumnName = operation[SqlServerAnnotationNames.TemporalPeriodStartColumnName] as string;
             var periodEndColumnName = operation[SqlServerAnnotationNames.TemporalPeriodEndColumnName] as string;
 

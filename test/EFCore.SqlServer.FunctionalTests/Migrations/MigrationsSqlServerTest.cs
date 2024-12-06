@@ -12697,7 +12697,39 @@ DROP TABLE [historySchema].[HistoryTable];
 
         AssertSql(
 """
-ALOP TABLE [historySchema].[HistoryTable];
+IF SCHEMA_ID(N'myCustomSchema') IS NULL EXEC(N'CREATE SCHEMA [myCustomSchema];');
+""",
+                //
+                """
+ALTER TABLE [Customers] SET (SYSTEM_VERSIONING = OFF)
+""",
+                //
+                """
+ALTER SCHEMA [myCustomSchema] TRANSFER [Customers];
+""",
+                //
+                """
+ALTER SCHEMA [myCustomSchema] TRANSFER [HistoryTable];
+""",
+                //
+                """
+ALTER TABLE [myCustomSchema].[Customers] ADD [MyColumn] int NOT NULL DEFAULT 0;
+""",
+                //
+                """
+ALTER TABLE [myCustomSchema].[HistoryTable] ADD [MyColumn] int NOT NULL DEFAULT 0;
+""",
+                //
+                """
+ALTER TABLE [myCustomSchema].[Customers] ADD [AnotherColumn] int NOT NULL DEFAULT 0;
+""",
+                //
+                """
+ALTER TABLE [myCustomSchema].[HistoryTable] ADD [AnotherColumn] int NOT NULL DEFAULT 0;
+""",
+                //
+                """
+ALTER TABLE [myCustomSchema].[Customers] SET (SYSTEM_VERSIONING = ON (HISTORY_TABLE = [myCustomSchema].[HistoryTable]))
 """);
     }
 

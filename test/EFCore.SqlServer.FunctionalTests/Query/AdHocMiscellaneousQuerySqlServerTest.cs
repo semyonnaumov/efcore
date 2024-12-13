@@ -2405,4 +2405,133 @@ WHERE CASE
 END = N'COUNTRY'
 """);
     }
+
+
+
+
+
+
+
+
+
+#nullable enable
+
+    [ConditionalFact]
+    public void SaveChangesPerf()
+    {
+        //var jsonTime = await UseJsonContext(seedData, Enumerable.Range(1, 60).ToList());
+        var jsonTime = UseJsonContext(Enumerable.Range(1, 60).ToList());
+
+        Console.WriteLine($"ToJson Time: {jsonTime} milliseconds.");
+        Console.WriteLine("Press Any Key to Exit");
+
+
+        throw new InvalidOperationException(jsonTime.ToString());
+    }
+
+    private static long UseJsonContext(List<int> testIds)
+    {
+        var dbContext = new JsonDbContext();
+        var x = dbContext.SampleEntities.Where(a => a.TestId == 100).FirstOrDefault();
+        dbContext.SaveChanges();
+
+        foreach (var testId in testIds)
+        {
+            var src = dbContext.SampleEntities.Where(a => a.TestId == testId).FirstOrDefault();
+        }
+
+        var sw = new Stopwatch();
+        sw.Start();
+        dbContext.SaveChanges();
+        sw.Stop();
+
+        return sw.ElapsedMilliseconds;
+    }
+
+    public class JsonDbContext : DbContext
+    {
+        public JsonDbContext() { }
+
+        public DbSet<SampleEntity> SampleEntities { get; set; } = null!;
+
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
+            optionsBuilder
+                    .UseSqlServer(@"Server=(localdb)\mssqllocaldb;Database=SaveChangesPerf80;Trusted_Connection=True;MultipleActiveResultSets=true")
+                    .LogTo(Console.WriteLine, LogLevel.Information)
+                    .EnableSensitiveDataLogging();
+        }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<SampleEntity>().OwnsMany(c => c.Jsons, d =>
+            {
+                d.ToJson();
+                d.OwnsOne(e => e.Result);
+            });
+        }
+    }
+
+
+
+
+    public class SampleEntity
+    {
+        //[Timestamp] 
+        public uint Xmin { get; set; }
+        public Guid Id { get; set; }
+        public Guid SampleId { get; set; }
+        public Guid AnotherId { get; set; }
+        public int TestId { get; set; }
+        public Guid RockId { get; set; }
+        public Guid SccId { get; set; }
+        public Guid SeId { get; set; }
+
+        //[Column(TypeName = "jsonb")]
+        public List<SampleJson> Jsons { get; set; } = [];
+        public bool IsPushed { get; set; }
+    }
+    public record SampleJson
+    {
+        public Guid TrackingId { get; set; }
+        public Guid ComponentGroupId { get; set; }
+        public Guid ComponentId { get; set; }
+        public Guid? OrderedComponentTrackingId { get; set; }
+        public Guid? MonthId { get; set; }
+        public Guid? MeasureId { get; set; }
+        public bool IsGroupLevel { get; set; }
+        public ResultJson? Result { get; set; }
+    }
+    public record ResultJson
+    {
+        public string? TextValue { get; set; }
+        public decimal? NumericValue { get; set; }
+        public Guid? MarkIdValue { get; set; }
+        public List<Guid> CommentIds { get; set; } = [];
+        public Guid CreatedBy { get; set; }
+        public string CreatedByName { get; set; } = null!;
+        public DateTime CreatedDate { get; set; }
+        public Guid LastModifiedBy { get; set; }
+        public string LastModifiedByName { get; set; } = null!;
+        public DateTime LastModifiedDate { get; set; }
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }

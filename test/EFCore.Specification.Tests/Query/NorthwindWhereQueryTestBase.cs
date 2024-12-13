@@ -1722,7 +1722,7 @@ public abstract class NorthwindWhereQueryTestBase<TFixture>(TFixture fixture) : 
     [MemberData(nameof(IsAsyncData))]
     public virtual Task Where_array_of_object_contains_over_value_type(bool async)
     {
-        var orderIds = new object[] { 10248, 10249 };
+        var orderIds = new object[] { "foo", 10248, 10249 };
         return AssertQuery(
             async,
             ss => ss.Set<Order>()

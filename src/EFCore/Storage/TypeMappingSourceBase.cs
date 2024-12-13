@@ -150,7 +150,9 @@ public abstract class TypeMappingSourceBase : ITypeMappingSource
         {
             elementMapping ??= FindMapping(elementType);
 
-            if (elementMapping is { JsonValueReaderWriter: not null })
+            // don't generate mapping for nested collections (i.e. where ElementTypeMapping is not null already)
+            // they are not supported and we can only get into trouble tryong to generate comparers - see #35239
+            if (elementMapping is { JsonValueReaderWriter: not null, ElementTypeMapping: null })
             {
                 var elementReader = elementMapping.JsonValueReaderWriter!;
 

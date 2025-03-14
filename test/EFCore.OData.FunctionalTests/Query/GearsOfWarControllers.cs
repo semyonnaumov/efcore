@@ -19,8 +19,8 @@ public class GearsController(GearsOfWarODataContext context) : TestODataControll
 
     [HttpGet]
     [EnableQuery]
-    public IEnumerable<Officer> GetFromOfficer()
-        => _context.Gears.OfType<Officer>();
+    public IEnumerable<Officer<int>> GetFromOfficer()
+        => _context.Gears.OfType<Officer<int>>();
 
     [HttpGet]
     [EnableQuery]
@@ -180,13 +180,13 @@ public class FactionsController(GearsOfWarODataContext context) : TestODataContr
 
     [HttpGet]
     [EnableQuery]
-    public IEnumerable<Faction> Get()
+    public IEnumerable<Faction<int>> Get()
         => _context.Factions;
 
     [HttpGet]
     [EnableQuery]
-    public IEnumerable<LocustHorde> GetFromLocustHorde()
-        => _context.Factions.OfType<LocustHorde>();
+    public IEnumerable<LocustHorde<int>> GetFromLocustHorde()
+        => _context.Factions.OfType<LocustHorde<int>>();
 
     [HttpGet]
     [EnableQuery]
@@ -208,13 +208,13 @@ public class LocustLeadersController(GearsOfWarODataContext context) : TestOData
 
     [HttpGet]
     [EnableQuery]
-    public IEnumerable<LocustLeader> Get()
+    public IEnumerable<LocustLeader<int>> Get()
         => _context.LocustLeaders;
 
     [HttpGet]
     [EnableQuery]
-    public IEnumerable<LocustCommander> GetFromLocustCommander()
-        => _context.LocustLeaders.OfType<LocustCommander>();
+    public IEnumerable<LocustCommander<int>> GetFromLocustCommander()
+        => _context.LocustLeaders.OfType<LocustCommander<int>>();
 
     [HttpGet]
     [EnableQuery]
@@ -236,7 +236,7 @@ public class LocustHighCommandsController(GearsOfWarODataContext context) : Test
 
     [HttpGet]
     [EnableQuery]
-    public IEnumerable<LocustHighCommand> Get()
+    public IEnumerable<LocustHighCommand<int>> Get()
         => _context.LocustHighCommands;
 
     [HttpGet]

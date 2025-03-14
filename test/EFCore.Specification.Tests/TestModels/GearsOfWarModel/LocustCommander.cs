@@ -5,14 +5,14 @@ namespace Microsoft.EntityFrameworkCore.TestModels.GearsOfWarModel;
 
 #nullable disable
 
-public class LocustCommander : LocustLeader
+public class LocustCommander<T> : LocustLeader<T>
 {
-    public LocustHorde CommandingFaction { get; set; }
+    public LocustHorde<T> CommandingFaction { get; set; }
 
     public string DefeatedByNickname { get; set; }
     public int? DefeatedBySquadId { get; set; }
     public Gear DefeatedBy { get; set; }
 
-    public LocustHighCommand HighCommand { get; set; }
+    public LocustHighCommand<T> HighCommand { get; set; }
     public int HighCommandId { get; set; }
 }

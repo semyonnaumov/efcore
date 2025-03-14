@@ -30,11 +30,11 @@ public abstract class TPCGearsOfWarQueryRelationalFixture : GearsOfWarQueryFixtu
         base.OnModelCreating(modelBuilder, context);
 
         modelBuilder.Entity<Gear>().UseTpcMappingStrategy();
-        modelBuilder.Entity<Faction>().UseTpcMappingStrategy();
-        modelBuilder.Entity<LocustLeader>().UseTpcMappingStrategy();
+        modelBuilder.Entity<Faction<int>>().UseTpcMappingStrategy();
+        modelBuilder.Entity<LocustLeader<int>>().UseTpcMappingStrategy();
 
-        modelBuilder.Entity<LocustHorde>().ToTable("LocustHordes");
+        modelBuilder.Entity<LocustHorde<int>>().ToTable("LocustHordes");
 
-        modelBuilder.Entity<LocustCommander>().ToTable("LocustCommanders");
+        modelBuilder.Entity<LocustCommander<int>>().ToTable("LocustCommanders");
     }
 }

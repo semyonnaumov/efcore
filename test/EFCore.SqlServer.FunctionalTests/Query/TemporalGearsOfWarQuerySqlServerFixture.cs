@@ -24,10 +24,10 @@ public class TemporalGearsOfWarQuerySqlServerFixture : GearsOfWarQuerySqlServerF
                     ttb.HasPeriodStart("PeriodStart").HasPrecision(0);
                     ttb.HasPeriodEnd("PeriodEnd").HasPrecision(0);
                 }));
-        modelBuilder.Entity<Faction>().ToTable(tb => tb.IsTemporal());
+        modelBuilder.Entity<Faction<int>>().ToTable(tb => tb.IsTemporal());
         modelBuilder.Entity<Gear>().ToTable(tb => tb.IsTemporal());
-        modelBuilder.Entity<LocustLeader>().ToTable(tb => tb.IsTemporal());
-        modelBuilder.Entity<LocustHighCommand>().ToTable(tb => tb.IsTemporal());
+        modelBuilder.Entity<LocustLeader<int>>().ToTable(tb => tb.IsTemporal());
+        modelBuilder.Entity<LocustHighCommand<int>>().ToTable(tb => tb.IsTemporal());
         modelBuilder.Entity<Mission>().ToTable(tb => tb.IsTemporal());
         modelBuilder.Entity<Squad>().ToTable(tb => tb.IsTemporal());
         modelBuilder.Entity<SquadMission>().ToTable(tb => tb.IsTemporal());
@@ -57,15 +57,15 @@ public class TemporalGearsOfWarQuerySqlServerFixture : GearsOfWarQuerySqlServerF
         context.RemoveRange(context.ChangeTracker.Entries().Where(e => e.Entity is City).Select(e => e.Entity));
         context.RemoveRange(context.ChangeTracker.Entries().Where(e => e.Entity is CogTag).Select(e => e.Entity));
         context.RemoveRange(context.ChangeTracker.Entries().Where(e => e.Entity is Gear).Select(e => e.Entity));
-        context.RemoveRange(context.ChangeTracker.Entries().Where(e => e.Entity is LocustHighCommand).Select(e => e.Entity));
+        context.RemoveRange(context.ChangeTracker.Entries().Where(e => e.Entity is LocustHighCommand<int>).Select(e => e.Entity));
         context.RemoveRange(context.ChangeTracker.Entries().Where(e => e.Entity is Mission).Select(e => e.Entity));
         context.RemoveRange(context.ChangeTracker.Entries().Where(e => e.Entity is Squad).Select(e => e.Entity));
         context.RemoveRange(context.ChangeTracker.Entries().Where(e => e.Entity is SquadMission).Select(e => e.Entity));
         context.RemoveRange(context.ChangeTracker.Entries().Where(e => e.Entity is Weapon).Select(e => e.Entity));
         await context.SaveChangesAsync();
 
-        context.RemoveRange(context.ChangeTracker.Entries().Where(e => e.Entity is Faction).Select(e => e.Entity));
-        context.RemoveRange(context.ChangeTracker.Entries().Where(e => e.Entity is LocustLeader).Select(e => e.Entity));
+        context.RemoveRange(context.ChangeTracker.Entries().Where(e => e.Entity is Faction<int>).Select(e => e.Entity));
+        context.RemoveRange(context.ChangeTracker.Entries().Where(e => e.Entity is LocustLeader<int>).Select(e => e.Entity));
         await context.SaveChangesAsync();
 
         // clean up Faction history

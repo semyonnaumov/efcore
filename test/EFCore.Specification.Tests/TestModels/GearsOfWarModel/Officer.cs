@@ -3,7 +3,7 @@
 
 namespace Microsoft.EntityFrameworkCore.TestModels.GearsOfWarModel;
 
-public class Officer : Gear
+public class Officer<T> : Gear
 {
     public Officer()
         => Reports = new List<Gear>();

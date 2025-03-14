@@ -33,9 +33,9 @@ public abstract class GearsOfWarQueryRelationalFixture : GearsOfWarQueryFixtureB
                 }
             },
             {
-                (typeof(Faction), "Discriminator"), e =>
+                (typeof(Faction<int>), "Discriminator"), e =>
                 {
-                    switch (((Faction)e)?.Id)
+                    switch (((Faction<int>)e)?.Id)
                     {
                         case 1:
                         case 2:
@@ -48,9 +48,9 @@ public abstract class GearsOfWarQueryRelationalFixture : GearsOfWarQueryFixtureB
                 }
             },
             {
-                (typeof(LocustLeader), "Discriminator"), e =>
+                (typeof(LocustLeader<int>), "Discriminator"), e =>
                 {
-                    switch (((LocustLeader)e)?.Name)
+                    switch (((LocustLeader<int>)e)?.Name)
                     {
                         case "General Karn":
                         case "General RAAM":

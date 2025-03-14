@@ -14,9 +14,9 @@ public class GearsOfWarODataContext(DbContextOptions options) : PoolableDbContex
     public DbSet<City> Cities { get; set; }
     public DbSet<Mission> Missions { get; set; }
     public DbSet<SquadMission> SquadMissions { get; set; }
-    public DbSet<Faction> Factions { get; set; }
-    public DbSet<LocustLeader> LocustLeaders { get; set; }
-    public DbSet<LocustHighCommand> LocustHighCommands { get; set; }
+    public DbSet<Faction<int>> Factions { get; set; }
+    public DbSet<LocustLeader<int>> LocustLeaders { get; set; }
+    public DbSet<LocustHighCommand<int>> LocustHighCommands { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -38,7 +38,7 @@ public class GearsOfWarODataContext(DbContextOptions options) : PoolableDbContex
                 b.HasOne(g => g.AssignedCity).WithMany(c => c.StationedGears).IsRequired(false);
             });
 
-        modelBuilder.Entity<Officer>().HasMany(o => o.Reports).WithOne().HasForeignKey(
+        modelBuilder.Entity<Officer<int>>().HasMany(o => o.Reports).WithOne().HasForeignKey(
             o => new { o.LeaderNickname, o.LeaderSquadId });
 
         modelBuilder.Entity<Squad>(
@@ -69,21 +69,21 @@ public class GearsOfWarODataContext(DbContextOptions options) : PoolableDbContex
                 b.HasOne(sm => sm.Squad).WithMany(s => s.Missions).HasForeignKey(sm => sm.SquadId);
             });
 
-        modelBuilder.Entity<Faction>().HasKey(f => f.Id);
-        modelBuilder.Entity<Faction>().Property(f => f.Id).ValueGeneratedNever();
+        modelBuilder.Entity<Faction<int>>().HasKey(f => f.Id);
+        modelBuilder.Entity<Faction<int>>().Property(f => f.Id).ValueGeneratedNever();
 
-        modelBuilder.Entity<LocustHorde>().HasBaseType<Faction>();
-        modelBuilder.Entity<LocustHorde>().HasMany(h => h.Leaders).WithOne();
+        modelBuilder.Entity<LocustHorde<int>>().HasBaseType<Faction<int>>();
+        modelBuilder.Entity<LocustHorde<int>>().HasMany(h => h.Leaders).WithOne();
 
-        modelBuilder.Entity<LocustHorde>().HasOne(h => h.Commander).WithOne(c => c.CommandingFaction);
+        modelBuilder.Entity<LocustHorde<int>>().HasOne(h => h.Commander).WithOne(c => c.CommandingFaction);
 
-        modelBuilder.Entity<LocustLeader>().HasKey(l => l.Name);
-        modelBuilder.Entity<LocustCommander>().HasBaseType<LocustLeader>();
-        modelBuilder.Entity<LocustCommander>().HasOne(c => c.DefeatedBy).WithOne().HasForeignKey<LocustCommander>(
+        modelBuilder.Entity<LocustLeader<int>>().HasKey(l => l.Name);
+        modelBuilder.Entity<LocustCommander<int>>().HasBaseType<LocustLeader<int>>();
+        modelBuilder.Entity<LocustCommander<int>>().HasOne(c => c.DefeatedBy).WithOne().HasForeignKey<LocustCommander<int>>(
             c => new { c.DefeatedByNickname, c.DefeatedBySquadId });
 
-        modelBuilder.Entity<LocustHighCommand>().HasKey(l => l.Id);
-        modelBuilder.Entity<LocustHighCommand>().Property(l => l.Id).ValueGeneratedNever();
+        modelBuilder.Entity<LocustHighCommand<int>>().HasKey(l => l.Id);
+        modelBuilder.Entity<LocustHighCommand<int>>().Property(l => l.Id).ValueGeneratedNever();
 
         modelBuilder.Entity<City>().Property(g => g.Location).HasColumnType("varchar(100)");
     }

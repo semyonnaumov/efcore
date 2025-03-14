@@ -32,10 +32,10 @@ public class GearsOfWarODataQueryTestFixture : GearsOfWarQuerySqlServerFixture, 
         modelBuilder.EntitySet<Mission>("Missions");
         modelBuilder.EntitySet<SquadMission>("SquadMissions");
         modelBuilder.EntityType<SquadMission>().HasKey(e => new { e.SquadId, e.MissionId });
-        modelBuilder.EntitySet<Faction>("Factions");
-        modelBuilder.EntitySet<LocustLeader>("LocustLeaders");
-        modelBuilder.EntityType<LocustLeader>().HasKey(c => c.Name);
-        modelBuilder.EntitySet<LocustHighCommand>("LocustHighCommands");
+        modelBuilder.EntitySet<Faction<int>>("Factions");
+        modelBuilder.EntitySet<LocustLeader<int>>("LocustLeaders");
+        modelBuilder.EntityType<LocustLeader<int>>().HasKey(c => c.Name);
+        modelBuilder.EntitySet<LocustHighCommand<int>>("LocustHighCommands");
 
         return modelBuilder.GetEdmModel();
     }

@@ -538,7 +538,10 @@ public abstract class CompiledModelRelationalTestBase : CompiledModelTestBase
                     s => s
                         .HasParameter(p => p.Id)
                         .HasParameter("PrincipalBaseId")
-                        .HasParameter("PrincipalDerivedId")
+
+                        .HasParameter("PrincipalDerived<DependentBase<byte?>>Id")
+
+                        //.HasParameter("PrincipalDerivedId")
                         .HasParameter("Enum2")
                         .HasParameter("FlagsEnum1")
                         .HasParameter("FlagsEnum2")
@@ -555,7 +558,13 @@ public abstract class CompiledModelRelationalTestBase : CompiledModelTestBase
                 eb.UpdateUsingStoredProcedure(
                     s => s
                         .HasParameter("PrincipalBaseId")
-                        .HasParameter("PrincipalDerivedId")
+
+
+                        .HasParameter("PrincipalDerived<DependentBase<byte?>>Id")
+
+
+
+                        //.HasParameter("PrincipalDerivedId")
                         .HasParameter("Enum1")
                         .HasParameter("Enum2")
                         .HasParameter("FlagsEnum1")
@@ -607,7 +616,13 @@ public abstract class CompiledModelRelationalTestBase : CompiledModelTestBase
                     "Derived_Insert", s => s
                         .HasParameter(p => p.Id)
                         .HasParameter("PrincipalBaseId")
-                        .HasParameter("PrincipalDerivedId")
+
+
+                        .HasParameter("PrincipalDerived<DependentBase<byte?>>Id")
+
+
+
+                        //.HasParameter("PrincipalDerivedId")
                         .HasParameter("Enum2")
                         .HasParameter("FlagsEnum1")
                         .HasParameter("FlagsEnum2")
@@ -623,7 +638,12 @@ public abstract class CompiledModelRelationalTestBase : CompiledModelTestBase
                 eb.UpdateUsingStoredProcedure(
                     "Derived_Update", "Derived", s => s
                         .HasParameter("PrincipalBaseId")
-                        .HasParameter("PrincipalDerivedId")
+                        //.HasParameter("PrincipalDerivedId")
+
+
+                        .HasParameter("PrincipalDerived<DependentBase<byte?>>Id")
+
+
                         .HasParameter("Enum1")
                         .HasParameter("Enum2")
                         .HasParameter("FlagsEnum1")
@@ -693,7 +713,11 @@ public abstract class CompiledModelRelationalTestBase : CompiledModelTestBase
             [
                 "Id",
                 "PrincipalBaseId",
-                "PrincipalDerivedId",
+
+                "PrincipalDerived<DependentBase<byte?>>Id",
+
+
+                //"PrincipalDerivedId",
                 "Enum2",
                 "FlagsEnum1",
                 "FlagsEnum2",
@@ -725,7 +749,10 @@ public abstract class CompiledModelRelationalTestBase : CompiledModelTestBase
         Assert.Equal(
             [
                 "PrincipalBaseId",
-                "PrincipalDerivedId",
+
+                "PrincipalDerived<DependentBase<byte?>>Id",
+
+                //"PrincipalDerivedId",
                 "Enum1",
                 "Enum2",
                 "FlagsEnum1",
@@ -791,7 +818,11 @@ public abstract class CompiledModelRelationalTestBase : CompiledModelTestBase
             [
                 "Id",
                 "PrincipalBaseId",
-                "PrincipalDerivedId",
+
+                "PrincipalDerived<DependentBase<byte?>>Id",
+
+
+//                "PrincipalDerivedId",
                 "Enum2",
                 "FlagsEnum1",
                 "FlagsEnum2",
@@ -823,7 +854,11 @@ public abstract class CompiledModelRelationalTestBase : CompiledModelTestBase
         Assert.Equal(
             [
                 "PrincipalBaseId",
-                "PrincipalDerivedId",
+
+                "PrincipalDerived<DependentBase<byte?>>Id",
+
+
+            //"PrincipalDerivedId",
                 "Enum1",
                 "Enum2",
                 "FlagsEnum1",

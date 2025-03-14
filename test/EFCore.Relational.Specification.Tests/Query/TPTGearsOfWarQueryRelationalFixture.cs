@@ -27,9 +27,9 @@ public abstract class TPTGearsOfWarQueryRelationalFixture : GearsOfWarQueryFixtu
 
         modelBuilder.Entity<Gear>().UseTptMappingStrategy();
 
-        modelBuilder.Entity<LocustHorde>().ToTable("LocustHordes");
+        modelBuilder.Entity<LocustHorde<int>>().ToTable("LocustHordes");
 
-        modelBuilder.Entity<LocustCommander>().ToTable("LocustCommanders");
+        modelBuilder.Entity<LocustCommander<int>>().ToTable("LocustCommanders");
 
         modelBuilder.Entity<Squad>()
             .HasMany(s => s.Members)

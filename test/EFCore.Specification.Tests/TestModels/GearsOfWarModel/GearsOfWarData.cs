@@ -11,14 +11,14 @@ public class GearsOfWarData : ISetSource
 
     public IReadOnlyList<City> Cities { get; }
     public IReadOnlyList<CogTag> Tags { get; }
-    public IReadOnlyList<Faction> Factions { get; }
+    public IReadOnlyList<Faction<int>> Factions { get; }
     public IReadOnlyList<Gear> Gears { get; }
     public IReadOnlyList<Mission> Missions { get; }
     public IReadOnlyList<Squad> Squads { get; }
     public IReadOnlyList<SquadMission> SquadMissions { get; }
     public IReadOnlyList<Weapon> Weapons { get; }
-    public IReadOnlyList<LocustLeader> LocustLeaders { get; }
-    public IReadOnlyList<LocustHighCommand> LocustHighCommands { get; }
+    public IReadOnlyList<LocustLeader<int>> LocustLeaders { get; }
+    public IReadOnlyList<LocustHighCommand<int>> LocustHighCommands { get; }
 
     private GearsOfWarData()
     {
@@ -50,14 +50,14 @@ public class GearsOfWarData : ISetSource
             return (IQueryable<TEntity>)Tags.AsQueryable();
         }
 
-        if (typeof(TEntity) == typeof(Faction))
+        if (typeof(TEntity) == typeof(Faction<int>))
         {
             return (IQueryable<TEntity>)Factions.AsQueryable();
         }
 
-        if (typeof(TEntity) == typeof(LocustHorde))
+        if (typeof(TEntity) == typeof(LocustHorde<int>))
         {
-            return (IQueryable<TEntity>)Factions.OfType<LocustHorde>().AsQueryable();
+            return (IQueryable<TEntity>)Factions.OfType<LocustHorde<int>>().AsQueryable();
         }
 
         if (typeof(TEntity) == typeof(Gear))
@@ -65,9 +65,9 @@ public class GearsOfWarData : ISetSource
             return (IQueryable<TEntity>)Gears.AsQueryable();
         }
 
-        if (typeof(TEntity) == typeof(Officer))
+        if (typeof(TEntity) == typeof(Officer<int>))
         {
-            return (IQueryable<TEntity>)Gears.OfType<Officer>().AsQueryable();
+            return (IQueryable<TEntity>)Gears.OfType<Officer<int>>().AsQueryable();
         }
 
         if (typeof(TEntity) == typeof(Mission))
@@ -90,12 +90,12 @@ public class GearsOfWarData : ISetSource
             return (IQueryable<TEntity>)Weapons.AsQueryable();
         }
 
-        if (typeof(TEntity) == typeof(LocustLeader))
+        if (typeof(TEntity) == typeof(LocustLeader<int>))
         {
             return (IQueryable<TEntity>)LocustLeaders.AsQueryable();
         }
 
-        if (typeof(TEntity) == typeof(LocustHighCommand))
+        if (typeof(TEntity) == typeof(LocustHighCommand<int>))
         {
             return (IQueryable<TEntity>)LocustHighCommands.AsQueryable();
         }
@@ -360,7 +360,7 @@ public class GearsOfWarData : ISetSource
                 LeaderNickname = "Baird",
                 LeaderSquadId = 1
             },
-            new Officer
+            new Officer<int>
             {
                 Nickname = "Baird",
                 FullName = "Damon Baird",
@@ -371,7 +371,7 @@ public class GearsOfWarData : ISetSource
                 LeaderNickname = "Marcus",
                 LeaderSquadId = 1
             },
-            new Officer
+            new Officer<int>
             {
                 Nickname = "Marcus",
                 FullName = "Marcus Fenix",
@@ -382,8 +382,8 @@ public class GearsOfWarData : ISetSource
             }
         };
 
-    public static IReadOnlyList<LocustLeader> CreateLocustLeaders()
-        => new List<LocustLeader>
+    public static IReadOnlyList<LocustLeader<int>> CreateLocustLeaders()
+        => new List<LocustLeader<int>>
         {
             new()
             {
@@ -406,7 +406,7 @@ public class GearsOfWarData : ISetSource
                 ThreatLevelByte = 1,
                 ThreatLevelNullableByte = 1
             },
-            new LocustCommander
+            new LocustCommander<int>
             {
                 Name = "Queen Myrrah",
                 ThreatLevel = 5,
@@ -420,14 +420,14 @@ public class GearsOfWarData : ISetSource
                 ThreatLevelByte = 3,
                 ThreatLevelNullableByte = 3
             },
-            new LocustCommander
+            new LocustCommander<int>
             {
                 Name = "Unknown",
                 ThreatLevel = 0,
                 ThreatLevelByte = 0,
                 ThreatLevelNullableByte = null
             },
-            new LocustCommander
+            new LocustCommander<int>
             {
                 Name = "Reyna Diaz",
                 ThreatLevel = 4,
@@ -436,10 +436,10 @@ public class GearsOfWarData : ISetSource
             }
         };
 
-    public static IReadOnlyList<Faction> CreateFactions()
-        => new List<Faction>
+    public static IReadOnlyList<Faction<int>> CreateFactions()
+        => new List<Faction<int>>
         {
-            new LocustHorde
+            new LocustHorde<int>
             {
                 Id = 1,
                 Name = "Locust",
@@ -447,14 +447,14 @@ public class GearsOfWarData : ISetSource
                 CommanderName = "Queen Myrrah",
                 ServerAddress = IPAddress.Loopback
             },
-            new LocustHorde
+            new LocustHorde<int>
             {
                 Id = 2,
                 Name = "Swarm",
                 Eradicated = false,
                 CommanderName = "Unknown"
             },
-            new LocustHorde
+            new LocustHorde<int>
             {
                 Id = 3,
                 Name = "Future Locust",
@@ -463,8 +463,8 @@ public class GearsOfWarData : ISetSource
             }
         };
 
-    public static IReadOnlyList<LocustHighCommand> CreateHighCommands()
-        => new List<LocustHighCommand>
+    public static IReadOnlyList<LocustHighCommand<int>> CreateHighCommands()
+        => new List<LocustHighCommand<int>>
         {
             new()
             {
@@ -482,9 +482,9 @@ public class GearsOfWarData : ISetSource
         IReadOnlyList<Weapon> weapons,
         IReadOnlyList<CogTag> tags,
         IReadOnlyList<Gear> gears,
-        IReadOnlyList<LocustLeader> locustLeaders,
-        IReadOnlyList<Faction> factions,
-        IReadOnlyList<LocustHighCommand> locustHighCommands)
+        IReadOnlyList<LocustLeader<int>> locustLeaders,
+        IReadOnlyList<Faction<int>> factions,
+        IReadOnlyList<LocustHighCommand<int>> locustHighCommands)
     {
         squadMissions[0].Mission = missions[0];
         squadMissions[0].MissionId = missions[0].Id;
@@ -548,7 +548,7 @@ public class GearsOfWarData : ISetSource
         gears[3].Squad = squads[0];
         gears[3].Tag = tags[3];
         gears[3].Weapons = new List<Weapon> { weapons[6], weapons[7] };
-        ((Officer)gears[3]).Reports = new List<Gear> { gears[2] };
+        ((Officer<int>)gears[3]).Reports = new List<Gear> { gears[2] };
 
         // marcus
         gears[4].CityOfBirth = cities[0];
@@ -556,7 +556,7 @@ public class GearsOfWarData : ISetSource
         gears[4].Squad = squads[0];
         gears[4].Tag = tags[4];
         gears[4].Weapons = new List<Weapon> { weapons[0], weapons[1] };
-        ((Officer)gears[4]).Reports = new List<Gear>
+        ((Officer<int>)gears[4]).Reports = new List<Gear>
         {
             gears[0],
             gears[1],
@@ -607,47 +607,47 @@ public class GearsOfWarData : ISetSource
         tags[4].GearNickName = gears[4].Nickname;
         tags[4].GearSquadId = gears[4].SquadId;
 
-        ((LocustCommander)locustLeaders[3]).DefeatedBy = gears[4];
-        ((LocustCommander)locustLeaders[3]).DefeatedByNickname = gears[4].Nickname;
-        ((LocustCommander)locustLeaders[3]).DefeatedBySquadId = gears[4].SquadId;
+        ((LocustCommander<int>)locustLeaders[3]).DefeatedBy = gears[4];
+        ((LocustCommander<int>)locustLeaders[3]).DefeatedByNickname = gears[4].Nickname;
+        ((LocustCommander<int>)locustLeaders[3]).DefeatedBySquadId = gears[4].SquadId;
 
-        ((LocustCommander)locustLeaders[3]).CommandingFaction = ((LocustHorde)factions[0]);
-        ((LocustCommander)locustLeaders[5]).CommandingFaction = ((LocustHorde)factions[1]);
-        ((LocustCommander)locustLeaders[6]).CommandingFaction = ((LocustHorde)factions[2]);
+        ((LocustCommander<int>)locustLeaders[3]).CommandingFaction = ((LocustHorde<int>)factions[0]);
+        ((LocustCommander<int>)locustLeaders[5]).CommandingFaction = ((LocustHorde<int>)factions[1]);
+        ((LocustCommander<int>)locustLeaders[6]).CommandingFaction = ((LocustHorde<int>)factions[2]);
 
-        ((LocustHorde)factions[0]).Commander = ((LocustCommander)locustLeaders[3]);
-        ((LocustHorde)factions[1]).Commander = ((LocustCommander)locustLeaders[5]);
-        ((LocustHorde)factions[2]).Commander = ((LocustCommander)locustLeaders[6]);
+        ((LocustHorde<int>)factions[0]).Commander = ((LocustCommander<int>)locustLeaders[3]);
+        ((LocustHorde<int>)factions[1]).Commander = ((LocustCommander<int>)locustLeaders[5]);
+        ((LocustHorde<int>)factions[2]).Commander = ((LocustCommander<int>)locustLeaders[6]);
 
         locustHighCommands[0].Commanders =
         [
-            (LocustCommander)locustLeaders[3],
-            (LocustCommander)locustLeaders[5],
-            (LocustCommander)locustLeaders[6],
+            (LocustCommander<int>)locustLeaders[3],
+            (LocustCommander<int>)locustLeaders[5],
+            (LocustCommander<int>)locustLeaders[6],
         ];
 
-        ((LocustCommander)locustLeaders[3]).HighCommand = locustHighCommands[0];
-        ((LocustCommander)locustLeaders[3]).HighCommandId = 1;
+        ((LocustCommander<int>)locustLeaders[3]).HighCommand = locustHighCommands[0];
+        ((LocustCommander<int>)locustLeaders[3]).HighCommandId = 1;
 
-        ((LocustCommander)locustLeaders[5]).HighCommand = locustHighCommands[0];
-        ((LocustCommander)locustLeaders[5]).HighCommandId = 1;
+        ((LocustCommander<int>)locustLeaders[5]).HighCommand = locustHighCommands[0];
+        ((LocustCommander<int>)locustLeaders[5]).HighCommandId = 1;
 
-        ((LocustCommander)locustLeaders[6]).HighCommand = locustHighCommands[0];
-        ((LocustCommander)locustLeaders[6]).HighCommandId = 1;
+        ((LocustCommander<int>)locustLeaders[6]).HighCommand = locustHighCommands[0];
+        ((LocustCommander<int>)locustLeaders[6]).HighCommandId = 1;
     }
 
     public static void WireUp2(
-        IReadOnlyList<LocustLeader> locustLeaders,
-        IReadOnlyList<Faction> factions)
+        IReadOnlyList<LocustLeader<int>> locustLeaders,
+        IReadOnlyList<Faction<int>> factions)
     {
-        ((LocustHorde)factions[0]).Leaders =
+        ((LocustHorde<int>)factions[0]).Leaders =
         [
             locustLeaders[0],
             locustLeaders[1],
             locustLeaders[2],
             locustLeaders[3]
         ];
-        ((LocustHorde)factions[1]).Leaders = [locustLeaders[4], locustLeaders[5]];
-        ((LocustHorde)factions[2]).Leaders = [locustLeaders[6]];
+        ((LocustHorde<int>)factions[1]).Leaders = [locustLeaders[4], locustLeaders[5]];
+        ((LocustHorde<int>)factions[2]).Leaders = [locustLeaders[6]];
     }
 }

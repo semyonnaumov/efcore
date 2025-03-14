@@ -8,16 +8,16 @@ namespace Microsoft.EntityFrameworkCore.TestModels.GearsOfWarModel;
 public class GearsOfWarContext(DbContextOptions options) : PoolableDbContext(options)
 {
     public DbSet<Gear> Gears { get; set; }
-    public DbSet<Officer> Officers { get; set; }
+    public DbSet<Officer<int>> Officers { get; set; }
     public DbSet<Squad> Squads { get; set; }
     public DbSet<CogTag> Tags { get; set; }
     public DbSet<Weapon> Weapons { get; set; }
     public DbSet<City> Cities { get; set; }
     public DbSet<Mission> Missions { get; set; }
     public DbSet<SquadMission> SquadMissions { get; set; }
-    public DbSet<Faction> Factions { get; set; }
-    public DbSet<LocustLeader> LocustLeaders { get; set; }
-    public DbSet<LocustHighCommand> LocustHighCommands { get; set; }
+    public DbSet<Faction<int>> Factions { get; set; }
+    public DbSet<LocustLeader<int>> LocustLeaders { get; set; }
+    public DbSet<LocustHighCommand<int>> LocustHighCommands { get; set; }
 
     public static async Task SeedAsync(GearsOfWarContext context)
     {

@@ -27,13 +27,13 @@ public class TemporalGearsOfWarQuerySqlServerTest : GearsOfWarQueryRelationalTes
         {
             typeof(City),
             typeof(CogTag),
-            typeof(Faction),
-            typeof(LocustHorde),
+            typeof(Faction<int>),
+            typeof(LocustHorde<int>),
             typeof(Gear),
-            typeof(Officer),
-            typeof(LocustLeader),
-            typeof(LocustCommander),
-            typeof(LocustHighCommand),
+            typeof(Officer<int>),
+            typeof(LocustLeader<int>),
+            typeof(LocustCommander<int>),
+            typeof(LocustHighCommand<int>),
             typeof(Mission),
             typeof(Squad),
             typeof(SquadMission),
@@ -372,7 +372,7 @@ FROM [Gears] FOR SYSTEM_TIME AS OF '2015-01-01T00:00:00.0000000' AS [g0]
     {
         using var ctx = CreateContext();
         var date = new DateTime(2015, 1, 1);
-        var query = ctx.Set<Officer>().TemporalAsOf(date).Concat(ctx.Set<Officer>().TemporalAsOf(date));
+        var query = ctx.Set<Officer<int>>().TemporalAsOf(date).Concat(ctx.Set<Officer<int>>().TemporalAsOf(date));
         var expected = async
             ? await query.ToListAsync()
             : query.ToList();

@@ -5,10 +5,10 @@ namespace Microsoft.EntityFrameworkCore.TestModels.GearsOfWarModel;
 
 #nullable disable
 
-public class LocustHorde : Faction
+public class LocustHorde<T> : Faction<T>
 {
-    public LocustCommander Commander { get; set; }
-    public List<LocustLeader> Leaders { get; set; }
+    public LocustCommander<T> Commander { get; set; }
+    public List<LocustLeader<T>> Leaders { get; set; }
 
     public string CommanderName { get; set; }
     public bool? Eradicated { get; set; }

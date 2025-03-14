@@ -7,7 +7,7 @@ namespace Microsoft.EntityFrameworkCore.TestModels.GearsOfWarModel;
 
 #nullable disable
 
-public abstract class Faction
+public abstract class Faction<T>
 {
     public int Id { get; set; }
     public string Name { get; set; }

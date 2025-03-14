@@ -83,29 +83,29 @@ public abstract class GearsOfWarQueryRelationalTestBase<TFixture>(TFixture fixtu
 
         await AssertQuery(
             async,
-            ss => ss.Set<Gear>().OfType<Officer>()
+            ss => ss.Set<Gear>().OfType<Officer<int>>()
                 .Select(g => new { g.Nickname, Discriminator = EF.Property<string>(g, "Discriminator") }),
             elementSorter: e => e.Nickname);
 
         await AssertQuery(
             async,
-            ss => ss.Set<Faction>().Select(f => new { f.Id, Discriminator = EF.Property<string>(f, "Discriminator") }),
+            ss => ss.Set<Faction<int>>().Select(f => new { f.Id, Discriminator = EF.Property<string>(f, "Discriminator") }),
             elementSorter: e => e.Id);
 
         await AssertQuery(
             async,
-            ss => ss.Set<Faction>().OfType<LocustHorde>()
+            ss => ss.Set<Faction<int>>().OfType<LocustHorde<int>>()
                 .Select(lh => new { lh.Id, Discriminator = EF.Property<string>(lh, "Discriminator") }),
             elementSorter: e => e.Id);
 
         await AssertQuery(
             async,
-            ss => ss.Set<LocustLeader>().Select(ll => new { ll.Name, Discriminator = EF.Property<string>(ll, "Discriminator") }),
+            ss => ss.Set<LocustLeader<int>>().Select(ll => new { ll.Name, Discriminator = EF.Property<string>(ll, "Discriminator") }),
             elementSorter: e => e.Name);
 
         await AssertQuery(
             async,
-            ss => ss.Set<LocustLeader>().OfType<LocustCommander>()
+            ss => ss.Set<LocustLeader<int>>().OfType<LocustCommander<int>>()
                 .Select(ll => new { ll.Name, Discriminator = EF.Property<string>(ll, "Discriminator") }),
             elementSorter: e => e.Name);
     }

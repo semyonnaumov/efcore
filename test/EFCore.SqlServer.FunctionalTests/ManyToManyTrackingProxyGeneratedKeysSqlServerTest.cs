@@ -61,11 +61,11 @@ public class ManyToManyTrackingProxyGeneratedKeysSqlServerTest(
                 .SharedTypeEntity<Dictionary<string, object>>("UnidirectionalJoinOneToThreePayloadFullShared")
                 .Ignore("Payload"); // Mutable properties aren't proxyable on Dictionary
 
-            modelBuilder.Entity<EntityOne>().Property(e => e.Id).ValueGeneratedOnAdd();
-            modelBuilder.Entity<EntityTwo>().Property(e => e.Id).ValueGeneratedOnAdd();
-            modelBuilder.Entity<EntityThree>().Property(e => e.Id).ValueGeneratedOnAdd();
-            modelBuilder.Entity<EntityCompositeKey>().Property(e => e.Key1).ValueGeneratedOnAdd();
-            modelBuilder.Entity<EntityRoot>().Property(e => e.Id).ValueGeneratedOnAdd();
+            modelBuilder.Entity<EntityOne<int>>().Property(e => e.Id).ValueGeneratedOnAdd();
+            modelBuilder.Entity<EntityTwo<int>>().Property(e => e.Id).ValueGeneratedOnAdd();
+            modelBuilder.Entity<EntityThree<int>>().Property(e => e.Id).ValueGeneratedOnAdd();
+            modelBuilder.Entity<EntityCompositeKey<int>>().Property(e => e.Key1).ValueGeneratedOnAdd();
+            modelBuilder.Entity<EntityRoot<int>>().Property(e => e.Id).ValueGeneratedOnAdd();
             modelBuilder.Entity<EntityTableSharing1>().Property(e => e.Id).ValueGeneratedOnAdd();
             modelBuilder.Entity<EntityTableSharing2>().Property(e => e.Id).ValueGeneratedOnAdd();
             modelBuilder.SharedTypeEntity<ProxyableSharedType>("PST").IndexerProperty<int>("Id").ValueGeneratedOnAdd();

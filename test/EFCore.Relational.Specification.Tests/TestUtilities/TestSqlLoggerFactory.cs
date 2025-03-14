@@ -47,6 +47,9 @@ public class TestSqlLoggerFactory : ListLoggerFactory
 
     public void AssertBaseline(string[] expected, bool assertOrder = true, bool forUpdate = false)
     {
+        //var ii = 1;
+        //if (ii == 1) return;
+
         if (_proceduralQueryGeneration)
         {
             return;

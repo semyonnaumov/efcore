@@ -5,10 +5,10 @@ namespace Microsoft.EntityFrameworkCore.TestModels.ManyToManyModel;
 
 #nullable disable
 
-public class EntityLeaf : EntityBranch
+public class EntityLeaf<T> : EntityBranch<T>
 {
     public virtual bool? IsGreen { get; set; }
 
-    public virtual ICollection<EntityCompositeKey> CompositeKeySkipFull { get; set; }
-    public virtual ICollection<JoinCompositeKeyToLeaf> JoinCompositeKeyFull { get; set; }
+    public virtual ICollection<EntityCompositeKey<T>> CompositeKeySkipFull { get; set; }
+    public virtual ICollection<JoinCompositeKeyToLeaf<T>> JoinCompositeKeyFull { get; set; }
 }

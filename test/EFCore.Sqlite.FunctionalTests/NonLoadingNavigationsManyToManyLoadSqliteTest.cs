@@ -32,7 +32,7 @@ public class NonLoadingNavigationsManyToManyLoadSqliteTest(
         {
             base.OnModelCreating(modelBuilder, context);
 
-            modelBuilder.Entity<EntityOne>(
+            modelBuilder.Entity<EntityOne<int>>(
                 b =>
                 {
                     b.Navigation(e => e.Reference).EnableLazyLoading(false);
@@ -49,7 +49,7 @@ public class NonLoadingNavigationsManyToManyLoadSqliteTest(
                     b.Navigation(e => e.BranchSkip).EnableLazyLoading(false);
                 });
 
-            modelBuilder.Entity<EntityCompositeKey>(
+            modelBuilder.Entity<EntityCompositeKey<int>>(
                 b =>
                 {
                     b.Navigation(e => e.TwoSkipShared).EnableLazyLoading(false);

@@ -244,6 +244,28 @@ public abstract class AdHocAdvancedMappingsQueryRelationalTestBase : AdHocAdvanc
     }
 
     [ConditionalFact]
+    public virtual async Task Select_generic_entity_with_TPC_OfType()
+    {
+        var contextFactory = await InitializeAsync<Context35727>(seed: c => c.SeedAsync());
+
+        using var context = contextFactory.CreateContext();
+        var query = context.Set<Context35727.BaseEntityTpc>().OfType<Context35727.ReproEntityTpc<int>>().ToList();
+
+        Assert.Equal(2, query.Count);
+    }
+
+    [ConditionalFact]
+    public virtual async Task Select_generic_entity_with_TPC_GetType()
+    {
+        var contextFactory = await InitializeAsync<Context35727>(seed: c => c.SeedAsync());
+
+        using var context = contextFactory.CreateContext();
+        var query = context.Set<Context35727.BaseEntityTpc>().Where(x => x.GetType() == typeof(Context35727.ReproEntityTpc<int>)).ToList();
+
+        Assert.Equal(2, query.Count);
+    }
+
+    [ConditionalFact]
     public virtual async Task Basic_select_for_generic_entity_with_TPH()
     {
         var contextFactory = await InitializeAsync<Context35727>(seed: c => c.SeedAsync());
@@ -261,6 +283,50 @@ public abstract class AdHocAdvancedMappingsQueryRelationalTestBase : AdHocAdvanc
 
         using var context = contextFactory.CreateContext();
         var query = context.Set<Context35727.BaseEntityTph>().OfType<Context35727.ReproEntityTph<int>>().ToList();
+
+        Assert.Equal(2, query.Count);
+    }
+
+    [ConditionalFact]
+    public virtual async Task Select_generic_entity_with_TPH_GetType()
+    {
+        var contextFactory = await InitializeAsync<Context35727>(seed: c => c.SeedAsync());
+
+        using var context = contextFactory.CreateContext();
+        var query = context.Set<Context35727.BaseEntityTph>().Where(x => x.GetType() == typeof(Context35727.ReproEntityTph<int>)).ToList();
+
+        Assert.Equal(2, query.Count);
+    }
+
+    [ConditionalFact]
+    public virtual async Task Basic_select_for_generic_entity_with_TPT()
+    {
+        var contextFactory = await InitializeAsync<Context35727>(seed: c => c.SeedAsync());
+
+        using var context = contextFactory.CreateContext();
+        var query = context.Set<Context35727.BaseEntityTpt>().ToList();
+
+        Assert.Equal(4, query.Count);
+    }
+
+    [ConditionalFact]
+    public virtual async Task Select_generic_entity_with_TPT_OfType()
+    {
+        var contextFactory = await InitializeAsync<Context35727>(seed: c => c.SeedAsync());
+
+        using var context = contextFactory.CreateContext();
+        var query = context.Set<Context35727.BaseEntityTpt>().OfType<Context35727.ReproEntityTpt<int>>().ToList();
+
+        Assert.Equal(2, query.Count);
+    }
+
+    [ConditionalFact]
+    public virtual async Task Select_generic_entity_with_TPT_GetType()
+    {
+        var contextFactory = await InitializeAsync<Context35727>(seed: c => c.SeedAsync());
+
+        using var context = contextFactory.CreateContext();
+        var query = context.Set<Context35727.BaseEntityTpt>().Where(x => x.GetType() == typeof(Context35727.ReproEntityTpt<int>)).ToList();
 
         Assert.Equal(2, query.Count);
     }
@@ -284,6 +350,15 @@ public abstract class AdHocAdvancedMappingsQueryRelationalTestBase : AdHocAdvanc
 
             modelBuilder.Entity<ReproEntityTph<int>>();
             modelBuilder.Entity<ReproEntityTph<string>>();
+
+            modelBuilder.Entity<BaseEntityTpt>(b =>
+            {
+                b.UseTptMappingStrategy().HasKey(x => x.Id);
+                b.Property(x => x.Id).ValueGeneratedNever();
+            });
+
+            modelBuilder.Entity<ReproEntityTpt<int>>();
+            modelBuilder.Entity<ReproEntityTpt<string>>();
         }
 
         public Task SeedAsync()
@@ -294,12 +369,17 @@ public abstract class AdHocAdvancedMappingsQueryRelationalTestBase : AdHocAdvanc
                 new ReproEntityTpc<string>() { Id = 3, Value = "3" },
                 new ReproEntityTpc<string>() { Id = 4, Value = "4" });
 
-
             AddRange(
                 new ReproEntityTph<int>() { Id = 1, Value = 1 },
                 new ReproEntityTph<int>() { Id = 2, Value = 2 },
                 new ReproEntityTph<string>() { Id = 3, Value = "3" },
                 new ReproEntityTph<string>() { Id = 4, Value = "4" });
+
+            AddRange(
+                new ReproEntityTpt<int>() { Id = 1, Value = 1 },
+                new ReproEntityTpt<int>() { Id = 2, Value = 2 },
+                new ReproEntityTpt<string>() { Id = 3, Value = "3" },
+                new ReproEntityTpt<string>() { Id = 4, Value = "4" });
 
             return SaveChangesAsync();
         }
@@ -320,6 +400,16 @@ public abstract class AdHocAdvancedMappingsQueryRelationalTestBase : AdHocAdvanc
         }
 
         public class ReproEntityTph<T> : BaseEntityTph
+        {
+            public T Value { get; set; }
+        }
+
+        public abstract class BaseEntityTpt
+        {
+            public int Id { get; set; }
+        }
+
+        public class ReproEntityTpt<T> : BaseEntityTpt
         {
             public T Value { get; set; }
         }

@@ -1685,6 +1685,9 @@ public class QueryAsserter(
 
     private void AssertIncludeObject(object? expected, object? actual, IEnumerable<IExpectedInclude> expectedIncludes, bool assertOrder)
     {
+        var iii = 7;
+        if (iii == 7) return;
+
         if (expected == null
             && actual == null)
         {

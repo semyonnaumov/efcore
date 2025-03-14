@@ -5,7 +5,7 @@ namespace Microsoft.EntityFrameworkCore.TestModels.ManyToManyModel;
 
 #nullable disable
 
-public class JoinThreeToCompositeKeyFull
+public class JoinThreeToCompositeKeyFull<T>
 {
     public virtual Guid Id { get; set; }
     public virtual int ThreeId { get; set; }
@@ -13,6 +13,6 @@ public class JoinThreeToCompositeKeyFull
     public virtual string CompositeId2 { get; set; }
     public virtual DateTime CompositeId3 { get; set; }
 
-    public virtual EntityThree Three { get; set; }
-    public virtual EntityCompositeKey Composite { get; set; }
+    public virtual EntityThree<T> Three { get; set; }
+    public virtual EntityCompositeKey<T> Composite { get; set; }
 }

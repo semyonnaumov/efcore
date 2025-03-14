@@ -46,7 +46,7 @@ public abstract partial class ManyToManyLoadTestBase<TFixture>(TFixture fixture)
 
         context.ChangeTracker.QueryTrackingBehavior = queryTrackingBehavior;
 
-        var left = context.Set<EntityOne>().Find(3)!;
+        var left = context.Set<EntityOne<int>>().Find(3)!;
 
         ClearLog();
 
@@ -116,7 +116,7 @@ public abstract partial class ManyToManyLoadTestBase<TFixture>(TFixture fixture)
     {
         using var context = Fixture.CreateContext();
 
-        var left = context.Set<EntityOne>().Find(3)!;
+        var left = context.Set<EntityOne<int>>().Find(3)!;
 
         ClearLog();
 
@@ -167,28 +167,28 @@ public abstract partial class ManyToManyLoadTestBase<TFixture>(TFixture fixture)
         context.ChangeTracker.LazyLoadingEnabled = false;
 
         var left = ExpectLazyLoading
-            ? context.CreateProxy<EntityOne>(
+            ? context.CreateProxy<EntityOne<int>>(
                 b =>
                 {
                     b.Id = 7776;
-                    b.TwoSkip = new ObservableCollection<EntityTwo> { new() { Id = 7777 } };
-                    b.TwoSkipShared = new ObservableCollection<EntityTwo> { new() { Id = 7778 } };
-                    b.SelfSkipPayloadLeft = new ObservableCollection<EntityOne> { new() { Id = 7779 } };
-                    b.SelfSkipPayloadRight = new ObservableCollection<EntityOne> { new() { Id = 7780 } };
-                    b.BranchSkip = new ObservableCollection<EntityBranch> { new() { Id = 7781 } };
-                    b.ThreeSkipPayloadFull = new ObservableCollection<EntityThree> { new() { Id = 7782 } };
-                    b.ThreeSkipPayloadFullShared = new ObservableCollection<EntityThree> { new() { Id = 7783 } };
+                    b.TwoSkip = new ObservableCollection<EntityTwo<int>> { new() { Id = 7777 } };
+                    b.TwoSkipShared = new ObservableCollection<EntityTwo<int>> { new() { Id = 7778 } };
+                    b.SelfSkipPayloadLeft = new ObservableCollection<EntityOne<int>> { new() { Id = 7779 } };
+                    b.SelfSkipPayloadRight = new ObservableCollection<EntityOne<int>> { new() { Id = 7780 } };
+                    b.BranchSkip = new ObservableCollection<EntityBranch<int>> { new() { Id = 7781 } };
+                    b.ThreeSkipPayloadFull = new ObservableCollection<EntityThree<int>> { new() { Id = 7782 } };
+                    b.ThreeSkipPayloadFullShared = new ObservableCollection<EntityThree<int>> { new() { Id = 7783 } };
                 })
-            : new EntityOne
+            : new EntityOne<int>
             {
                 Id = 7776,
-                TwoSkip = new List<EntityTwo> { new() { Id = 7777 } },
-                TwoSkipShared = new List<EntityTwo> { new() { Id = 7778 } },
-                SelfSkipPayloadLeft = new List<EntityOne> { new() { Id = 7779 } },
-                SelfSkipPayloadRight = new List<EntityOne> { new() { Id = 7780 } },
-                BranchSkip = new List<EntityBranch> { new() { Id = 7781 } },
-                ThreeSkipPayloadFull = new List<EntityThree> { new() { Id = 7782 } },
-                ThreeSkipPayloadFullShared = new List<EntityThree> { new() { Id = 7783 } }
+                TwoSkip = new List<EntityTwo<int>> { new() { Id = 7777 } },
+                TwoSkipShared = new List<EntityTwo<int>> { new() { Id = 7778 } },
+                SelfSkipPayloadLeft = new List<EntityOne<int>> { new() { Id = 7779 } },
+                SelfSkipPayloadRight = new List<EntityOne<int>> { new() { Id = 7780 } },
+                BranchSkip = new List<EntityBranch<int>> { new() { Id = 7781 } },
+                ThreeSkipPayloadFull = new List<EntityThree<int>> { new() { Id = 7782 } },
+                ThreeSkipPayloadFullShared = new List<EntityThree<int>> { new() { Id = 7783 } }
             };
 
         context.Attach(left);
@@ -236,7 +236,7 @@ public abstract partial class ManyToManyLoadTestBase<TFixture>(TFixture fixture)
     {
         using var context = Fixture.CreateContext();
 
-        var left = context.Set<EntityOne>().Include(e => e.ThreeSkipPayloadFull).Single(e => e.Id == 3);
+        var left = context.Set<EntityOne<int>>().Include(e => e.ThreeSkipPayloadFull).Single(e => e.Id == 3);
 
         ClearLog();
 
@@ -301,7 +301,7 @@ public abstract partial class ManyToManyLoadTestBase<TFixture>(TFixture fixture)
     {
         using var context = Fixture.CreateContext();
 
-        var left = context.Set<EntityOne>().Include(e => e.TwoSkip).Single(e => e.Id == 3);
+        var left = context.Set<EntityOne<int>>().Include(e => e.TwoSkip).Single(e => e.Id == 3);
 
         ClearLog();
 
@@ -374,7 +374,7 @@ public abstract partial class ManyToManyLoadTestBase<TFixture>(TFixture fixture)
 
         context.ChangeTracker.LazyLoadingEnabled = false;
 
-        var left = context.Set<EntityOne>().Include(e => e.ThreeSkipPayloadFull.OrderBy(e => e.Id).Take(1)).Single(e => e.Id == 3);
+        var left = context.Set<EntityOne<int>>().Include(e => e.ThreeSkipPayloadFull.OrderBy(e => e.Id).Take(1)).Single(e => e.Id == 3);
 
         ClearLog();
 
@@ -471,7 +471,7 @@ public abstract partial class ManyToManyLoadTestBase<TFixture>(TFixture fixture)
 
         context.ChangeTracker.LazyLoadingEnabled = false;
 
-        var left = context.Set<EntityOne>().Include(e => e.TwoSkip.OrderBy(e => e.Id).Take(1)).Single(e => e.Id == 3);
+        var left = context.Set<EntityOne<int>>().Include(e => e.TwoSkip.OrderBy(e => e.Id).Take(1)).Single(e => e.Id == 3);
 
         ClearLog();
 
@@ -551,7 +551,7 @@ public abstract partial class ManyToManyLoadTestBase<TFixture>(TFixture fixture)
         context.ChangeTracker.LazyLoadingEnabled = false;
         context.ChangeTracker.QueryTrackingBehavior = queryTrackingBehavior;
 
-        var left = context.Set<EntityOne>().Include(e => e.ThreeSkipPayloadFull.OrderBy(e => e.Id).Take(1)).Single(e => e.Id == 3);
+        var left = context.Set<EntityOne<int>>().Include(e => e.ThreeSkipPayloadFull.OrderBy(e => e.Id).Take(1)).Single(e => e.Id == 3);
 
         ClearLog();
 
@@ -608,7 +608,7 @@ public abstract partial class ManyToManyLoadTestBase<TFixture>(TFixture fixture)
     {
         using var context = Fixture.CreateContext();
 
-        var left = context.Set<EntityOne>().Find(3)!;
+        var left = context.Set<EntityOne<int>>().Find(3)!;
 
         ClearLog();
 
@@ -675,7 +675,7 @@ public abstract partial class ManyToManyLoadTestBase<TFixture>(TFixture fixture)
     {
         using var context = Fixture.CreateContext();
 
-        var left = context.Set<EntityOne>().Find(3)!;
+        var left = context.Set<EntityOne<int>>().Find(3)!;
 
         ClearLog();
 
@@ -729,8 +729,8 @@ public abstract partial class ManyToManyLoadTestBase<TFixture>(TFixture fixture)
 
         var left = context.Attach(
             ExpectLazyLoading
-                ? context.CreateProxy<EntityOne>(b => b.Id = 999)
-                : new EntityOne { Id = 999 }).Entity;
+                ? context.CreateProxy<EntityOne<int>>(b => b.Id = 999)
+                : new EntityOne<int> { Id = 999 }).Entity;
 
         ClearLog();
 
@@ -791,8 +791,8 @@ public abstract partial class ManyToManyLoadTestBase<TFixture>(TFixture fixture)
 
         var left = context.Attach(
             ExpectLazyLoading
-                ? context.CreateProxy<EntityOne>(b => b.Id = 999)
-                : new EntityOne { Id = 999 }).Entity;
+                ? context.CreateProxy<EntityOne<int>>(b => b.Id = 999)
+                : new EntityOne<int> { Id = 999 }).Entity;
 
         ClearLog();
 
@@ -844,7 +844,7 @@ public abstract partial class ManyToManyLoadTestBase<TFixture>(TFixture fixture)
 
         context.ChangeTracker.DeleteOrphansTiming = deleteOrphansTiming;
 
-        var left = context.Set<EntityOne>().Include(e => e.ThreeSkipPayloadFull).Single(e => e.Id == 3);
+        var left = context.Set<EntityOne<int>>().Include(e => e.ThreeSkipPayloadFull).Single(e => e.Id == 3);
 
         ClearLog();
 
@@ -924,7 +924,7 @@ public abstract partial class ManyToManyLoadTestBase<TFixture>(TFixture fixture)
 
         context.ChangeTracker.DeleteOrphansTiming = deleteOrphansTiming;
 
-        var left = context.Set<EntityOne>().Include(e => e.TwoSkip).Single(e => e.Id == 3);
+        var left = context.Set<EntityOne<int>>().Include(e => e.TwoSkip).Single(e => e.Id == 3);
 
         ClearLog();
 
@@ -986,7 +986,7 @@ public abstract partial class ManyToManyLoadTestBase<TFixture>(TFixture fixture)
     {
         using var context = Fixture.CreateContext();
 
-        var left = context.Set<EntityCompositeKey>().Find(7, "7_2", new DateTime(2007, 2, 1))!;
+        var left = context.Set<EntityCompositeKey<int>>().Find(7, "7_2", new DateTime(2007, 2, 1))!;
 
         ClearLog();
 
@@ -1053,7 +1053,7 @@ public abstract partial class ManyToManyLoadTestBase<TFixture>(TFixture fixture)
     {
         using var context = Fixture.CreateContext();
 
-        var left = context.Set<EntityCompositeKey>().Find(7, "7_2", new DateTime(2007, 2, 1))!;
+        var left = context.Set<EntityCompositeKey<int>>().Find(7, "7_2", new DateTime(2007, 2, 1))!;
 
         ClearLog();
 
@@ -1101,7 +1101,7 @@ public abstract partial class ManyToManyLoadTestBase<TFixture>(TFixture fixture)
     {
         using var context = Fixture.CreateContext();
 
-        var left = context.Set<EntityOne>().AsTracking(queryTrackingBehavior).Single(e => e.Id == 3);
+        var left = context.Set<EntityOne<int>>().AsTracking(queryTrackingBehavior).Single(e => e.Id == 3);
 
         var collectionEntry = context.Entry(left).Collection(e => e.TwoSkip);
 
@@ -1128,7 +1128,7 @@ public abstract partial class ManyToManyLoadTestBase<TFixture>(TFixture fixture)
     {
         using var context = Fixture.CreateContext();
 
-        var left = context.Set<EntityOne>().AsTracking(queryTrackingBehavior).Single(e => e.Id == 3);
+        var left = context.Set<EntityOne<int>>().AsTracking(queryTrackingBehavior).Single(e => e.Id == 3);
 
         var collectionEntry = context.Entry(left).Collection(e => e.TwoSkip);
 
@@ -1147,7 +1147,7 @@ public abstract partial class ManyToManyLoadTestBase<TFixture>(TFixture fixture)
     {
         using var context = Fixture.CreateContext();
 
-        var left = context.Set<EntityOne>().Find(3)!;
+        var left = context.Set<EntityOne<int>>().Find(3)!;
 
         ClearLog();
 
@@ -1196,7 +1196,7 @@ public abstract partial class ManyToManyLoadTestBase<TFixture>(TFixture fixture)
     {
         using var context = Fixture.CreateContext();
 
-        var left = context.Set<EntityOne>().Find(3)!;
+        var left = context.Set<EntityOne<int>>().Find(3)!;
 
         ClearLog();
 
@@ -1235,7 +1235,7 @@ public abstract partial class ManyToManyLoadTestBase<TFixture>(TFixture fixture)
     {
         using var context = Fixture.CreateContext();
 
-        var left = context.Set<EntityOne>().Find(3)!;
+        var left = context.Set<EntityOne<int>>().Find(3)!;
 
         ClearLog();
 
@@ -1274,7 +1274,7 @@ public abstract partial class ManyToManyLoadTestBase<TFixture>(TFixture fixture)
     {
         using var context = Fixture.CreateContext();
 
-        var left = context.Set<EntityOne>().Find(3)!;
+        var left = context.Set<EntityOne<int>>().Find(3)!;
 
         ClearLog();
 
@@ -1324,7 +1324,7 @@ public abstract partial class ManyToManyLoadTestBase<TFixture>(TFixture fixture)
     {
         using var context = Fixture.CreateContext();
 
-        var left = context.Set<EntityOne>().Find(3)!;
+        var left = context.Set<EntityOne<int>>().Find(3)!;
 
         ClearLog();
 
@@ -1380,7 +1380,7 @@ public abstract partial class ManyToManyLoadTestBase<TFixture>(TFixture fixture)
     {
         using var context = Fixture.CreateContext();
 
-        var left = context.Set<EntityOne>().Find(3)!;
+        var left = context.Set<EntityOne<int>>().Find(3)!;
 
         ClearLog();
 
@@ -1389,7 +1389,7 @@ public abstract partial class ManyToManyLoadTestBase<TFixture>(TFixture fixture)
         Assert.False(collectionEntry.IsLoaded);
 
         var queryable = from t in collectionEntry.Query()
-                        join s in context.Set<EntityOne>().SelectMany(e => e.TwoSkipShared)
+                        join s in context.Set<EntityOne<int>>().SelectMany(e => e.TwoSkipShared)
                             on t.Id equals s.Id
                         select new { t, s };
 

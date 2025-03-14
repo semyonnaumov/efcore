@@ -7,30 +7,30 @@ namespace Microsoft.EntityFrameworkCore.TestModels.ManyToManyModel;
 
 #nullable disable
 
-public class EntityTwo
+public class EntityTwo<T>
 {
     public virtual int Id { get; set; }
     public virtual string Name { get; set; }
 
     public virtual int? ReferenceInverseId { get; set; }
-    public virtual EntityOne ReferenceInverse { get; set; }
+    public virtual EntityOne<T> ReferenceInverse { get; set; }
 
     public virtual int? CollectionInverseId { get; set; }
-    public virtual EntityOne CollectionInverse { get; set; }
+    public virtual EntityOne<T> CollectionInverse { get; set; }
 
-    public virtual EntityThree Reference { get; set; }
-    public virtual ICollection<EntityThree> Collection { get; set; }
-    public virtual ICollection<EntityOne> OneSkip { get; set; }
-    public virtual ICollection<EntityThree> ThreeSkipFull { get; set; }
-    public virtual ICollection<JoinTwoToThree> JoinThreeFull { get; set; }
-    public virtual ICollection<EntityTwo> SelfSkipSharedLeft { get; set; }
-    public virtual ICollection<EntityTwo> SelfSkipSharedRight { get; set; }
+    public virtual EntityThree<T> Reference { get; set; }
+    public virtual ICollection<EntityThree<T>> Collection { get; set; }
+    public virtual ICollection<EntityOne<T>> OneSkip { get; set; }
+    public virtual ICollection<EntityThree<T>> ThreeSkipFull { get; set; }
+    public virtual ICollection<JoinTwoToThree<T>> JoinThreeFull { get; set; }
+    public virtual ICollection<EntityTwo<T>> SelfSkipSharedLeft { get; set; }
+    public virtual ICollection<EntityTwo<T>> SelfSkipSharedRight { get; set; }
 
     [InverseProperty("TwoSkipShared")]
-    public virtual ICollection<EntityOne> OneSkipShared { get; set; }
+    public virtual ICollection<EntityOne<T>> OneSkipShared { get; set; }
 
-    public virtual ICollection<EntityCompositeKey> CompositeKeySkipShared { get; set; }
+    public virtual ICollection<EntityCompositeKey<T>> CompositeKeySkipShared { get; set; }
 
     public virtual int? ExtraId { get; set; }
-    public virtual JoinOneToTwoExtra Extra { get; set; }
+    public virtual JoinOneToTwoExtra<T> Extra { get; set; }
 }

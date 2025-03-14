@@ -62,13 +62,13 @@ public class ManyToManyTrackingProxySqlServerTest(ManyToManyTrackingProxySqlServ
         {
             base.OnModelCreating(modelBuilder, context);
 
-            modelBuilder.Entity<EntityBranch2>()
+            modelBuilder.Entity<EntityBranch2<int>>()
                 .HasMany(e => e.SelfSkipSharedLeft)
                 .WithMany(e => e.SelfSkipSharedRight)
                 .UsingEntity<Dictionary<string, object>>(
                     "EntityBranch2EntityBranch2",
-                    r => r.HasOne<EntityBranch2>().WithMany().HasForeignKey("SelfSkipSharedRightId").OnDelete(DeleteBehavior.Restrict),
-                    l => l.HasOne<EntityBranch2>().WithMany().HasForeignKey("SelfSkipSharedLeftId").OnDelete(DeleteBehavior.Restrict));
+                    r => r.HasOne<EntityBranch2<int>>().WithMany().HasForeignKey("SelfSkipSharedRightId").OnDelete(DeleteBehavior.Restrict),
+                    l => l.HasOne<EntityBranch2<int>>().WithMany().HasForeignKey("SelfSkipSharedLeftId").OnDelete(DeleteBehavior.Restrict));
 
             modelBuilder
                 .SharedTypeEntity<Dictionary<string, object>>("JoinOneToThreePayloadFullShared")

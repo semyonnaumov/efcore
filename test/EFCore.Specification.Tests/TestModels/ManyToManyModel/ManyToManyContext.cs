@@ -9,11 +9,11 @@ namespace Microsoft.EntityFrameworkCore.TestModels.ManyToManyModel;
 
 public class ManyToManyContext(DbContextOptions options) : PoolableDbContext(options)
 {
-    public DbSet<EntityOne> EntityOnes { get; set; }
-    public DbSet<EntityTwo> EntityTwos { get; set; }
-    public DbSet<EntityThree> EntityThrees { get; set; }
-    public DbSet<EntityCompositeKey> EntityCompositeKeys { get; set; }
-    public DbSet<EntityRoot> EntityRoots { get; set; }
+    public DbSet<EntityOne<int>> EntityOnes { get; set; }
+    public DbSet<EntityTwo<int>> EntityTwos { get; set; }
+    public DbSet<EntityThree<int>> EntityThrees { get; set; }
+    public DbSet<EntityCompositeKey<int>> EntityCompositeKeys { get; set; }
+    public DbSet<EntityRoot<int>> EntityRoots { get; set; }
     public DbSet<EntityTableSharing1> EntityTableSharing1s { get; set; }
     public DbSet<EntityTableSharing2> EntityTableSharing2s { get; set; }
     public DbSet<ImplicitManyToManyA> ImplicitManyToManyAs { get; set; }

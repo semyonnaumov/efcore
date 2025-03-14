@@ -5,9 +5,9 @@ namespace Microsoft.EntityFrameworkCore.TestModels.ManyToManyModel;
 
 #nullable disable
 
-public class EntityBranch : EntityRoot
+public class EntityBranch<T> : EntityRoot<T>
 {
     public virtual long Number { get; set; }
-    public virtual ICollection<EntityOne> OneSkip { get; set; }
-    public virtual ICollection<EntityRoot> RootSkipShared { get; set; }
+    public virtual ICollection<EntityOne<T>> OneSkip { get; set; }
+    public virtual ICollection<EntityRoot<T>> RootSkipShared { get; set; }
 }

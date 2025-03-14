@@ -305,7 +305,7 @@ ORDER BY [e].[Id], [s].[OneSkipSharedId], [s].[TwoSkipSharedId], [s].[Id], [s1].
             base.OnModelCreating(modelBuilder, context);
 
             modelBuilder
-                .Entity<JoinOneSelfPayload>()
+                .Entity<JoinOneSelfPayload<int>>()
                 .Property(e => e.Payload)
                 .HasDefaultValueSql("GETUTCDATE()");
 
@@ -315,7 +315,7 @@ ORDER BY [e].[Id], [s].[OneSkipSharedId], [s].[TwoSkipSharedId], [s].[Id], [s1].
                 .HasDefaultValue("Generated");
 
             modelBuilder
-                .Entity<JoinOneToThreePayloadFull>()
+                .Entity<JoinOneToThreePayloadFull<int>>()
                 .Property(e => e.Payload)
                 .HasDefaultValue("Generated");
 

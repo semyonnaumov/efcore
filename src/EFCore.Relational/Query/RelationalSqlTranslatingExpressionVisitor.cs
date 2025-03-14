@@ -352,7 +352,7 @@ public class RelationalSqlTranslatingExpressionVisitor : ExpressionVisitor
             if (discriminatorProperty == null)
             {
                 // TPT or TPC
-                var discriminatorValue = derivedType.ShortName();
+                var discriminatorValue = derivedType.DisplayName();
                 if (typeReference.Subquery != null)
                 {
                     var shaper = (StructuralTypeShaperExpression)typeReference.Subquery.ShaperExpression;
@@ -386,7 +386,7 @@ public class RelationalSqlTranslatingExpressionVisitor : ExpressionVisitor
                         // TPT case
                         // Most root type doesn't have matching case
                         // All derived types needs to be excluded
-                        var derivedTypeValues = derivedType.GetDerivedTypes().Where(e => !e.IsAbstract()).Select(e => e.ShortName())
+                        var derivedTypeValues = derivedType.GetDerivedTypes().Where(e => !e.IsAbstract()).Select(e => e.DisplayName())
                             .ToList();
                         var predicates = new List<SqlExpression>();
                         foreach (var caseWhenClause in caseExpression.WhenClauses)

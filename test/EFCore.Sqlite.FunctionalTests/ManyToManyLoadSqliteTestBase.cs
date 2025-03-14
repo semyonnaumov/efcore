@@ -23,7 +23,7 @@ public abstract class ManyToManyLoadSqliteTestBase<TFixture>(TFixture fixture) :
             base.OnModelCreating(modelBuilder, context);
 
             modelBuilder
-                .Entity<JoinOneSelfPayload>()
+                .Entity<JoinOneSelfPayload<int>>()
                 .Property(e => e.Payload)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
@@ -33,7 +33,7 @@ public abstract class ManyToManyLoadSqliteTestBase<TFixture>(TFixture fixture) :
                 .HasDefaultValue("Generated");
 
             modelBuilder
-                .Entity<JoinOneToThreePayloadFull>()
+                .Entity<JoinOneToThreePayloadFull<int>>()
                 .Property(e => e.Payload)
                 .HasDefaultValue("Generated");
 

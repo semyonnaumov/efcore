@@ -5,10 +5,10 @@ namespace Microsoft.EntityFrameworkCore.TestModels.ManyToManyModel;
 
 #nullable disable
 
-public class JoinOneToTwoExtra
+public class JoinOneToTwoExtra<T>
 {
     public virtual int Id { get; set; }
     public virtual string Name { get; set; }
 
-    public virtual ICollection<JoinOneToTwo> JoinEntities { get; set; }
+    public virtual ICollection<JoinOneToTwo<T>> JoinEntities { get; set; }
 }

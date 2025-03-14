@@ -7,25 +7,25 @@ namespace Microsoft.EntityFrameworkCore.TestModels.ManyToManyModel;
 
 #nullable disable
 
-public class EntityOne
+public class EntityOne<T>
 {
     public virtual int Id { get; set; }
     public virtual string Name { get; set; }
 
-    public virtual EntityTwo Reference { get; set; }
-    public virtual ICollection<EntityTwo> Collection { get; set; }
-    public virtual ICollection<EntityTwo> TwoSkip { get; set; }
-    public virtual ICollection<EntityThree> ThreeSkipPayloadFull { get; set; }
-    public virtual ICollection<JoinOneToThreePayloadFull> JoinThreePayloadFull { get; set; }
+    public virtual EntityTwo<T> Reference { get; set; }
+    public virtual ICollection<EntityTwo<T>> Collection { get; set; }
+    public virtual ICollection<EntityTwo<T>> TwoSkip { get; set; }
+    public virtual ICollection<EntityThree<T>> ThreeSkipPayloadFull { get; set; }
+    public virtual ICollection<JoinOneToThreePayloadFull<T>> JoinThreePayloadFull { get; set; }
 
     [InverseProperty("OneSkipShared")]
-    public virtual ICollection<EntityTwo> TwoSkipShared { get; set; }
+    public virtual ICollection<EntityTwo<T>> TwoSkipShared { get; set; }
 
-    public virtual ICollection<EntityThree> ThreeSkipPayloadFullShared { get; set; }
+    public virtual ICollection<EntityThree<T>> ThreeSkipPayloadFullShared { get; set; }
     public virtual ICollection<Dictionary<string, object>> JoinThreePayloadFullShared { get; set; }
-    public virtual ICollection<EntityOne> SelfSkipPayloadLeft { get; set; }
-    public virtual ICollection<JoinOneSelfPayload> JoinSelfPayloadLeft { get; set; }
-    public virtual ICollection<EntityOne> SelfSkipPayloadRight { get; set; }
-    public virtual ICollection<JoinOneSelfPayload> JoinSelfPayloadRight { get; set; }
-    public virtual ICollection<EntityBranch> BranchSkip { get; set; }
+    public virtual ICollection<EntityOne<T>> SelfSkipPayloadLeft { get; set; }
+    public virtual ICollection<JoinOneSelfPayload<T>> JoinSelfPayloadLeft { get; set; }
+    public virtual ICollection<EntityOne<T>> SelfSkipPayloadRight { get; set; }
+    public virtual ICollection<JoinOneSelfPayload<T>> JoinSelfPayloadRight { get; set; }
+    public virtual ICollection<EntityBranch<T>> BranchSkip { get; set; }
 }

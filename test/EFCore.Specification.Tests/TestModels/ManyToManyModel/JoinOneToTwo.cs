@@ -5,11 +5,11 @@ namespace Microsoft.EntityFrameworkCore.TestModels.ManyToManyModel;
 
 #nullable disable
 
-public class JoinOneToTwo
+public class JoinOneToTwo<T>
 {
     public virtual int OneId { get; set; }
     public virtual int TwoId { get; set; }
 
-    public virtual EntityOne One { get; set; }
-    public virtual EntityTwo Two { get; set; }
+    public virtual EntityOne<T> One { get; set; }
+    public virtual EntityTwo<T> Two { get; set; }
 }

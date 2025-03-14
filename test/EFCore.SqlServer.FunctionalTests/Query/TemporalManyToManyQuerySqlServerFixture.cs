@@ -30,33 +30,33 @@ public class TemporalManyToManyQuerySqlServerFixture : ManyToManyQueryFixtureBas
                 b.ToTable("TableSharing");
             });
 
-        modelBuilder.Entity<EntityOne>().ToTable(tb => tb.IsTemporal());
-        modelBuilder.Entity<EntityTwo>().ToTable(tb => tb.IsTemporal());
-        modelBuilder.Entity<EntityThree>().ToTable(tb => tb.IsTemporal());
-        modelBuilder.Entity<EntityCompositeKey>().ToTable(tb => tb.IsTemporal());
-        modelBuilder.Entity<EntityRoot>().ToTable(tb => tb.IsTemporal());
+        modelBuilder.Entity<EntityOne<int>>().ToTable(tb => tb.IsTemporal());
+        modelBuilder.Entity<EntityTwo<int>>().ToTable(tb => tb.IsTemporal());
+        modelBuilder.Entity<EntityThree<int>>().ToTable(tb => tb.IsTemporal());
+        modelBuilder.Entity<EntityCompositeKey<int>>().ToTable(tb => tb.IsTemporal());
+        modelBuilder.Entity<EntityRoot<int>>().ToTable(tb => tb.IsTemporal());
         modelBuilder.Entity<UnidirectionalEntityOne>().ToTable(tb => tb.IsTemporal());
         modelBuilder.Entity<UnidirectionalEntityTwo>().ToTable(tb => tb.IsTemporal());
         modelBuilder.Entity<UnidirectionalEntityThree>().ToTable(tb => tb.IsTemporal());
         modelBuilder.Entity<UnidirectionalEntityCompositeKey>().ToTable(tb => tb.IsTemporal());
         modelBuilder.Entity<UnidirectionalEntityRoot>().ToTable(tb => tb.IsTemporal());
 
-        modelBuilder.Entity<EntityOne>().Property(e => e.Id).ValueGeneratedNever();
-        modelBuilder.Entity<EntityTwo>().Property(e => e.Id).ValueGeneratedNever();
-        modelBuilder.Entity<EntityThree>().Property(e => e.Id).ValueGeneratedNever();
-        modelBuilder.Entity<EntityCompositeKey>().HasKey(
+        modelBuilder.Entity<EntityOne<int>>().Property(e => e.Id).ValueGeneratedNever();
+        modelBuilder.Entity<EntityTwo<int>>().Property(e => e.Id).ValueGeneratedNever();
+        modelBuilder.Entity<EntityThree<int>>().Property(e => e.Id).ValueGeneratedNever();
+        modelBuilder.Entity<EntityCompositeKey<int>>().HasKey(
             e => new
             {
                 e.Key1,
                 e.Key2,
                 e.Key3
             });
-        modelBuilder.Entity<EntityRoot>().Property(e => e.Id).ValueGeneratedNever();
-        modelBuilder.Entity<EntityBranch>().HasBaseType<EntityRoot>();
-        modelBuilder.Entity<EntityLeaf>().HasBaseType<EntityBranch>();
-        modelBuilder.Entity<EntityLeaf>().HasBaseType<EntityBranch>();
-        modelBuilder.Entity<EntityBranch2>().HasBaseType<EntityRoot>();
-        modelBuilder.Entity<EntityLeaf2>().HasBaseType<EntityBranch2>();
+        modelBuilder.Entity<EntityRoot<int>>().Property(e => e.Id).ValueGeneratedNever();
+        modelBuilder.Entity<EntityBranch<int>>().HasBaseType<EntityRoot<int>>();
+        modelBuilder.Entity<EntityLeaf<int>>().HasBaseType<EntityBranch<int>>();
+        modelBuilder.Entity<EntityLeaf<int>>().HasBaseType<EntityBranch<int>>();
+        modelBuilder.Entity<EntityBranch2<int>>().HasBaseType<EntityRoot<int>>();
+        modelBuilder.Entity<EntityLeaf2<int>>().HasBaseType<EntityBranch2<int>>();
         modelBuilder.Entity<EntityTableSharing1>().Property(e => e.Id).ValueGeneratedNever();
         modelBuilder.Entity<EntityTableSharing2>().Property(e => e.Id).ValueGeneratedNever();
 
@@ -74,31 +74,31 @@ public class TemporalManyToManyQuerySqlServerFixture : ManyToManyQueryFixtureBas
         modelBuilder.Entity<UnidirectionalEntityBranch>().HasBaseType<UnidirectionalEntityRoot>();
         modelBuilder.Entity<UnidirectionalEntityLeaf>().HasBaseType<UnidirectionalEntityBranch>();
 
-        modelBuilder.Entity<EntityOne>()
+        modelBuilder.Entity<EntityOne<int>>()
             .HasMany(e => e.Collection)
             .WithOne(e => e.CollectionInverse)
             .HasForeignKey(e => e.CollectionInverseId);
 
-        modelBuilder.Entity<EntityOne>()
+        modelBuilder.Entity<EntityOne<int>>()
             .HasOne(e => e.Reference)
             .WithOne(e => e.ReferenceInverse)
-            .HasForeignKey<EntityTwo>(e => e.ReferenceInverseId);
+            .HasForeignKey<EntityTwo<int>>(e => e.ReferenceInverseId);
 
-        modelBuilder.Entity<EntityOne>()
+        modelBuilder.Entity<EntityOne<int>>()
             .HasMany(e => e.TwoSkipShared)
             .WithMany(e => e.OneSkipShared)
             .UsingEntity(t => t.ToTable(tb => tb.IsTemporal()));
 
-        modelBuilder.Entity<EntityRoot>()
+        modelBuilder.Entity<EntityRoot<int>>()
             .HasMany(e => e.BranchSkipShared)
             .WithMany(e => e.RootSkipShared)
             .UsingEntity(t => t.ToTable(tb => tb.IsTemporal()));
 
-        modelBuilder.Entity<EntityBranch2>()
+        modelBuilder.Entity<EntityBranch2<int>>()
             .HasMany(e => e.SelfSkipSharedLeft)
             .WithMany(e => e.SelfSkipSharedRight);
 
-        modelBuilder.Entity<EntityBranch2>()
+        modelBuilder.Entity<EntityBranch2<int>>()
             .HasMany(e => e.Leaf2SkipShared)
             .WithMany(e => e.Branch2SkipShared);
 
@@ -107,84 +107,84 @@ public class TemporalManyToManyQuerySqlServerFixture : ManyToManyQueryFixtureBas
             .WithMany(e => e.TableSharing1Shared);
 
         // Nav:2 Payload:No Join:Concrete Extra:None
-        modelBuilder.Entity<EntityOne>()
+        modelBuilder.Entity<EntityOne<int>>()
             .HasMany(e => e.TwoSkip)
             .WithMany(e => e.OneSkip)
-            .UsingEntity<JoinOneToTwo>()
+            .UsingEntity<JoinOneToTwo<int>>()
             .ToTable(tb => tb.IsTemporal());
 
         // Nav:6 Payload:Yes Join:Concrete Extra:None
-        modelBuilder.Entity<EntityOne>()
+        modelBuilder.Entity<EntityOne<int>>()
             .HasMany(e => e.ThreeSkipPayloadFull)
             .WithMany(e => e.OneSkipPayloadFull)
-            .UsingEntity<JoinOneToThreePayloadFull>(
+            .UsingEntity<JoinOneToThreePayloadFull<int>>(
                 r => r.HasOne(x => x.Three).WithMany(e => e.JoinOnePayloadFull),
                 l => l.HasOne(x => x.One).WithMany(e => e.JoinThreePayloadFull))
             .ToTable(tb => tb.IsTemporal());
 
         // Nav:4 Payload:Yes Join:Shared Extra:None
-        modelBuilder.Entity<EntityOne>()
+        modelBuilder.Entity<EntityOne<int>>()
             .HasMany(e => e.ThreeSkipPayloadFullShared)
             .WithMany(e => e.OneSkipPayloadFullShared)
             .UsingEntity<Dictionary<string, object>>(
                 "JoinOneToThreePayloadFullShared",
-                r => r.HasOne<EntityThree>().WithMany(e => e.JoinOnePayloadFullShared).HasForeignKey("ThreeId"),
-                l => l.HasOne<EntityOne>().WithMany(e => e.JoinThreePayloadFullShared).HasForeignKey("OneId"))
+                r => r.HasOne<EntityThree<int>>().WithMany(e => e.JoinOnePayloadFullShared).HasForeignKey("ThreeId"),
+                l => l.HasOne<EntityOne<int>>().WithMany(e => e.JoinThreePayloadFullShared).HasForeignKey("OneId"))
             .ToTable(tb => tb.IsTemporal())
             .IndexerProperty<string>("Payload");
 
         // Nav:6 Payload:Yes Join:Concrete Extra:Self-Ref
-        modelBuilder.Entity<EntityOne>()
+        modelBuilder.Entity<EntityOne<int>>()
             .HasMany(e => e.SelfSkipPayloadLeft)
             .WithMany(e => e.SelfSkipPayloadRight)
-            .UsingEntity<JoinOneSelfPayload>(
+            .UsingEntity<JoinOneSelfPayload<int>>(
                 l => l.HasOne(x => x.Left).WithMany(x => x.JoinSelfPayloadLeft),
                 r => r.HasOne(x => x.Right).WithMany(x => x.JoinSelfPayloadRight))
             .ToTable(tb => tb.IsTemporal());
 
         // Nav:2 Payload:No Join:Concrete Extra:Inheritance
-        modelBuilder.Entity<EntityOne>()
+        modelBuilder.Entity<EntityOne<int>>()
             .HasMany(e => e.BranchSkip)
             .WithMany(e => e.OneSkip)
             .UsingEntity<JoinOneToBranch>()
             .ToTable(tb => tb.IsTemporal());
 
-        modelBuilder.Entity<EntityTwo>()
+        modelBuilder.Entity<EntityTwo<int>>()
             .HasOne(e => e.Reference)
             .WithOne(e => e.ReferenceInverse)
-            .HasForeignKey<EntityThree>(e => e.ReferenceInverseId);
+            .HasForeignKey<EntityThree<int>>(e => e.ReferenceInverseId);
 
-        modelBuilder.Entity<EntityTwo>()
+        modelBuilder.Entity<EntityTwo<int>>()
             .HasMany(e => e.Collection)
             .WithOne(e => e.CollectionInverse)
             .HasForeignKey(e => e.CollectionInverseId);
 
         // Nav:6 Payload:No Join:Concrete Extra:None
-        modelBuilder.Entity<EntityTwo>()
+        modelBuilder.Entity<EntityTwo<int>>()
             .HasMany(e => e.ThreeSkipFull)
             .WithMany(e => e.TwoSkipFull)
-            .UsingEntity<JoinTwoToThree>(
+            .UsingEntity<JoinTwoToThree<int>>(
                 r => r.HasOne(x => x.Three).WithMany(e => e.JoinTwoFull),
                 l => l.HasOne(x => x.Two).WithMany(e => e.JoinThreeFull))
             .ToTable(tb => tb.IsTemporal());
 
         // Nav:2 Payload:No Join:Shared Extra:Self-ref
-        modelBuilder.Entity<EntityTwo>()
+        modelBuilder.Entity<EntityTwo<int>>()
             .HasMany(e => e.SelfSkipSharedLeft)
             .WithMany(e => e.SelfSkipSharedRight)
             .UsingEntity(t => t.ToTable(tb => tb.IsTemporal()));
 
         // Nav:2 Payload:No Join:Shared Extra:CompositeKey
-        modelBuilder.Entity<EntityTwo>()
+        modelBuilder.Entity<EntityTwo<int>>()
             .HasMany(e => e.CompositeKeySkipShared)
             .WithMany(e => e.TwoSkipShared)
             .UsingEntity(t => t.ToTable(tb => tb.IsTemporal()));
 
         // Nav:6 Payload:No Join:Concrete Extra:CompositeKey
-        modelBuilder.Entity<EntityThree>()
+        modelBuilder.Entity<EntityThree<int>>()
             .HasMany(e => e.CompositeKeySkipFull)
             .WithMany(e => e.ThreeSkipFull)
-            .UsingEntity<JoinThreeToCompositeKeyFull>(
+            .UsingEntity<JoinThreeToCompositeKeyFull<int>>(
                 l => l.HasOne(x => x.Composite).WithMany(x => x.JoinThreeFull).HasForeignKey(
                     e => new
                     {
@@ -196,20 +196,20 @@ public class TemporalManyToManyQuerySqlServerFixture : ManyToManyQueryFixtureBas
             .ToTable(tb => tb.IsTemporal());
 
         // Nav:2 Payload:No Join:Shared Extra:Inheritance
-        modelBuilder.Entity<EntityThree>().HasMany(e => e.RootSkipShared).WithMany(e => e.ThreeSkipShared)
+        modelBuilder.Entity<EntityThree<int>>().HasMany(e => e.RootSkipShared).WithMany(e => e.ThreeSkipShared)
             .UsingEntity(t => t.ToTable(tb => tb.IsTemporal()));
 
         // Nav:2 Payload:No Join:Shared Extra:Inheritance,CompositeKey
-        modelBuilder.Entity<EntityCompositeKey>()
+        modelBuilder.Entity<EntityCompositeKey<int>>()
             .HasMany(e => e.RootSkipShared)
             .WithMany(e => e.CompositeKeySkipShared)
             .UsingEntity(t => t.ToTable(tb => tb.IsTemporal()));
 
         // Nav:6 Payload:No Join:Concrete Extra:Inheritance,CompositeKey
-        modelBuilder.Entity<EntityCompositeKey>()
+        modelBuilder.Entity<EntityCompositeKey<int>>()
             .HasMany(e => e.LeafSkipFull)
             .WithMany(e => e.CompositeKeySkipFull)
-            .UsingEntity<JoinCompositeKeyToLeaf>(
+            .UsingEntity<JoinCompositeKeyToLeaf<int>>(
                 r => r.HasOne(x => x.Leaf).WithMany(x => x.JoinCompositeKeyFull),
                 l => l.HasOne(x => x.Composite).WithMany(x => x.JoinLeafFull).HasForeignKey(
                     e => new
@@ -370,11 +370,11 @@ public class TemporalManyToManyQuerySqlServerFixture : ManyToManyQueryFixtureBas
 
         ChangesDate = new DateTime(2010, 1, 1);
 
-        context.RemoveRange(context.ChangeTracker.Entries().Where(e => e.Entity is EntityThree).Select(e => e.Entity));
-        context.RemoveRange(context.ChangeTracker.Entries().Where(e => e.Entity is EntityTwo).Select(e => e.Entity));
-        context.RemoveRange(context.ChangeTracker.Entries().Where(e => e.Entity is EntityOne).Select(e => e.Entity));
-        context.RemoveRange(context.ChangeTracker.Entries().Where(e => e.Entity is EntityCompositeKey).Select(e => e.Entity));
-        context.RemoveRange(context.ChangeTracker.Entries().Where(e => e.Entity is EntityRoot).Select(e => e.Entity));
+        context.RemoveRange(context.ChangeTracker.Entries().Where(e => e.Entity is EntityThree<int>).Select(e => e.Entity));
+        context.RemoveRange(context.ChangeTracker.Entries().Where(e => e.Entity is EntityTwo<int>).Select(e => e.Entity));
+        context.RemoveRange(context.ChangeTracker.Entries().Where(e => e.Entity is EntityOne<int>).Select(e => e.Entity));
+        context.RemoveRange(context.ChangeTracker.Entries().Where(e => e.Entity is EntityCompositeKey<int>).Select(e => e.Entity));
+        context.RemoveRange(context.ChangeTracker.Entries().Where(e => e.Entity is EntityRoot<int>).Select(e => e.Entity));
         context.RemoveRange(context.ChangeTracker.Entries().Where(e => e.Entity is UnidirectionalEntityThree).Select(e => e.Entity));
         context.RemoveRange(context.ChangeTracker.Entries().Where(e => e.Entity is UnidirectionalEntityTwo).Select(e => e.Entity));
         context.RemoveRange(context.ChangeTracker.Entries().Where(e => e.Entity is UnidirectionalEntityOne).Select(e => e.Entity));

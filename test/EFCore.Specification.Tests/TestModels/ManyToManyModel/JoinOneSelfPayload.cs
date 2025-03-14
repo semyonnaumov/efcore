@@ -5,11 +5,11 @@ namespace Microsoft.EntityFrameworkCore.TestModels.ManyToManyModel;
 
 #nullable disable
 
-public class JoinOneSelfPayload
+public class JoinOneSelfPayload<T>
 {
     public virtual int LeftId { get; set; }
     public virtual int RightId { get; set; }
     public virtual DateTime Payload { get; set; }
-    public virtual EntityOne Right { get; set; }
-    public virtual EntityOne Left { get; set; }
+    public virtual EntityOne<T> Right { get; set; }
+    public virtual EntityOne<T> Left { get; set; }
 }

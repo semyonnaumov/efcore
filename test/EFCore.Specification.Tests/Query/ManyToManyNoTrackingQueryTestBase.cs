@@ -44,16 +44,16 @@ public abstract class ManyToManyNoTrackingQueryTestBase<TFixture>(TFixture fixtu
     [MemberData(nameof(IsAsyncData))]
     public virtual async Task Include_skip_navigation_then_include_inverse_throws_in_no_tracking(bool async)
         => Assert.Equal(
-            CoreStrings.IncludeWithCycle(nameof(EntityThree.OneSkipPayloadFullShared), nameof(EntityOne.ThreeSkipPayloadFullShared)),
+            CoreStrings.IncludeWithCycle(nameof(EntityThree<int>.OneSkipPayloadFullShared), nameof(EntityOne<int>.ThreeSkipPayloadFullShared)),
             (await Assert.ThrowsAsync<InvalidOperationException>(
                 () => AssertQuery(
                     async,
-                    ss => ss.Set<EntityThree>().AsNoTracking().Include(e => e.OneSkipPayloadFullShared)
+                    ss => ss.Set<EntityThree<int>>().AsNoTracking().Include(e => e.OneSkipPayloadFullShared)
                         .ThenInclude(e => e.ThreeSkipPayloadFullShared),
                     elementAsserter: (e, a) => AssertInclude(
                         e, a,
-                        new ExpectedInclude<EntityThree>(et => et.OneSkipPayloadFullShared),
-                        new ExpectedInclude<EntityOne>(et => et.ThreeSkipPayloadFullShared, "OneSkipPayloadFullShared"))))).Message);
+                        new ExpectedInclude<EntityThree<int>>(et => et.OneSkipPayloadFullShared),
+                        new ExpectedInclude<EntityOne<int>>(et => et.ThreeSkipPayloadFullShared, "OneSkipPayloadFullShared"))))).Message);
 
     public override Task Include_skip_navigation_then_include_inverse_works_for_tracking_query(bool async)
         => Task.CompletedTask;

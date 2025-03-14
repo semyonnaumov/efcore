@@ -48,18 +48,18 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 };
                 var rightEntities = new[]
                 {
-                    context.Set<EntityLeaf>().CreateInstance((e, p) => e.Id = Fixture.UseGeneratedKeys ? 0 : 7721),
-                    context.Set<EntityLeaf>().CreateInstance((e, p) => e.Id = Fixture.UseGeneratedKeys ? 0 : 7722),
-                    context.Set<EntityLeaf>().CreateInstance((e, p) => e.Id = Fixture.UseGeneratedKeys ? 0 : 7723)
+                    context.Set<EntityLeaf<int>>().CreateInstance((e, p) => e.Id = Fixture.UseGeneratedKeys ? 0 : 7721),
+                    context.Set<EntityLeaf<int>>().CreateInstance((e, p) => e.Id = Fixture.UseGeneratedKeys ? 0 : 7722),
+                    context.Set<EntityLeaf<int>>().CreateInstance((e, p) => e.Id = Fixture.UseGeneratedKeys ? 0 : 7723)
                 };
 
-                leftEntities[0].LeafSkipFull = CreateCollection<EntityLeaf>();
+                leftEntities[0].LeafSkipFull = CreateCollection<EntityLeaf<int>>();
 
                 leftEntities[0].LeafSkipFull.Add(rightEntities[0]); // 11 - 21
                 leftEntities[0].LeafSkipFull.Add(rightEntities[1]); // 11 - 22
                 leftEntities[0].LeafSkipFull.Add(rightEntities[2]); // 11 - 23
 
-                rightEntities[0].CompositeKeySkipFull = CreateCollection<EntityCompositeKey>();
+                rightEntities[0].CompositeKeySkipFull = CreateCollection<EntityCompositeKey<int>>();
 
                 rightEntities[0].CompositeKeySkipFull.Add(leftEntities[0]); // 21 - 11 (Dupe)
                 rightEntities[0].CompositeKeySkipFull.Add(leftEntities[1]); // 21 - 12
@@ -93,25 +93,25 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
             },
             async context =>
             {
-                var queryable = context.Set<EntityCompositeKey>().Where(e => keys.Contains(e.Key1)).Include(e => e.LeafSkipFull);
+                var queryable = context.Set<EntityCompositeKey<int>>().Where(e => keys.Contains(e.Key1)).Include(e => e.LeafSkipFull);
                 var results = async ? await queryable.ToListAsync() : queryable.ToList();
                 Assert.Equal(3, results.Count);
 
-                var leftEntities = context.ChangeTracker.Entries<EntityCompositeKey>()
+                var leftEntities = context.ChangeTracker.Entries<EntityCompositeKey<int>>()
                     .Select(e => e.Entity).OrderBy(e => e.Key2).ToList();
 
-                var rightEntities = context.ChangeTracker.Entries<EntityLeaf>()
+                var rightEntities = context.ChangeTracker.Entries<EntityLeaf<int>>()
                     .Select(e => e.Entity).OrderBy(e => e.Name).ToList();
 
                 ValidateFixup(context, leftEntities, rightEntities);
             });
 
-        void ValidateFixup(DbContext context, IList<EntityCompositeKey> leftEntities, IList<EntityLeaf> rightEntities)
+        void ValidateFixup(DbContext context, IList<EntityCompositeKey<int>> leftEntities, IList<EntityLeaf<int>> rightEntities)
         {
             Assert.Equal(11, context.ChangeTracker.Entries().Count());
-            Assert.Equal(3, context.ChangeTracker.Entries<EntityCompositeKey>().Count());
-            Assert.Equal(3, context.ChangeTracker.Entries<EntityLeaf>().Count());
-            Assert.Equal(5, context.ChangeTracker.Entries<JoinCompositeKeyToLeaf>().Count());
+            Assert.Equal(3, context.ChangeTracker.Entries<EntityCompositeKey<int>>().Count());
+            Assert.Equal(3, context.ChangeTracker.Entries<EntityLeaf<int>>().Count());
+            Assert.Equal(5, context.ChangeTracker.Entries<JoinCompositeKeyToLeaf<int>>().Count());
 
             Assert.Equal(3, leftEntities[0].LeafSkipFull.Count);
             Assert.Single(leftEntities[1].LeafSkipFull);
@@ -121,7 +121,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
             Assert.Single(rightEntities[1].CompositeKeySkipFull);
             Assert.Single(rightEntities[2].CompositeKeySkipFull);
 
-            var joinEntities = context.ChangeTracker.Entries<JoinCompositeKeyToLeaf>().Select(e => e.Entity).ToList();
+            var joinEntities = context.ChangeTracker.Entries<JoinCompositeKeyToLeaf<int>>().Select(e => e.Entity).ToList();
             foreach (var joinEntity in joinEntities)
             {
                 Assert.Equal(joinEntity.Composite.Key1, joinEntity.CompositeId1);
@@ -145,25 +145,25 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
         return ExecuteWithStrategyInTransactionAsync(
             async context =>
             {
-                var leftEntities = await context.Set<EntityCompositeKey>().Include(e => e.LeafSkipFull).OrderBy(e => e.Key2).ToListAsync();
-                var rightEntities = await context.Set<EntityLeaf>().Include(e => e.CompositeKeySkipFull).OrderBy(e => e.Name).ToListAsync();
+                var leftEntities = await context.Set<EntityCompositeKey<int>>().Include(e => e.LeafSkipFull).OrderBy(e => e.Key2).ToListAsync();
+                var rightEntities = await context.Set<EntityLeaf<int>>().Include(e => e.CompositeKeySkipFull).OrderBy(e => e.Name).ToListAsync();
 
                 leftEntities[0].LeafSkipFull.Add(
-                    context.Set<EntityLeaf>().CreateInstance(
+                    context.Set<EntityLeaf<int>>().CreateInstance(
                         (e, p) =>
                         {
                             e.Id = Fixture.UseGeneratedKeys ? 0 : 7721;
                             e.Name = "Z7721";
                         }));
                 leftEntities[0].LeafSkipFull.Add(
-                    context.Set<EntityLeaf>().CreateInstance(
+                    context.Set<EntityLeaf<int>>().CreateInstance(
                         (e, p) =>
                         {
                             e.Id = Fixture.UseGeneratedKeys ? 0 : 7722;
                             e.Name = "Z7722";
                         }));
                 leftEntities[0].LeafSkipFull.Add(
-                    context.Set<EntityLeaf>().CreateInstance(
+                    context.Set<EntityLeaf<int>>().CreateInstance(
                         (e, p) =>
                         {
                             e.Id = Fixture.UseGeneratedKeys ? 0 : 7723;
@@ -203,7 +203,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
 
                 leftEntities[2].LeafSkipFull.Remove(leftEntities[2].LeafSkipFull.Single(e => e.Name == "Leaf 3"));
                 leftEntities[2].LeafSkipFull.Add(
-                    context.Set<EntityLeaf>().CreateInstance(
+                    context.Set<EntityLeaf<int>>().CreateInstance(
                         (e, p) =>
                         {
                             e.Id = Fixture.UseGeneratedKeys ? 0 : 7724;
@@ -233,23 +233,23 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 ValidateFixup(context, leftEntities, rightEntities, 24, 8, 39 - 4);
             }, async context =>
             {
-                var leftEntities = await context.Set<EntityCompositeKey>().Include(e => e.LeafSkipFull).OrderBy(e => e.Key2).ToListAsync();
-                var rightEntities = await context.Set<EntityLeaf>().Include(e => e.CompositeKeySkipFull).OrderBy(e => e.Name).ToListAsync();
+                var leftEntities = await context.Set<EntityCompositeKey<int>>().Include(e => e.LeafSkipFull).OrderBy(e => e.Key2).ToListAsync();
+                var rightEntities = await context.Set<EntityLeaf<int>>().Include(e => e.CompositeKeySkipFull).OrderBy(e => e.Name).ToListAsync();
 
                 ValidateFixup(context, leftEntities, rightEntities, 24, 8, 39 - 4);
             });
 
         void ValidateFixup(
             DbContext context,
-            List<EntityCompositeKey> leftEntities,
-            List<EntityLeaf> rightEntities,
+            List<EntityCompositeKey<int>> leftEntities,
+            List<EntityLeaf<int>> rightEntities,
             int leftCount,
             int rightCount,
             int joinCount)
         {
-            Assert.Equal(leftCount, context.ChangeTracker.Entries<EntityCompositeKey>().Count());
-            Assert.Equal(rightCount, context.ChangeTracker.Entries<EntityLeaf>().Count());
-            Assert.Equal(joinCount, context.ChangeTracker.Entries<JoinCompositeKeyToLeaf>().Count());
+            Assert.Equal(leftCount, context.ChangeTracker.Entries<EntityCompositeKey<int>>().Count());
+            Assert.Equal(rightCount, context.ChangeTracker.Entries<EntityLeaf<int>>().Count());
+            Assert.Equal(joinCount, context.ChangeTracker.Entries<JoinCompositeKeyToLeaf<int>>().Count());
             Assert.Equal(leftCount + rightCount + joinCount, context.ChangeTracker.Entries().Count());
 
             Assert.Contains(leftEntities[0].LeafSkipFull, e => e.Name == "Z7721");
@@ -269,7 +269,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
             Assert.DoesNotContain(rightEntities[2].CompositeKeySkipFull, e => e.Key2 == "8_1");
             Assert.Contains(rightEntities[2].CompositeKeySkipFull, e => e.Key2 == "7714");
 
-            var joinEntries = context.ChangeTracker.Entries<JoinCompositeKeyToLeaf>().ToList();
+            var joinEntries = context.ChangeTracker.Entries<JoinCompositeKeyToLeaf<int>>().ToList();
             foreach (var joinEntry in joinEntries)
             {
                 var joinEntity = joinEntry.Entity;
@@ -283,8 +283,8 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 Assert.Contains(joinEntity, joinEntity.Leaf.JoinCompositeKeyFull);
             }
 
-            var allLeft = context.ChangeTracker.Entries<EntityCompositeKey>().Select(e => e.Entity).OrderBy(e => e.Key2).ToList();
-            var allRight = context.ChangeTracker.Entries<EntityLeaf>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
+            var allLeft = context.ChangeTracker.Entries<EntityCompositeKey<int>>().Select(e => e.Entity).OrderBy(e => e.Key2).ToList();
+            var allRight = context.ChangeTracker.Entries<EntityLeaf<int>>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
 
             VerifyRelationshipSnapshots(context, joinEntries.Select(e => e.Entity));
             VerifyRelationshipSnapshots(context, allLeft);
@@ -309,7 +309,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 }
             }
 
-            var deleted = context.ChangeTracker.Entries<JoinCompositeKeyToLeaf>().Count(e => e.State == EntityState.Deleted);
+            var deleted = context.ChangeTracker.Entries<JoinCompositeKeyToLeaf<int>>().Count(e => e.State == EntityState.Deleted);
             Assert.Equal(joinCount, (count / 2) + deleted);
         }
     }
@@ -325,11 +325,11 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
         return ExecuteWithStrategyInTransactionAsync(
             async context =>
             {
-                var ones = await context.Set<EntityCompositeKey>().Include(e => e.RootSkipShared).OrderBy(e => e.Key2).ToListAsync();
-                var threes = await context.Set<EntityLeaf>().Include(e => e.CompositeKeySkipFull).OrderBy(e => e.Name).ToListAsync();
+                var ones = await context.Set<EntityCompositeKey<int>>().Include(e => e.RootSkipShared).OrderBy(e => e.Key2).ToListAsync();
+                var threes = await context.Set<EntityLeaf<int>>().Include(e => e.CompositeKeySkipFull).OrderBy(e => e.Name).ToListAsync();
 
                 // Make sure other related entities are loaded for delete fixup
-                await context.Set<JoinThreeToCompositeKeyFull>().LoadAsync();
+                await context.Set<JoinThreeToCompositeKeyFull<int>>().LoadAsync();
 
                 var toRemoveOne = context.EntityCompositeKeys.Single(e => e.Name == "Composite 6");
                 key1 = toRemoveOne.Key1;
@@ -337,11 +337,11 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 key3 = toRemoveOne.Key3;
                 var refCountOnes = threes.SelectMany(e => e.CompositeKeySkipFull).Count(e => e == toRemoveOne);
 
-                var toRemoveThree = (EntityLeaf)context.EntityRoots.Single(e => e.Name == "Leaf 3");
+                var toRemoveThree = (EntityLeaf<int>)context.EntityRoots.Single(e => e.Name == "Leaf 3");
                 id = toRemoveThree.Id;
                 var refCountThrees = ones.SelectMany(e => e.RootSkipShared).Count(e => e == toRemoveThree);
 
-                foreach (var joinEntity in context.ChangeTracker.Entries<JoinCompositeKeyToLeaf>().Select(e => e.Entity).ToList())
+                foreach (var joinEntity in context.ChangeTracker.Entries<JoinCompositeKeyToLeaf<int>>().Select(e => e.Entity).ToList())
                 {
                     Assert.Equal(joinEntity.Composite.Key1, joinEntity.CompositeId1);
                     Assert.Equal(joinEntity.Composite.Key2, joinEntity.CompositeId2);
@@ -370,7 +370,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 ValidateJoinNavigations(context);
 
                 Assert.All(
-                    context.ChangeTracker.Entries<JoinCompositeKeyToLeaf>(), e => Assert.Equal(
+                    context.ChangeTracker.Entries<JoinCompositeKeyToLeaf<int>>(), e => Assert.Equal(
                         (e.Entity.CompositeId1 == key1
                             && e.Entity.CompositeId2 == key2
                             && e.Entity.CompositeId3 == key3)
@@ -392,27 +392,27 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 Assert.Equal(0, ones.SelectMany(e => e.RootSkipShared).Count(e => e == toRemoveThree));
 
                 Assert.DoesNotContain(
-                    context.ChangeTracker.Entries<JoinCompositeKeyToLeaf>(),
+                    context.ChangeTracker.Entries<JoinCompositeKeyToLeaf<int>>(),
                     e => (e.Entity.CompositeId1 == key1
                             && e.Entity.CompositeId2 == key2
                             && e.Entity.CompositeId3 == key3)
                         || e.Entity.LeafId == id);
             }, async context =>
             {
-                var ones = await context.Set<EntityCompositeKey>().Include(e => e.RootSkipShared).OrderBy(e => e.Key2).ToListAsync();
-                var threes = await context.Set<EntityLeaf>().Include(e => e.CompositeKeySkipFull).OrderBy(e => e.Name).ToListAsync();
+                var ones = await context.Set<EntityCompositeKey<int>>().Include(e => e.RootSkipShared).OrderBy(e => e.Key2).ToListAsync();
+                var threes = await context.Set<EntityLeaf<int>>().Include(e => e.CompositeKeySkipFull).OrderBy(e => e.Name).ToListAsync();
 
                 ValidateNavigations(ones, threes);
 
                 Assert.DoesNotContain(
-                    context.ChangeTracker.Entries<JoinCompositeKeyToLeaf>(),
+                    context.ChangeTracker.Entries<JoinCompositeKeyToLeaf<int>>(),
                     e => (e.Entity.CompositeId1 == key1
                             && e.Entity.CompositeId2 == key2
                             && e.Entity.CompositeId3 == key3)
                         || e.Entity.LeafId == id);
             });
 
-        void ValidateNavigations(List<EntityCompositeKey> ones, List<EntityLeaf> threes)
+        void ValidateNavigations(List<EntityCompositeKey<int>> ones, List<EntityLeaf<int>> threes)
         {
             foreach (var one in ones)
             {
@@ -459,7 +459,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
 
         static void ValidateJoinNavigations(DbContext context)
         {
-            foreach (var joinEntity in context.ChangeTracker.Entries<JoinCompositeKeyToLeaf>().Select(e => e.Entity).ToList())
+            foreach (var joinEntity in context.ChangeTracker.Entries<JoinCompositeKeyToLeaf<int>>().Select(e => e.Entity).ToList())
             {
                 Assert.Equal(joinEntity.Composite.Key1, joinEntity.CompositeId1);
                 Assert.Equal(joinEntity.Composite.Key2, joinEntity.CompositeId2);
@@ -508,18 +508,18 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 };
                 var rightEntities = new[]
                 {
-                    context.Set<EntityRoot>().CreateInstance((e, p) => e.Id = Fixture.UseGeneratedKeys ? 0 : 7721),
-                    context.Set<EntityRoot>().CreateInstance((e, p) => e.Id = Fixture.UseGeneratedKeys ? 0 : 7722),
-                    context.Set<EntityRoot>().CreateInstance((e, p) => e.Id = Fixture.UseGeneratedKeys ? 0 : 7723)
+                    context.Set<EntityRoot<int>>().CreateInstance((e, p) => e.Id = Fixture.UseGeneratedKeys ? 0 : 7721),
+                    context.Set<EntityRoot<int>>().CreateInstance((e, p) => e.Id = Fixture.UseGeneratedKeys ? 0 : 7722),
+                    context.Set<EntityRoot<int>>().CreateInstance((e, p) => e.Id = Fixture.UseGeneratedKeys ? 0 : 7723)
                 };
 
-                leftEntities[0].RootSkipShared = CreateCollection<EntityRoot>();
+                leftEntities[0].RootSkipShared = CreateCollection<EntityRoot<int>>();
 
                 leftEntities[0].RootSkipShared.Add(rightEntities[0]); // 11 - 21
                 leftEntities[0].RootSkipShared.Add(rightEntities[1]); // 11 - 22
                 leftEntities[0].RootSkipShared.Add(rightEntities[2]); // 11 - 23
 
-                rightEntities[0].CompositeKeySkipShared = CreateCollection<EntityCompositeKey>();
+                rightEntities[0].CompositeKeySkipShared = CreateCollection<EntityCompositeKey<int>>();
 
                 rightEntities[0].CompositeKeySkipShared.Add(leftEntities[0]); // 21 - 11 (Dupe)
                 rightEntities[0].CompositeKeySkipShared.Add(leftEntities[1]); // 21 - 12
@@ -553,24 +553,24 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
             },
             async context =>
             {
-                var queryable = context.Set<EntityCompositeKey>().Where(e => keys.Contains(e.Key1)).Include(e => e.RootSkipShared);
+                var queryable = context.Set<EntityCompositeKey<int>>().Where(e => keys.Contains(e.Key1)).Include(e => e.RootSkipShared);
                 var results = async ? await queryable.ToListAsync() : queryable.ToList();
                 Assert.Equal(3, results.Count);
 
-                var leftEntities = context.ChangeTracker.Entries<EntityCompositeKey>()
+                var leftEntities = context.ChangeTracker.Entries<EntityCompositeKey<int>>()
                     .Select(e => e.Entity).OrderBy(e => e.Key2).ToList();
 
-                var rightEntities = context.ChangeTracker.Entries<EntityRoot>()
+                var rightEntities = context.ChangeTracker.Entries<EntityRoot<int>>()
                     .Select(e => e.Entity).OrderBy(e => e.Name).ToList();
 
                 ValidateFixup(context, leftEntities, rightEntities);
             });
 
-        void ValidateFixup(DbContext context, IList<EntityCompositeKey> leftEntities, IList<EntityRoot> rightEntities)
+        void ValidateFixup(DbContext context, IList<EntityCompositeKey<int>> leftEntities, IList<EntityRoot<int>> rightEntities)
         {
             Assert.Equal(11, context.ChangeTracker.Entries().Count());
-            Assert.Equal(3, context.ChangeTracker.Entries<EntityCompositeKey>().Count());
-            Assert.Equal(3, context.ChangeTracker.Entries<EntityRoot>().Count());
+            Assert.Equal(3, context.ChangeTracker.Entries<EntityCompositeKey<int>>().Count());
+            Assert.Equal(3, context.ChangeTracker.Entries<EntityRoot<int>>().Count());
             Assert.Equal(5, context.ChangeTracker.Entries<Dictionary<string, object>>().Count());
 
             Assert.Equal(3, leftEntities[0].RootSkipShared.Count);
@@ -594,33 +594,33 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
         return ExecuteWithStrategyInTransactionAsync(
             async context =>
             {
-                var leftEntities = await context.Set<EntityCompositeKey>().Include(e => e.RootSkipShared).OrderBy(e => e.Key2)
+                var leftEntities = await context.Set<EntityCompositeKey<int>>().Include(e => e.RootSkipShared).OrderBy(e => e.Key2)
                     .ToListAsync();
-                var rightEntities = await context.Set<EntityRoot>().Include(e => e.CompositeKeySkipShared).OrderBy(e => e.Name)
+                var rightEntities = await context.Set<EntityRoot<int>>().Include(e => e.CompositeKeySkipShared).OrderBy(e => e.Name)
                     .ToListAsync();
 
                 var roots = new[]
                 {
-                    context.Set<EntityRoot>().CreateInstance(
+                    context.Set<EntityRoot<int>>().CreateInstance(
                         (e, p) =>
                         {
                             e.Id = Fixture.UseGeneratedKeys ? 0 : 7721;
                             e.Name = "Z7721";
                         }),
-                    context.Set<EntityRoot>().CreateInstance(
+                    context.Set<EntityRoot<int>>().CreateInstance(
                         (e, p) =>
                         {
                             e.Id = Fixture.UseGeneratedKeys ? 0 : 7722;
                             e.Name = "Z7722";
                         }),
-                    context.Set<EntityRoot>().CreateInstance(
+                    context.Set<EntityRoot<int>>().CreateInstance(
                         (e, p) =>
                         {
                             Assert.True(e != null, nameof(e) + " != null");
                             e.Id = Fixture.UseGeneratedKeys ? 0 : 7723;
                             e.Name = "Z7723";
                         }),
-                    context.Set<EntityRoot>().CreateInstance(
+                    context.Set<EntityRoot<int>>().CreateInstance(
                         (e, p) =>
                         {
                             e.Id = Fixture.UseGeneratedKeys ? 0 : 7724;
@@ -689,9 +689,9 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 ValidateFixup(context, leftEntities, rightEntities, 24, 24, 47 - 4);
             }, async context =>
             {
-                var leftEntities = await context.Set<EntityCompositeKey>().Include(e => e.RootSkipShared).OrderBy(e => e.Key2)
+                var leftEntities = await context.Set<EntityCompositeKey<int>>().Include(e => e.RootSkipShared).OrderBy(e => e.Key2)
                     .ToListAsync();
-                var rightEntities = await context.Set<EntityRoot>().Include(e => e.CompositeKeySkipShared).OrderBy(e => e.Name)
+                var rightEntities = await context.Set<EntityRoot<int>>().Include(e => e.CompositeKeySkipShared).OrderBy(e => e.Name)
                     .ToListAsync();
 
                 ValidateFixup(context, leftEntities, rightEntities, 24, 24, 47 - 4);
@@ -699,14 +699,14 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
 
         void ValidateFixup(
             DbContext context,
-            List<EntityCompositeKey> leftEntities,
-            List<EntityRoot> rightEntities,
+            List<EntityCompositeKey<int>> leftEntities,
+            List<EntityRoot<int>> rightEntities,
             int leftCount,
             int rightCount,
             int joinCount)
         {
-            Assert.Equal(leftCount, context.ChangeTracker.Entries<EntityCompositeKey>().Count());
-            Assert.Equal(rightCount, context.ChangeTracker.Entries<EntityRoot>().Count());
+            Assert.Equal(leftCount, context.ChangeTracker.Entries<EntityCompositeKey<int>>().Count());
+            Assert.Equal(rightCount, context.ChangeTracker.Entries<EntityRoot<int>>().Count());
             Assert.Equal(joinCount, context.ChangeTracker.Entries<Dictionary<string, object>>().Count());
             Assert.Equal(leftCount + rightCount + joinCount, context.ChangeTracker.Entries().Count());
 
@@ -727,8 +727,8 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
             Assert.DoesNotContain(rightEntities[3].CompositeKeySkipShared, e => e.Key2 == "8_5");
             Assert.Contains(rightEntities[3].CompositeKeySkipShared, e => e.Key2 == "Z7714");
 
-            var allLeft = context.ChangeTracker.Entries<EntityCompositeKey>().Select(e => e.Entity).OrderBy(e => e.Key2).ToList();
-            var allRight = context.ChangeTracker.Entries<EntityRoot>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
+            var allLeft = context.ChangeTracker.Entries<EntityCompositeKey<int>>().Select(e => e.Entity).OrderBy(e => e.Key2).ToList();
+            var allRight = context.ChangeTracker.Entries<EntityRoot<int>>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
 
             VerifyRelationshipSnapshots(context, allLeft);
             VerifyRelationshipSnapshots(context, allRight);
@@ -768,11 +768,11 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
         return ExecuteWithStrategyInTransactionAsync(
             async context =>
             {
-                var ones = await context.Set<EntityCompositeKey>().Include(e => e.RootSkipShared).OrderBy(e => e.Key2).ToListAsync();
-                var threes = await context.Set<EntityRoot>().Include(e => e.CompositeKeySkipShared).OrderBy(e => e.Name).ToListAsync();
+                var ones = await context.Set<EntityCompositeKey<int>>().Include(e => e.RootSkipShared).OrderBy(e => e.Key2).ToListAsync();
+                var threes = await context.Set<EntityRoot<int>>().Include(e => e.CompositeKeySkipShared).OrderBy(e => e.Name).ToListAsync();
 
                 // Make sure other related entities are loaded for delete fixup
-                context.Set<JoinThreeToCompositeKeyFull>().Load();
+                context.Set<JoinThreeToCompositeKeyFull<int>>().Load();
 
                 var toRemoveOne = context.EntityCompositeKeys.Single(e => e.Name == "Composite 6");
                 key1 = toRemoveOne.Key1;
@@ -826,8 +826,8 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                         || (int)e.Entity["RootSkipSharedId"] == id);
             }, async context =>
             {
-                var ones = await context.Set<EntityCompositeKey>().Include(e => e.RootSkipShared).OrderBy(e => e.Key2).ToListAsync();
-                var threes = await context.Set<EntityRoot>().Include(e => e.CompositeKeySkipShared).OrderBy(e => e.Name).ToListAsync();
+                var ones = await context.Set<EntityCompositeKey<int>>().Include(e => e.RootSkipShared).OrderBy(e => e.Key2).ToListAsync();
+                var threes = await context.Set<EntityRoot<int>>().Include(e => e.CompositeKeySkipShared).OrderBy(e => e.Name).ToListAsync();
 
                 ValidateNavigations(ones, threes);
 
@@ -840,8 +840,8 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
             });
 
         void ValidateNavigations(
-            List<EntityCompositeKey> ones,
-            List<EntityRoot> threes)
+            List<EntityCompositeKey<int>> ones,
+            List<EntityRoot<int>> threes)
         {
             foreach (var one in ones)
             {
@@ -901,19 +901,19 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 };
                 var rightEntities = new[]
                 {
-                    context.Set<EntityThree>().CreateInstance(
+                    context.Set<EntityThree<int>>().CreateInstance(
                         (e, p) =>
                         {
                             e.Id = Fixture.UseGeneratedKeys ? 0 : 7721;
                             e.Name = "Z7721";
                         }),
-                    context.Set<EntityThree>().CreateInstance(
+                    context.Set<EntityThree<int>>().CreateInstance(
                         (e, p) =>
                         {
                             e.Id = Fixture.UseGeneratedKeys ? 0 : 7722;
                             e.Name = "Z7722";
                         }),
-                    context.Set<EntityThree>().CreateInstance(
+                    context.Set<EntityThree<int>>().CreateInstance(
                         (e, p) =>
                         {
                             e.Id = Fixture.UseGeneratedKeys ? 0 : 7723;
@@ -921,13 +921,13 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                         })
                 };
 
-                leftEntities[0].ThreeSkipFull = CreateCollection<EntityThree>();
+                leftEntities[0].ThreeSkipFull = CreateCollection<EntityThree<int>>();
 
                 leftEntities[0].ThreeSkipFull.Add(rightEntities[0]); // 11 - 21
                 leftEntities[0].ThreeSkipFull.Add(rightEntities[1]); // 11 - 22
                 leftEntities[0].ThreeSkipFull.Add(rightEntities[2]); // 11 - 23
 
-                rightEntities[0].CompositeKeySkipFull = CreateCollection<EntityCompositeKey>();
+                rightEntities[0].CompositeKeySkipFull = CreateCollection<EntityCompositeKey<int>>();
 
                 rightEntities[0].CompositeKeySkipFull.Add(leftEntities[0]); // 21 - 11 (Dupe)
                 rightEntities[0].CompositeKeySkipFull.Add(leftEntities[1]); // 21 - 12
@@ -961,26 +961,26 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
             },
             async context =>
             {
-                var queryable = context.Set<EntityCompositeKey>().Where(e => keys.Contains(e.Key2)).Include(e => e.ThreeSkipFull);
+                var queryable = context.Set<EntityCompositeKey<int>>().Where(e => keys.Contains(e.Key2)).Include(e => e.ThreeSkipFull);
                 var results = async ? await queryable.ToListAsync() : queryable.ToList();
                 Assert.Equal(3, results.Count);
 
-                var leftEntities = context.ChangeTracker.Entries<EntityCompositeKey>()
+                var leftEntities = context.ChangeTracker.Entries<EntityCompositeKey<int>>()
                     .Select(e => e.Entity).OrderBy(e => e.Key2).ToList();
 
-                var rightEntities = context.ChangeTracker.Entries<EntityThree>()
+                var rightEntities = context.ChangeTracker.Entries<EntityThree<int>>()
                     .Select(e => e.Entity).OrderBy(e => e.Name).ToList();
 
                 ValidateFixup(context, leftEntities, rightEntities, postSave: true);
             });
 
-        void ValidateFixup(DbContext context, IList<EntityCompositeKey> leftEntities, IList<EntityThree> rightEntities, bool postSave)
+        void ValidateFixup(DbContext context, IList<EntityCompositeKey<int>> leftEntities, IList<EntityThree<int>> rightEntities, bool postSave)
         {
             var entries = context.ChangeTracker.Entries();
             Assert.Equal(11, entries.Count());
-            Assert.Equal(3, context.ChangeTracker.Entries<EntityCompositeKey>().Count());
-            Assert.Equal(3, context.ChangeTracker.Entries<EntityThree>().Count());
-            Assert.Equal(5, context.ChangeTracker.Entries<JoinThreeToCompositeKeyFull>().Count());
+            Assert.Equal(3, context.ChangeTracker.Entries<EntityCompositeKey<int>>().Count());
+            Assert.Equal(3, context.ChangeTracker.Entries<EntityThree<int>>().Count());
+            Assert.Equal(5, context.ChangeTracker.Entries<JoinThreeToCompositeKeyFull<int>>().Count());
 
             Assert.Equal(3, leftEntities[0].ThreeSkipFull.Count);
             Assert.Single(leftEntities[1].ThreeSkipFull);
@@ -990,7 +990,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
             Assert.Single(rightEntities[1].CompositeKeySkipFull);
             Assert.Single(rightEntities[2].CompositeKeySkipFull);
 
-            var joinEntities = context.ChangeTracker.Entries<JoinThreeToCompositeKeyFull>().Select(e => e.Entity).ToList();
+            var joinEntities = context.ChangeTracker.Entries<JoinThreeToCompositeKeyFull<int>>().Select(e => e.Entity).ToList();
             foreach (var joinEntity in joinEntities)
             {
                 Assert.Equal(joinEntity.Composite.Key1, joinEntity.CompositeId1);
@@ -1021,31 +1021,31 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
         return ExecuteWithStrategyInTransactionAsync(
             async context =>
             {
-                var leftEntities = await context.Set<EntityCompositeKey>().Include(e => e.ThreeSkipFull).OrderBy(e => e.Key2).ToListAsync();
+                var leftEntities = await context.Set<EntityCompositeKey<int>>().Include(e => e.ThreeSkipFull).OrderBy(e => e.Key2).ToListAsync();
                 var rightEntities =
-                    await context.Set<EntityThree>().Include(e => e.CompositeKeySkipFull).OrderBy(e => e.Name).ToListAsync();
+                    await context.Set<EntityThree<int>>().Include(e => e.CompositeKeySkipFull).OrderBy(e => e.Name).ToListAsync();
 
                 var threes = new[]
                 {
-                    context.Set<EntityThree>().CreateInstance(
+                    context.Set<EntityThree<int>>().CreateInstance(
                         (e, p) =>
                         {
                             e.Id = Fixture.UseGeneratedKeys ? 0 : 7721;
                             e.Name = "Z7721";
                         }),
-                    context.Set<EntityThree>().CreateInstance(
+                    context.Set<EntityThree<int>>().CreateInstance(
                         (e, p) =>
                         {
                             e.Id = Fixture.UseGeneratedKeys ? 0 : 7722;
                             e.Name = "Z7722";
                         }),
-                    context.Set<EntityThree>().CreateInstance(
+                    context.Set<EntityThree<int>>().CreateInstance(
                         (e, p) =>
                         {
                             e.Id = Fixture.UseGeneratedKeys ? 0 : 7723;
                             e.Name = "Z7723";
                         }),
-                    context.Set<EntityThree>().CreateInstance(
+                    context.Set<EntityThree<int>>().CreateInstance(
                         (e, p) =>
                         {
                             e.Id = Fixture.UseGeneratedKeys ? 0 : 7724;
@@ -1120,24 +1120,24 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 ValidateFixup(context, leftEntities, rightEntities, 24, 24, 53 - 4);
             }, async context =>
             {
-                var leftEntities = await context.Set<EntityCompositeKey>().Include(e => e.ThreeSkipFull).OrderBy(e => e.Key2).ToListAsync();
+                var leftEntities = await context.Set<EntityCompositeKey<int>>().Include(e => e.ThreeSkipFull).OrderBy(e => e.Key2).ToListAsync();
                 var rightEntities =
-                    await context.Set<EntityThree>().Include(e => e.CompositeKeySkipFull).OrderBy(e => e.Name).ToListAsync();
+                    await context.Set<EntityThree<int>>().Include(e => e.CompositeKeySkipFull).OrderBy(e => e.Name).ToListAsync();
 
                 ValidateFixup(context, leftEntities, rightEntities, 24, 24, 53 - 4);
             });
 
         void ValidateFixup(
             DbContext context,
-            List<EntityCompositeKey> leftEntities,
-            List<EntityThree> rightEntities,
+            List<EntityCompositeKey<int>> leftEntities,
+            List<EntityThree<int>> rightEntities,
             int leftCount,
             int rightCount,
             int joinCount)
         {
-            Assert.Equal(leftCount, context.ChangeTracker.Entries<EntityCompositeKey>().Count());
-            Assert.Equal(rightCount, context.ChangeTracker.Entries<EntityThree>().Count());
-            Assert.Equal(joinCount, context.ChangeTracker.Entries<JoinThreeToCompositeKeyFull>().Count());
+            Assert.Equal(leftCount, context.ChangeTracker.Entries<EntityCompositeKey<int>>().Count());
+            Assert.Equal(rightCount, context.ChangeTracker.Entries<EntityThree<int>>().Count());
+            Assert.Equal(joinCount, context.ChangeTracker.Entries<JoinThreeToCompositeKeyFull<int>>().Count());
             Assert.Equal(leftCount + rightCount + joinCount, context.ChangeTracker.Entries().Count());
 
             Assert.Contains(leftEntities[0].ThreeSkipFull, e => context.Entry(e).Property(e => e.Id).CurrentValue == threeIds[0]);
@@ -1157,7 +1157,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
             Assert.DoesNotContain(rightEntities[2].CompositeKeySkipFull, e => e.Key2 == "6_1");
             Assert.Contains(rightEntities[2].CompositeKeySkipFull, e => e.Key2 == "Z7714");
 
-            var joinEntries = context.ChangeTracker.Entries<JoinThreeToCompositeKeyFull>().ToList();
+            var joinEntries = context.ChangeTracker.Entries<JoinThreeToCompositeKeyFull<int>>().ToList();
             foreach (var joinEntry in joinEntries)
             {
                 var joinEntity = joinEntry.Entity;
@@ -1171,8 +1171,8 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 Assert.Contains(joinEntity, joinEntity.Three.JoinCompositeKeyFull);
             }
 
-            var allLeft = context.ChangeTracker.Entries<EntityCompositeKey>().Select(e => e.Entity).OrderBy(e => e.Key2).ToList();
-            var allRight = context.ChangeTracker.Entries<EntityThree>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
+            var allLeft = context.ChangeTracker.Entries<EntityCompositeKey<int>>().Select(e => e.Entity).OrderBy(e => e.Key2).ToList();
+            var allRight = context.ChangeTracker.Entries<EntityThree<int>>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
 
             VerifyRelationshipSnapshots(context, joinEntries.Select(e => e.Entity));
             VerifyRelationshipSnapshots(context, allLeft);
@@ -1197,7 +1197,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 }
             }
 
-            var deleted = context.ChangeTracker.Entries<JoinThreeToCompositeKeyFull>().Count(e => e.State == EntityState.Deleted);
+            var deleted = context.ChangeTracker.Entries<JoinThreeToCompositeKeyFull<int>>().Count(e => e.State == EntityState.Deleted);
             Assert.Equal(joinCount, (count / 2) + deleted);
         }
     }
@@ -1210,11 +1210,11 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
         return ExecuteWithStrategyInTransactionAsync(
             async context =>
             {
-                var ones = await context.Set<EntityCompositeKey>().Include(e => e.ThreeSkipFull).OrderBy(e => e.Key2).ToListAsync();
-                var threes = await context.Set<EntityThree>().Include(e => e.CompositeKeySkipFull).OrderBy(e => e.Name).ToListAsync();
+                var ones = await context.Set<EntityCompositeKey<int>>().Include(e => e.ThreeSkipFull).OrderBy(e => e.Key2).ToListAsync();
+                var threes = await context.Set<EntityThree<int>>().Include(e => e.CompositeKeySkipFull).OrderBy(e => e.Name).ToListAsync();
 
                 // Make sure other related entities are loaded for delete fixup
-                await context.Set<JoinThreeToCompositeKeyFull>().LoadAsync();
+                await context.Set<JoinThreeToCompositeKeyFull<int>>().LoadAsync();
 
                 var toRemoveOne = context.EntityCompositeKeys.Single(e => e.Name == "Composite 6");
                 var refCountOnes = threes.SelectMany(e => e.CompositeKeySkipFull).Count(e => e == toRemoveOne);
@@ -1223,7 +1223,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 threeId = toRemoveThree.Id;
                 var refCountThrees = ones.SelectMany(e => e.ThreeSkipFull).Count(e => e == toRemoveThree);
 
-                foreach (var joinEntity in context.ChangeTracker.Entries<JoinThreeToCompositeKeyFull>().Select(e => e.Entity).ToList())
+                foreach (var joinEntity in context.ChangeTracker.Entries<JoinThreeToCompositeKeyFull<int>>().Select(e => e.Entity).ToList())
                 {
                     Assert.Equal(joinEntity.Composite.Key1, joinEntity.CompositeId1);
                     Assert.Equal(joinEntity.Composite.Key2, joinEntity.CompositeId2);
@@ -1252,7 +1252,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 ValidateJoinNavigations(context);
 
                 Assert.All(
-                    context.ChangeTracker.Entries<JoinThreeToCompositeKeyFull>(), e => Assert.Equal(
+                    context.ChangeTracker.Entries<JoinThreeToCompositeKeyFull<int>>(), e => Assert.Equal(
                         (e.Entity.CompositeId2 == "6_1"
                             && e.Entity.CompositeId3 == new DateTime(2006, 1, 1))
                         || e.Entity.ThreeId == threeId
@@ -1273,25 +1273,25 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 Assert.Equal(0, ones.SelectMany(e => e.ThreeSkipFull).Count(e => e == toRemoveThree));
 
                 Assert.DoesNotContain(
-                    context.ChangeTracker.Entries<JoinThreeToCompositeKeyFull>(),
+                    context.ChangeTracker.Entries<JoinThreeToCompositeKeyFull<int>>(),
                     e => (e.Entity.CompositeId2 == "6_1"
                             && e.Entity.CompositeId3 == new DateTime(2006, 1, 1))
                         || e.Entity.ThreeId == threeId);
             }, async context =>
             {
-                var ones = await context.Set<EntityCompositeKey>().Include(e => e.ThreeSkipFull).OrderBy(e => e.Key2).ToListAsync();
-                var threes = await context.Set<EntityThree>().Include(e => e.CompositeKeySkipFull).OrderBy(e => e.Name).ToListAsync();
+                var ones = await context.Set<EntityCompositeKey<int>>().Include(e => e.ThreeSkipFull).OrderBy(e => e.Key2).ToListAsync();
+                var threes = await context.Set<EntityThree<int>>().Include(e => e.CompositeKeySkipFull).OrderBy(e => e.Name).ToListAsync();
 
                 ValidateNavigations(ones, threes);
 
                 Assert.DoesNotContain(
-                    context.ChangeTracker.Entries<JoinThreeToCompositeKeyFull>(),
+                    context.ChangeTracker.Entries<JoinThreeToCompositeKeyFull<int>>(),
                     e => (e.Entity.CompositeId2 == "6_1"
                             && e.Entity.CompositeId3 == new DateTime(2006, 1, 1))
                         || e.Entity.ThreeId == threeId);
             });
 
-        void ValidateNavigations(List<EntityCompositeKey> ones, List<EntityThree> threes)
+        void ValidateNavigations(List<EntityCompositeKey<int>> ones, List<EntityThree<int>> threes)
         {
             foreach (var one in ones)
             {
@@ -1335,7 +1335,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
 
         static void ValidateJoinNavigations(DbContext context)
         {
-            foreach (var joinEntity in context.ChangeTracker.Entries<JoinThreeToCompositeKeyFull>().Select(e => e.Entity).ToList())
+            foreach (var joinEntity in context.ChangeTracker.Entries<JoinThreeToCompositeKeyFull<int>>().Select(e => e.Entity).ToList())
             {
                 Assert.Equal(joinEntity.Composite.Key1, joinEntity.CompositeId1);
                 Assert.Equal(joinEntity.Composite.Key2, joinEntity.CompositeId2);
@@ -1372,13 +1372,13 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                     context.EntityTwos.CreateInstance((e, p) => e.Id = Fixture.UseGeneratedKeys ? 0 : 7723)
                 };
 
-                leftEntities[0].SelfSkipSharedLeft = CreateCollection<EntityTwo>();
+                leftEntities[0].SelfSkipSharedLeft = CreateCollection<EntityTwo<int>>();
 
                 leftEntities[0].SelfSkipSharedLeft.Add(rightEntities[0]); // 11 - 21
                 leftEntities[0].SelfSkipSharedLeft.Add(rightEntities[1]); // 11 - 22
                 leftEntities[0].SelfSkipSharedLeft.Add(rightEntities[2]); // 11 - 23
 
-                rightEntities[0].SelfSkipSharedRight = CreateCollection<EntityTwo>();
+                rightEntities[0].SelfSkipSharedRight = CreateCollection<EntityTwo<int>>();
 
                 rightEntities[0].SelfSkipSharedRight.Add(leftEntities[0]); // 21 - 11 (Dupe)
                 rightEntities[0].SelfSkipSharedRight.Add(leftEntities[1]); // 21 - 12
@@ -1413,20 +1413,20 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
             },
             async context =>
             {
-                var queryable = context.Set<EntityTwo>()
+                var queryable = context.Set<EntityTwo<int>>()
                     .Where(e => leftKeys.Contains(e.Id) || rightKeys.Contains(e.Id))
                     .Include(e => e.SelfSkipSharedLeft);
 
                 var results = async ? await queryable.ToListAsync() : queryable.ToList();
                 Assert.Equal(6, results.Count);
 
-                var leftEntities = context.ChangeTracker.Entries<EntityTwo>()
+                var leftEntities = context.ChangeTracker.Entries<EntityTwo<int>>()
                     .Select(e => e.Entity)
                     .Where(e => leftKeys.Contains(e.Id))
                     .OrderBy(e => e.Name)
                     .ToList();
 
-                var rightEntities = context.ChangeTracker.Entries<EntityTwo>()
+                var rightEntities = context.ChangeTracker.Entries<EntityTwo<int>>()
                     .Select(e => e.Entity)
                     .Where(e => rightKeys.Contains(e.Id))
                     .OrderBy(e => e.Name)
@@ -1435,10 +1435,10 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 ValidateFixup(context, leftEntities, rightEntities);
             });
 
-        void ValidateFixup(DbContext context, IList<EntityTwo> leftEntities, IList<EntityTwo> rightEntities)
+        void ValidateFixup(DbContext context, IList<EntityTwo<int>> leftEntities, IList<EntityTwo<int>> rightEntities)
         {
             Assert.Equal(11, context.ChangeTracker.Entries().Count());
-            Assert.Equal(6, context.ChangeTracker.Entries<EntityTwo>().Count());
+            Assert.Equal(6, context.ChangeTracker.Entries<EntityTwo<int>>().Count());
             Assert.Equal(5, context.ChangeTracker.Entries<Dictionary<string, object>>().Count());
 
             Assert.Equal(3, leftEntities[0].SelfSkipSharedLeft.Count);
@@ -1462,8 +1462,8 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
         return ExecuteWithStrategyInTransactionAsync(
             async context =>
             {
-                var leftEntities = await context.Set<EntityTwo>().Include(e => e.SelfSkipSharedRight).OrderBy(e => e.Name).ToListAsync();
-                var rightEntities = await context.Set<EntityTwo>().Include(e => e.SelfSkipSharedLeft).OrderBy(e => e.Name).ToListAsync();
+                var leftEntities = await context.Set<EntityTwo<int>>().Include(e => e.SelfSkipSharedRight).OrderBy(e => e.Name).ToListAsync();
+                var rightEntities = await context.Set<EntityTwo<int>>().Include(e => e.SelfSkipSharedLeft).OrderBy(e => e.Name).ToListAsync();
 
                 var twos = new[]
                 {
@@ -1550,20 +1550,20 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 ValidateFixup(context, leftEntities, rightEntities, 28, 42 - 4);
             }, async context =>
             {
-                var leftEntities = await context.Set<EntityTwo>().Include(e => e.SelfSkipSharedRight).OrderBy(e => e.Name).ToListAsync();
-                var rightEntities = await context.Set<EntityTwo>().Include(e => e.SelfSkipSharedLeft).OrderBy(e => e.Name).ToListAsync();
+                var leftEntities = await context.Set<EntityTwo<int>>().Include(e => e.SelfSkipSharedRight).OrderBy(e => e.Name).ToListAsync();
+                var rightEntities = await context.Set<EntityTwo<int>>().Include(e => e.SelfSkipSharedLeft).OrderBy(e => e.Name).ToListAsync();
 
                 ValidateFixup(context, leftEntities, rightEntities, 28, 42 - 4);
             });
 
         void ValidateFixup(
             DbContext context,
-            List<EntityTwo> leftEntities,
-            List<EntityTwo> rightEntities,
+            List<EntityTwo<int>> leftEntities,
+            List<EntityTwo<int>> rightEntities,
             int count,
             int joinCount)
         {
-            Assert.Equal(count, context.ChangeTracker.Entries<EntityTwo>().Count());
+            Assert.Equal(count, context.ChangeTracker.Entries<EntityTwo<int>>().Count());
             Assert.Equal(joinCount, context.ChangeTracker.Entries<Dictionary<string, object>>().Count());
             Assert.Equal(count + joinCount, context.ChangeTracker.Entries().Count());
 
@@ -1584,8 +1584,8 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
             Assert.DoesNotContain(rightEntities[5].SelfSkipSharedLeft, e => e.Name == "EntityTwo 12");
             Assert.Contains(rightEntities[5].SelfSkipSharedLeft, e => context.Entry(e).Property(e => e.Id).CurrentValue == ids[7]);
 
-            var allLeft = context.ChangeTracker.Entries<EntityTwo>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
-            var allRight = context.ChangeTracker.Entries<EntityTwo>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
+            var allLeft = context.ChangeTracker.Entries<EntityTwo<int>>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
+            var allRight = context.ChangeTracker.Entries<EntityTwo<int>>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
 
             VerifyRelationshipSnapshots(context, allLeft);
             VerifyRelationshipSnapshots(context, allRight);
@@ -1637,13 +1637,13 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                     context.EntityThrees.CreateInstance((e, p) => e.Id = Fixture.UseGeneratedKeys ? 0 : 7723)
                 };
 
-                leftEntities[0].ThreeSkipFull = CreateCollection<EntityThree>();
+                leftEntities[0].ThreeSkipFull = CreateCollection<EntityThree<int>>();
 
                 leftEntities[0].ThreeSkipFull.Add(rightEntities[0]); // 11 - 21
                 leftEntities[0].ThreeSkipFull.Add(rightEntities[1]); // 11 - 22
                 leftEntities[0].ThreeSkipFull.Add(rightEntities[2]); // 11 - 23
 
-                rightEntities[0].TwoSkipFull = CreateCollection<EntityTwo>();
+                rightEntities[0].TwoSkipFull = CreateCollection<EntityTwo<int>>();
 
                 rightEntities[0].TwoSkipFull.Add(leftEntities[0]); // 21 - 11 (Dupe)
                 rightEntities[0].TwoSkipFull.Add(leftEntities[1]); // 21 - 12
@@ -1677,22 +1677,22 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
             },
             async context =>
             {
-                var queryable = context.Set<EntityTwo>().Where(e => keys.Contains(e.Id)).Include(e => e.ThreeSkipFull);
+                var queryable = context.Set<EntityTwo<int>>().Where(e => keys.Contains(e.Id)).Include(e => e.ThreeSkipFull);
                 var results = async ? await queryable.ToListAsync() : queryable.ToList();
                 Assert.Equal(3, results.Count);
 
-                var leftEntities = context.ChangeTracker.Entries<EntityTwo>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
-                var rightEntities = context.ChangeTracker.Entries<EntityThree>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
+                var leftEntities = context.ChangeTracker.Entries<EntityTwo<int>>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
+                var rightEntities = context.ChangeTracker.Entries<EntityThree<int>>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
 
                 ValidateFixup(context, leftEntities, rightEntities);
             });
 
-        void ValidateFixup(DbContext context, IList<EntityTwo> leftEntities, IList<EntityThree> rightEntities)
+        void ValidateFixup(DbContext context, IList<EntityTwo<int>> leftEntities, IList<EntityThree<int>> rightEntities)
         {
             Assert.Equal(11, context.ChangeTracker.Entries().Count());
-            Assert.Equal(3, context.ChangeTracker.Entries<EntityTwo>().Count());
-            Assert.Equal(3, context.ChangeTracker.Entries<EntityThree>().Count());
-            Assert.Equal(5, context.ChangeTracker.Entries<JoinTwoToThree>().Count());
+            Assert.Equal(3, context.ChangeTracker.Entries<EntityTwo<int>>().Count());
+            Assert.Equal(3, context.ChangeTracker.Entries<EntityThree<int>>().Count());
+            Assert.Equal(5, context.ChangeTracker.Entries<JoinTwoToThree<int>>().Count());
 
             Assert.Equal(3, leftEntities[0].ThreeSkipFull.Count);
             Assert.Single(leftEntities[1].ThreeSkipFull);
@@ -1702,7 +1702,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
             Assert.Single(rightEntities[1].TwoSkipFull);
             Assert.Single(rightEntities[2].TwoSkipFull);
 
-            var joinEntities = context.ChangeTracker.Entries<JoinTwoToThree>().Select(e => e.Entity).ToList();
+            var joinEntities = context.ChangeTracker.Entries<JoinTwoToThree<int>>().Select(e => e.Entity).ToList();
             foreach (var joinEntity in joinEntities)
             {
                 Assert.Equal(joinEntity.Two.Id, joinEntity.TwoId);
@@ -1723,8 +1723,8 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
         return ExecuteWithStrategyInTransactionAsync(
             async context =>
             {
-                var leftEntities = await context.Set<EntityTwo>().Include(e => e.ThreeSkipFull).OrderBy(e => e.Name).ToListAsync();
-                var rightEntities = await context.Set<EntityThree>().Include(e => e.TwoSkipFull).OrderBy(e => e.Name).ToListAsync();
+                var leftEntities = await context.Set<EntityTwo<int>>().Include(e => e.ThreeSkipFull).OrderBy(e => e.Name).ToListAsync();
+                var rightEntities = await context.Set<EntityThree<int>>().Include(e => e.TwoSkipFull).OrderBy(e => e.Name).ToListAsync();
 
                 leftEntities[0].ThreeSkipFull.Add(
                     context.EntityThrees.CreateInstance(
@@ -1803,23 +1803,23 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 ValidateFixup(context, leftEntities, rightEntities, 24, 24, 60 - 4);
             }, async context =>
             {
-                var leftEntities = await context.Set<EntityTwo>().Include(e => e.ThreeSkipFull).OrderBy(e => e.Name).ToListAsync();
-                var rightEntities = await context.Set<EntityThree>().Include(e => e.TwoSkipFull).OrderBy(e => e.Name).ToListAsync();
+                var leftEntities = await context.Set<EntityTwo<int>>().Include(e => e.ThreeSkipFull).OrderBy(e => e.Name).ToListAsync();
+                var rightEntities = await context.Set<EntityThree<int>>().Include(e => e.TwoSkipFull).OrderBy(e => e.Name).ToListAsync();
 
                 ValidateFixup(context, leftEntities, rightEntities, 24, 24, 60 - 4);
             });
 
         void ValidateFixup(
             DbContext context,
-            List<EntityTwo> leftEntities,
-            List<EntityThree> rightEntities,
+            List<EntityTwo<int>> leftEntities,
+            List<EntityThree<int>> rightEntities,
             int leftCount,
             int rightCount,
             int joinCount)
         {
-            Assert.Equal(leftCount, context.ChangeTracker.Entries<EntityTwo>().Count());
-            Assert.Equal(rightCount, context.ChangeTracker.Entries<EntityThree>().Count());
-            Assert.Equal(joinCount, context.ChangeTracker.Entries<JoinTwoToThree>().Count());
+            Assert.Equal(leftCount, context.ChangeTracker.Entries<EntityTwo<int>>().Count());
+            Assert.Equal(rightCount, context.ChangeTracker.Entries<EntityThree<int>>().Count());
+            Assert.Equal(joinCount, context.ChangeTracker.Entries<JoinTwoToThree<int>>().Count());
             Assert.Equal(leftCount + rightCount + joinCount, context.ChangeTracker.Entries().Count());
 
             Assert.Contains(leftEntities[0].ThreeSkipFull, e => e.Name == "Z7721");
@@ -1839,7 +1839,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
             Assert.DoesNotContain(rightEntities[2].TwoSkipFull, e => e.Name == "EntityTwo 3");
             Assert.Contains(rightEntities[2].TwoSkipFull, e => e.Name == "Z7714");
 
-            var joinEntries = context.ChangeTracker.Entries<JoinTwoToThree>().ToList();
+            var joinEntries = context.ChangeTracker.Entries<JoinTwoToThree<int>>().ToList();
             foreach (var joinEntry in joinEntries)
             {
                 var joinEntity = joinEntry.Entity;
@@ -1849,8 +1849,8 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 Assert.Contains(joinEntity, joinEntity.Three.JoinTwoFull);
             }
 
-            var allLeft = context.ChangeTracker.Entries<EntityTwo>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
-            var allRight = context.ChangeTracker.Entries<EntityThree>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
+            var allLeft = context.ChangeTracker.Entries<EntityTwo<int>>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
+            var allRight = context.ChangeTracker.Entries<EntityThree<int>>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
 
             VerifyRelationshipSnapshots(context, joinEntries.Select(e => e.Entity));
             VerifyRelationshipSnapshots(context, allLeft);
@@ -1875,7 +1875,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 }
             }
 
-            var deleted = context.ChangeTracker.Entries<JoinTwoToThree>().Count(e => e.State == EntityState.Deleted);
+            var deleted = context.ChangeTracker.Entries<JoinTwoToThree<int>>().Count(e => e.State == EntityState.Deleted);
             Assert.Equal(joinCount, (count / 2) + deleted);
         }
     }
@@ -1898,18 +1898,18 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 };
                 var rightEntities = new[]
                 {
-                    context.Set<EntityBranch>().CreateInstance((e, p) => e.Id = Fixture.UseGeneratedKeys ? 0 : 7721),
-                    context.Set<EntityBranch>().CreateInstance((e, p) => e.Id = Fixture.UseGeneratedKeys ? 0 : 7722),
-                    context.Set<EntityBranch>().CreateInstance((e, p) => e.Id = Fixture.UseGeneratedKeys ? 0 : 7723)
+                    context.Set<EntityBranch<int>>().CreateInstance((e, p) => e.Id = Fixture.UseGeneratedKeys ? 0 : 7721),
+                    context.Set<EntityBranch<int>>().CreateInstance((e, p) => e.Id = Fixture.UseGeneratedKeys ? 0 : 7722),
+                    context.Set<EntityBranch<int>>().CreateInstance((e, p) => e.Id = Fixture.UseGeneratedKeys ? 0 : 7723)
                 };
 
-                leftEntities[0].BranchSkip = CreateCollection<EntityBranch>();
+                leftEntities[0].BranchSkip = CreateCollection<EntityBranch<int>>();
 
                 leftEntities[0].BranchSkip.Add(rightEntities[0]); // 11 - 21
                 leftEntities[0].BranchSkip.Add(rightEntities[1]); // 11 - 22
                 leftEntities[0].BranchSkip.Add(rightEntities[2]); // 11 - 23
 
-                rightEntities[0].OneSkip = CreateCollection<EntityOne>();
+                rightEntities[0].OneSkip = CreateCollection<EntityOne<int>>();
 
                 rightEntities[0].OneSkip.Add(leftEntities[0]); // 21 - 11 (Dupe)
                 rightEntities[0].OneSkip.Add(leftEntities[1]); // 21 - 12
@@ -1943,21 +1943,21 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
             },
             async context =>
             {
-                var queryable = context.Set<EntityOne>().Where(e => keys.Contains(e.Id)).Include(e => e.BranchSkip);
+                var queryable = context.Set<EntityOne<int>>().Where(e => keys.Contains(e.Id)).Include(e => e.BranchSkip);
                 var results = async ? await queryable.ToListAsync() : queryable.ToList();
                 Assert.Equal(3, results.Count);
 
-                var leftEntities = context.ChangeTracker.Entries<EntityOne>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
-                var rightEntities = context.ChangeTracker.Entries<EntityBranch>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
+                var leftEntities = context.ChangeTracker.Entries<EntityOne<int>>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
+                var rightEntities = context.ChangeTracker.Entries<EntityBranch<int>>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
 
                 ValidateFixup(context, leftEntities, rightEntities);
             });
 
-        void ValidateFixup(DbContext context, IList<EntityOne> leftEntities, IList<EntityBranch> rightEntities)
+        void ValidateFixup(DbContext context, IList<EntityOne<int>> leftEntities, IList<EntityBranch<int>> rightEntities)
         {
             Assert.Equal(11, context.ChangeTracker.Entries().Count());
-            Assert.Equal(3, context.ChangeTracker.Entries<EntityOne>().Count());
-            Assert.Equal(3, context.ChangeTracker.Entries<EntityBranch>().Count());
+            Assert.Equal(3, context.ChangeTracker.Entries<EntityOne<int>>().Count());
+            Assert.Equal(3, context.ChangeTracker.Entries<EntityBranch<int>>().Count());
             Assert.Equal(5, context.ChangeTracker.Entries<JoinOneToBranch>().Count());
 
             Assert.Equal(3, leftEntities[0].BranchSkip.Count);
@@ -1979,25 +1979,25 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
         return ExecuteWithStrategyInTransactionAsync(
             async context =>
             {
-                var leftEntities = await context.Set<EntityOne>().Include(e => e.BranchSkip).OrderBy(e => e.Name).ToListAsync();
-                var rightEntities = await context.Set<EntityBranch>().Include(e => e.OneSkip).OrderBy(e => e.Name).ToListAsync();
+                var leftEntities = await context.Set<EntityOne<int>>().Include(e => e.BranchSkip).OrderBy(e => e.Name).ToListAsync();
+                var rightEntities = await context.Set<EntityBranch<int>>().Include(e => e.OneSkip).OrderBy(e => e.Name).ToListAsync();
 
                 leftEntities[0].BranchSkip.Add(
-                    context.Set<EntityBranch>().CreateInstance(
+                    context.Set<EntityBranch<int>>().CreateInstance(
                         (e, p) =>
                         {
                             e.Id = Fixture.UseGeneratedKeys ? 0 : 7721;
                             e.Name = "Z7721";
                         }));
                 leftEntities[0].BranchSkip.Add(
-                    context.Set<EntityBranch>().CreateInstance(
+                    context.Set<EntityBranch<int>>().CreateInstance(
                         (e, p) =>
                         {
                             e.Id = Fixture.UseGeneratedKeys ? 0 : 7722;
                             e.Name = "Z7722";
                         }));
                 leftEntities[0].BranchSkip.Add(
-                    context.Set<EntityBranch>().CreateInstance(
+                    context.Set<EntityBranch<int>>().CreateInstance(
                         (e, p) =>
                         {
                             e.Id = Fixture.UseGeneratedKeys ? 0 : 7723;
@@ -2031,7 +2031,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
 
                 leftEntities[4].BranchSkip.Remove(leftEntities[4].BranchSkip.Single(e => e.Name == "Branch 5"));
                 leftEntities[2].BranchSkip.Add(
-                    context.Set<EntityBranch>().CreateInstance(
+                    context.Set<EntityBranch<int>>().CreateInstance(
                         (e, p) =>
                         {
                             e.Id = Fixture.UseGeneratedKeys ? 0 : 7724;
@@ -2059,22 +2059,22 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 ValidateFixup(context, leftEntities, rightEntities, 24, 14, 55 - 4);
             }, async context =>
             {
-                var leftEntities = await context.Set<EntityOne>().Include(e => e.BranchSkip).OrderBy(e => e.Name).ToListAsync();
-                var rightEntities = await context.Set<EntityBranch>().Include(e => e.OneSkip).OrderBy(e => e.Name).ToListAsync();
+                var leftEntities = await context.Set<EntityOne<int>>().Include(e => e.BranchSkip).OrderBy(e => e.Name).ToListAsync();
+                var rightEntities = await context.Set<EntityBranch<int>>().Include(e => e.OneSkip).OrderBy(e => e.Name).ToListAsync();
 
                 ValidateFixup(context, leftEntities, rightEntities, 24, 14, 55 - 4);
             });
 
         void ValidateFixup(
             DbContext context,
-            List<EntityOne> leftEntities,
-            List<EntityBranch> rightEntities,
+            List<EntityOne<int>> leftEntities,
+            List<EntityBranch<int>> rightEntities,
             int leftCount,
             int rightCount,
             int joinCount)
         {
-            Assert.Equal(leftCount, context.ChangeTracker.Entries<EntityOne>().Count());
-            Assert.Equal(rightCount, context.ChangeTracker.Entries<EntityBranch>().Count());
+            Assert.Equal(leftCount, context.ChangeTracker.Entries<EntityOne<int>>().Count());
+            Assert.Equal(rightCount, context.ChangeTracker.Entries<EntityBranch<int>>().Count());
             Assert.Equal(joinCount, context.ChangeTracker.Entries<JoinOneToBranch>().Count());
             Assert.Equal(leftCount + rightCount + joinCount, context.ChangeTracker.Entries().Count());
 
@@ -2095,8 +2095,8 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
             Assert.DoesNotContain(rightEntities[2].OneSkip, e => e.Name == "EntityOne 8");
             Assert.Contains(rightEntities[2].OneSkip, e => e.Name == "Z7714");
 
-            var allLeft = context.ChangeTracker.Entries<EntityOne>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
-            var allRight = context.ChangeTracker.Entries<EntityBranch>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
+            var allLeft = context.ChangeTracker.Entries<EntityOne<int>>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
+            var allRight = context.ChangeTracker.Entries<EntityBranch<int>>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
 
             VerifyRelationshipSnapshots(context, allLeft);
             VerifyRelationshipSnapshots(context, allRight);
@@ -2149,13 +2149,13 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                     context.EntityOnes.CreateInstance((e, p) => e.Id = Fixture.UseGeneratedKeys ? 0 : 7723)
                 };
 
-                leftEntities[0].SelfSkipPayloadLeft = CreateCollection<EntityOne>();
+                leftEntities[0].SelfSkipPayloadLeft = CreateCollection<EntityOne<int>>();
 
                 leftEntities[0].SelfSkipPayloadLeft.Add(rightEntities[0]); // 11 - 21
                 leftEntities[0].SelfSkipPayloadLeft.Add(rightEntities[1]); // 11 - 22
                 leftEntities[0].SelfSkipPayloadLeft.Add(rightEntities[2]); // 11 - 23
 
-                rightEntities[0].SelfSkipPayloadRight = CreateCollection<EntityOne>();
+                rightEntities[0].SelfSkipPayloadRight = CreateCollection<EntityOne<int>>();
 
                 rightEntities[0].SelfSkipPayloadRight.Add(leftEntities[0]); // 21 - 11 (Dupe)
                 rightEntities[0].SelfSkipPayloadRight.Add(leftEntities[1]); // 21 - 12
@@ -2190,20 +2190,20 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
             },
             async context =>
             {
-                var queryable = context.Set<EntityOne>()
+                var queryable = context.Set<EntityOne<int>>()
                     .Where(e => leftKeys.Contains(e.Id) || rightKeys.Contains(e.Id))
                     .Include(e => e.SelfSkipPayloadLeft);
 
                 var results = async ? await queryable.ToListAsync() : queryable.ToList();
                 Assert.Equal(6, results.Count);
 
-                var leftEntities = context.ChangeTracker.Entries<EntityOne>()
+                var leftEntities = context.ChangeTracker.Entries<EntityOne<int>>()
                     .Select(e => e.Entity)
                     .Where(e => leftKeys.Contains(e.Id))
                     .OrderBy(e => e.Name)
                     .ToList();
 
-                var rightEntities = context.ChangeTracker.Entries<EntityOne>()
+                var rightEntities = context.ChangeTracker.Entries<EntityOne<int>>()
                     .Select(e => e.Entity)
                     .Where(e => rightKeys.Contains(e.Id))
                     .OrderBy(e => e.Name)
@@ -2212,11 +2212,11 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 ValidateFixup(context, leftEntities, rightEntities, postSave: true);
             });
 
-        void ValidateFixup(DbContext context, IList<EntityOne> leftEntities, IList<EntityOne> rightEntities, bool postSave)
+        void ValidateFixup(DbContext context, IList<EntityOne<int>> leftEntities, IList<EntityOne<int>> rightEntities, bool postSave)
         {
             Assert.Equal(11, context.ChangeTracker.Entries().Count());
-            Assert.Equal(6, context.ChangeTracker.Entries<EntityOne>().Count());
-            Assert.Equal(5, context.ChangeTracker.Entries<JoinOneSelfPayload>().Count());
+            Assert.Equal(6, context.ChangeTracker.Entries<EntityOne<int>>().Count());
+            Assert.Equal(5, context.ChangeTracker.Entries<JoinOneSelfPayload<int>>().Count());
 
             Assert.Equal(3, leftEntities[0].SelfSkipPayloadLeft.Count);
             Assert.Single(leftEntities[1].SelfSkipPayloadLeft);
@@ -2226,7 +2226,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
             Assert.Single(rightEntities[1].SelfSkipPayloadRight);
             Assert.Single(rightEntities[2].SelfSkipPayloadRight);
 
-            var joinEntities = context.ChangeTracker.Entries<JoinOneSelfPayload>().Select(e => e.Entity).ToList();
+            var joinEntities = context.ChangeTracker.Entries<JoinOneSelfPayload<int>>().Select(e => e.Entity).ToList();
             foreach (var joinEntity in joinEntities)
             {
                 Assert.Equal(joinEntity.Left.Id, joinEntity.LeftId);
@@ -2259,8 +2259,8 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
         return ExecuteWithStrategyInTransactionAsync(
             async context =>
             {
-                var leftEntities = await context.Set<EntityOne>().Include(e => e.SelfSkipPayloadRight).OrderBy(e => e.Name).ToListAsync();
-                var rightEntities = await context.Set<EntityOne>().Include(e => e.SelfSkipPayloadLeft).OrderBy(e => e.Name).ToListAsync();
+                var leftEntities = await context.Set<EntityOne<int>>().Include(e => e.SelfSkipPayloadRight).OrderBy(e => e.Name).ToListAsync();
+                var rightEntities = await context.Set<EntityOne<int>>().Include(e => e.SelfSkipPayloadLeft).OrderBy(e => e.Name).ToListAsync();
 
                 var ones = new[]
                 {
@@ -2339,12 +2339,12 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
 
                 keys = ones.Select(e => context.Entry(e).Property(e => e.Id).CurrentValue).ToList();
 
-                (await context.FindAsync<JoinOneSelfPayload>(
+                (await context.FindAsync<JoinOneSelfPayload<int>>(
                         keys[5],
                         context.Entry(context.EntityOnes.Local.Single(e => e.Name == "EntityOne 1")).Property(e => e.Id).CurrentValue))!
                     .Payload = new DateTime(1973, 9, 3);
 
-                (await context.FindAsync<JoinOneSelfPayload>(
+                (await context.FindAsync<JoinOneSelfPayload<int>>(
                         context.Entry(context.EntityOnes.Local.Single(e => e.Name == "EntityOne 20")).Property(e => e.Id).CurrentValue,
                         context.Entry(context.EntityOnes.Local.Single(e => e.Name == "EntityOne 16")).Property(e => e.Id).CurrentValue))!
                     .Payload = new DateTime(1969, 8, 3);
@@ -2358,22 +2358,22 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 ValidateFixup(context, leftEntities, rightEntities, 28, 37 - 4, postSave: true);
             }, async context =>
             {
-                var leftEntities = await context.Set<EntityOne>().Include(e => e.SelfSkipPayloadRight).OrderBy(e => e.Name).ToListAsync();
-                var rightEntities = await context.Set<EntityOne>().Include(e => e.SelfSkipPayloadLeft).OrderBy(e => e.Name).ToListAsync();
+                var leftEntities = await context.Set<EntityOne<int>>().Include(e => e.SelfSkipPayloadRight).OrderBy(e => e.Name).ToListAsync();
+                var rightEntities = await context.Set<EntityOne<int>>().Include(e => e.SelfSkipPayloadLeft).OrderBy(e => e.Name).ToListAsync();
 
                 ValidateFixup(context, leftEntities, rightEntities, 28, 37 - 4, postSave: true);
             });
 
         void ValidateFixup(
             DbContext context,
-            List<EntityOne> leftEntities,
-            List<EntityOne> rightEntities,
+            List<EntityOne<int>> leftEntities,
+            List<EntityOne<int>> rightEntities,
             int count,
             int joinCount,
             bool postSave)
         {
-            Assert.Equal(count, context.ChangeTracker.Entries<EntityOne>().Count());
-            Assert.Equal(joinCount, context.ChangeTracker.Entries<JoinOneSelfPayload>().Count());
+            Assert.Equal(count, context.ChangeTracker.Entries<EntityOne<int>>().Count());
+            Assert.Equal(joinCount, context.ChangeTracker.Entries<JoinOneSelfPayload<int>>().Count());
             Assert.Equal(count + joinCount, context.ChangeTracker.Entries().Count());
 
             Assert.Contains(leftEntities[0].SelfSkipPayloadRight, e => context.Entry(e).Property(e => e.Id).CurrentValue == keys[0]);
@@ -2393,7 +2393,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
             Assert.DoesNotContain(rightEntities[4].SelfSkipPayloadLeft, e => e.Name == "EntityOne 6");
             Assert.Contains(rightEntities[4].SelfSkipPayloadLeft, e => context.Entry(e).Property(e => e.Id).CurrentValue == keys[7]);
 
-            var joinEntries = context.ChangeTracker.Entries<JoinOneSelfPayload>().ToList();
+            var joinEntries = context.ChangeTracker.Entries<JoinOneSelfPayload<int>>().ToList();
             foreach (var joinEntry in joinEntries)
             {
                 var joinEntity = joinEntry.Entity;
@@ -2417,8 +2417,8 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 }
             }
 
-            var allLeft = context.ChangeTracker.Entries<EntityOne>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
-            var allRight = context.ChangeTracker.Entries<EntityOne>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
+            var allLeft = context.ChangeTracker.Entries<EntityOne<int>>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
+            var allRight = context.ChangeTracker.Entries<EntityOne<int>>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
 
             VerifyRelationshipSnapshots(context, joinEntries.Select(e => e.Entity));
             VerifyRelationshipSnapshots(context, allLeft);
@@ -2443,7 +2443,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 }
             }
 
-            var deleted = context.ChangeTracker.Entries<JoinOneSelfPayload>().Count(e => e.State == EntityState.Deleted);
+            var deleted = context.ChangeTracker.Entries<JoinOneSelfPayload<int>>().Count(e => e.State == EntityState.Deleted);
             Assert.Equal(joinCount, (joins / 2) + deleted);
         }
     }
@@ -2471,13 +2471,13 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                     context.EntityThrees.CreateInstance((e, p) => e.Id = Fixture.UseGeneratedKeys ? 0 : 7723)
                 };
 
-                leftEntities[0].ThreeSkipPayloadFullShared = CreateCollection<EntityThree>();
+                leftEntities[0].ThreeSkipPayloadFullShared = CreateCollection<EntityThree<int>>();
 
                 leftEntities[0].ThreeSkipPayloadFullShared.Add(rightEntities[0]); // 11 - 21
                 leftEntities[0].ThreeSkipPayloadFullShared.Add(rightEntities[1]); // 11 - 22
                 leftEntities[0].ThreeSkipPayloadFullShared.Add(rightEntities[2]); // 11 - 23
 
-                rightEntities[0].OneSkipPayloadFullShared = CreateCollection<EntityOne>();
+                rightEntities[0].OneSkipPayloadFullShared = CreateCollection<EntityOne<int>>();
 
                 rightEntities[0].OneSkipPayloadFullShared.Add(leftEntities[0]); // 21 - 11 (Dupe)
                 rightEntities[0].OneSkipPayloadFullShared.Add(leftEntities[1]); // 21 - 12
@@ -2511,21 +2511,21 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
             },
             async context =>
             {
-                var queryable = context.Set<EntityOne>().Where(e => keys.Contains(e.Id)).Include(e => e.ThreeSkipPayloadFullShared);
+                var queryable = context.Set<EntityOne<int>>().Where(e => keys.Contains(e.Id)).Include(e => e.ThreeSkipPayloadFullShared);
                 var results = async ? await queryable.ToListAsync() : queryable.ToList();
                 Assert.Equal(3, results.Count);
 
-                var leftEntities = context.ChangeTracker.Entries<EntityOne>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
-                var rightEntities = context.ChangeTracker.Entries<EntityThree>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
+                var leftEntities = context.ChangeTracker.Entries<EntityOne<int>>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
+                var rightEntities = context.ChangeTracker.Entries<EntityThree<int>>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
 
                 ValidateFixup(context, leftEntities, rightEntities, postSave: true);
             });
 
-        void ValidateFixup(DbContext context, IList<EntityOne> leftEntities, IList<EntityThree> rightEntities, bool postSave)
+        void ValidateFixup(DbContext context, IList<EntityOne<int>> leftEntities, IList<EntityThree<int>> rightEntities, bool postSave)
         {
             Assert.Equal(11, context.ChangeTracker.Entries().Count());
-            Assert.Equal(3, context.ChangeTracker.Entries<EntityOne>().Count());
-            Assert.Equal(3, context.ChangeTracker.Entries<EntityThree>().Count());
+            Assert.Equal(3, context.ChangeTracker.Entries<EntityOne<int>>().Count());
+            Assert.Equal(3, context.ChangeTracker.Entries<EntityThree<int>>().Count());
             Assert.Equal(5, context.ChangeTracker.Entries<Dictionary<string, object>>().Count());
 
             Assert.Equal(3, leftEntities[0].ThreeSkipPayloadFullShared.Count);
@@ -2557,9 +2557,9 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
         return ExecuteWithStrategyInTransactionAsync(
             async context =>
             {
-                var leftEntities = await context.Set<EntityOne>().Include(e => e.ThreeSkipPayloadFullShared).OrderBy(e => e.Name)
+                var leftEntities = await context.Set<EntityOne<int>>().Include(e => e.ThreeSkipPayloadFullShared).OrderBy(e => e.Name)
                     .ToListAsync();
-                var rightEntities = await context.Set<EntityThree>().Include(e => e.OneSkipPayloadFullShared).OrderBy(e => e.Name)
+                var rightEntities = await context.Set<EntityThree<int>>().Include(e => e.OneSkipPayloadFullShared).OrderBy(e => e.Name)
                     .ToListAsync();
 
                 leftEntities[0].ThreeSkipPayloadFullShared.Add(
@@ -2651,9 +2651,9 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 ValidateFixup(context, leftEntities, rightEntities, 24, 24, 48 - 4, postSave: true);
             }, async context =>
             {
-                var leftEntities = await context.Set<EntityOne>().Include(e => e.ThreeSkipPayloadFullShared).OrderBy(e => e.Name)
+                var leftEntities = await context.Set<EntityOne<int>>().Include(e => e.ThreeSkipPayloadFullShared).OrderBy(e => e.Name)
                     .ToListAsync();
-                var rightEntities = await context.Set<EntityThree>().Include(e => e.OneSkipPayloadFullShared).OrderBy(e => e.Name)
+                var rightEntities = await context.Set<EntityThree<int>>().Include(e => e.OneSkipPayloadFullShared).OrderBy(e => e.Name)
                     .ToListAsync();
 
                 ValidateFixup(context, leftEntities, rightEntities, 24, 24, 48 - 4, postSave: true);
@@ -2667,15 +2667,15 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
 
         void ValidateFixup(
             ManyToManyContext context,
-            List<EntityOne> leftEntities,
-            List<EntityThree> rightEntities,
+            List<EntityOne<int>> leftEntities,
+            List<EntityThree<int>> rightEntities,
             int leftCount,
             int rightCount,
             int joinCount,
             bool postSave)
         {
-            Assert.Equal(leftCount, context.ChangeTracker.Entries<EntityOne>().Count());
-            Assert.Equal(rightCount, context.ChangeTracker.Entries<EntityThree>().Count());
+            Assert.Equal(leftCount, context.ChangeTracker.Entries<EntityOne<int>>().Count());
+            Assert.Equal(rightCount, context.ChangeTracker.Entries<EntityThree<int>>().Count());
             Assert.Equal(joinCount, context.ChangeTracker.Entries<Dictionary<string, object>>().Count());
             Assert.Equal(leftCount + rightCount + joinCount, context.ChangeTracker.Entries().Count());
 
@@ -2721,8 +2721,8 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 }
             }
 
-            var allLeft = context.ChangeTracker.Entries<EntityOne>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
-            var allRight = context.ChangeTracker.Entries<EntityThree>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
+            var allLeft = context.ChangeTracker.Entries<EntityOne<int>>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
+            var allRight = context.ChangeTracker.Entries<EntityThree<int>>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
 
             VerifyRelationshipSnapshots(context, joinEntries.Select(e => e.Entity));
             VerifyRelationshipSnapshots(context, allLeft);
@@ -2775,13 +2775,13 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                     context.EntityTwos.CreateInstance((e, p) => e.Id = Fixture.UseGeneratedKeys ? 0 : 7723)
                 };
 
-                leftEntities[0].TwoSkipShared = CreateCollection<EntityTwo>();
+                leftEntities[0].TwoSkipShared = CreateCollection<EntityTwo<int>>();
 
                 leftEntities[0].TwoSkipShared.Add(rightEntities[0]); // 11 - 21
                 leftEntities[0].TwoSkipShared.Add(rightEntities[1]); // 11 - 22
                 leftEntities[0].TwoSkipShared.Add(rightEntities[2]); // 11 - 23
 
-                rightEntities[0].OneSkipShared = CreateCollection<EntityOne>();
+                rightEntities[0].OneSkipShared = CreateCollection<EntityOne<int>>();
 
                 rightEntities[0].OneSkipShared.Add(leftEntities[0]); // 21 - 11 (Dupe)
                 rightEntities[0].OneSkipShared.Add(leftEntities[1]); // 21 - 12
@@ -2815,21 +2815,21 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
             },
             async context =>
             {
-                var queryable = context.Set<EntityOne>().Where(e => keys.Contains(e.Id)).Include(e => e.TwoSkipShared);
+                var queryable = context.Set<EntityOne<int>>().Where(e => keys.Contains(e.Id)).Include(e => e.TwoSkipShared);
                 var results = async ? await queryable.ToListAsync() : queryable.ToList();
                 Assert.Equal(3, results.Count);
 
-                var leftEntities = context.ChangeTracker.Entries<EntityOne>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
-                var rightEntities = context.ChangeTracker.Entries<EntityTwo>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
+                var leftEntities = context.ChangeTracker.Entries<EntityOne<int>>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
+                var rightEntities = context.ChangeTracker.Entries<EntityTwo<int>>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
 
                 ValidateFixup(context, leftEntities, rightEntities);
             });
 
-        void ValidateFixup(DbContext context, IList<EntityOne> leftEntities, IList<EntityTwo> rightEntities)
+        void ValidateFixup(DbContext context, IList<EntityOne<int>> leftEntities, IList<EntityTwo<int>> rightEntities)
         {
             Assert.Equal(11, context.ChangeTracker.Entries().Count());
-            Assert.Equal(3, context.ChangeTracker.Entries<EntityOne>().Count());
-            Assert.Equal(3, context.ChangeTracker.Entries<EntityTwo>().Count());
+            Assert.Equal(3, context.ChangeTracker.Entries<EntityOne<int>>().Count());
+            Assert.Equal(3, context.ChangeTracker.Entries<EntityTwo<int>>().Count());
             Assert.Equal(5, context.ChangeTracker.Entries<Dictionary<string, object>>().Count());
 
             Assert.Equal(3, leftEntities[0].TwoSkipShared.Count);
@@ -2851,8 +2851,8 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
         return ExecuteWithStrategyInTransactionAsync(
             async context =>
             {
-                var leftEntities = await context.Set<EntityOne>().Include(e => e.TwoSkipShared).OrderBy(e => e.Name).ToListAsync();
-                var rightEntities = await context.Set<EntityTwo>().Include(e => e.OneSkipShared).OrderBy(e => e.Name).ToListAsync();
+                var leftEntities = await context.Set<EntityOne<int>>().Include(e => e.TwoSkipShared).OrderBy(e => e.Name).ToListAsync();
+                var rightEntities = await context.Set<EntityTwo<int>>().Include(e => e.OneSkipShared).OrderBy(e => e.Name).ToListAsync();
 
                 var twos = new[]
                 {
@@ -2939,22 +2939,22 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 ValidateFixup(context, leftEntities, rightEntities, 24, 24, 49);
             }, async context =>
             {
-                var leftEntities = await context.Set<EntityOne>().Include(e => e.TwoSkipShared).OrderBy(e => e.Name).ToListAsync();
-                var rightEntities = await context.Set<EntityTwo>().Include(e => e.OneSkipShared).OrderBy(e => e.Name).ToListAsync();
+                var leftEntities = await context.Set<EntityOne<int>>().Include(e => e.TwoSkipShared).OrderBy(e => e.Name).ToListAsync();
+                var rightEntities = await context.Set<EntityTwo<int>>().Include(e => e.OneSkipShared).OrderBy(e => e.Name).ToListAsync();
 
                 ValidateFixup(context, leftEntities, rightEntities, 24, 24, 49);
             });
 
         void ValidateFixup(
             DbContext context,
-            List<EntityOne> leftEntities,
-            List<EntityTwo> rightEntities,
+            List<EntityOne<int>> leftEntities,
+            List<EntityTwo<int>> rightEntities,
             int leftCount,
             int rightCount,
             int joinCount)
         {
-            Assert.Equal(leftCount, context.ChangeTracker.Entries<EntityOne>().Count());
-            Assert.Equal(rightCount, context.ChangeTracker.Entries<EntityTwo>().Count());
+            Assert.Equal(leftCount, context.ChangeTracker.Entries<EntityOne<int>>().Count());
+            Assert.Equal(rightCount, context.ChangeTracker.Entries<EntityTwo<int>>().Count());
             Assert.Equal(joinCount, context.ChangeTracker.Entries<Dictionary<string, object>>().Count());
             Assert.Equal(leftCount + rightCount + joinCount, context.ChangeTracker.Entries().Count());
 
@@ -2975,8 +2975,8 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
             Assert.DoesNotContain(rightEntities[2].OneSkipShared, e => e.Name == "EntityOne 9");
             Assert.Contains(rightEntities[2].OneSkipShared, e => e.Name == "Z7714");
 
-            var allLeft = context.ChangeTracker.Entries<EntityOne>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
-            var allRight = context.ChangeTracker.Entries<EntityTwo>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
+            var allLeft = context.ChangeTracker.Entries<EntityOne<int>>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
+            var allRight = context.ChangeTracker.Entries<EntityTwo<int>>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
 
             VerifyRelationshipSnapshots(context, allLeft);
             VerifyRelationshipSnapshots(context, allRight);
@@ -3028,13 +3028,13 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                     context.EntityThrees.CreateInstance((e, p) => e.Id = Fixture.UseGeneratedKeys ? 0 : 7723)
                 };
 
-                leftEntities[0].ThreeSkipPayloadFull = CreateCollection<EntityThree>();
+                leftEntities[0].ThreeSkipPayloadFull = CreateCollection<EntityThree<int>>();
 
                 leftEntities[0].ThreeSkipPayloadFull.Add(rightEntities[0]); // 11 - 21
                 leftEntities[0].ThreeSkipPayloadFull.Add(rightEntities[1]); // 11 - 22
                 leftEntities[0].ThreeSkipPayloadFull.Add(rightEntities[2]); // 11 - 23
 
-                rightEntities[0].OneSkipPayloadFull = CreateCollection<EntityOne>();
+                rightEntities[0].OneSkipPayloadFull = CreateCollection<EntityOne<int>>();
 
                 rightEntities[0].OneSkipPayloadFull.Add(leftEntities[0]); // 21 - 11 (Dupe)
                 rightEntities[0].OneSkipPayloadFull.Add(leftEntities[1]); // 21 - 12
@@ -3068,22 +3068,22 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
             },
             async context =>
             {
-                var queryable = context.Set<EntityOne>().Where(e => keys.Contains(e.Id)).Include(e => e.ThreeSkipPayloadFull);
+                var queryable = context.Set<EntityOne<int>>().Where(e => keys.Contains(e.Id)).Include(e => e.ThreeSkipPayloadFull);
                 var results = async ? await queryable.ToListAsync() : queryable.ToList();
                 Assert.Equal(3, results.Count);
 
-                var leftEntities = context.ChangeTracker.Entries<EntityOne>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
-                var rightEntities = context.ChangeTracker.Entries<EntityThree>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
+                var leftEntities = context.ChangeTracker.Entries<EntityOne<int>>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
+                var rightEntities = context.ChangeTracker.Entries<EntityThree<int>>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
 
                 ValidateFixup(context, leftEntities, rightEntities, postSave: true);
             });
 
-        void ValidateFixup(DbContext context, IList<EntityOne> leftEntities, IList<EntityThree> rightEntities, bool postSave)
+        void ValidateFixup(DbContext context, IList<EntityOne<int>> leftEntities, IList<EntityThree<int>> rightEntities, bool postSave)
         {
             Assert.Equal(11, context.ChangeTracker.Entries().Count());
-            Assert.Equal(3, context.ChangeTracker.Entries<EntityOne>().Count());
-            Assert.Equal(3, context.ChangeTracker.Entries<EntityThree>().Count());
-            Assert.Equal(5, context.ChangeTracker.Entries<JoinOneToThreePayloadFull>().Count());
+            Assert.Equal(3, context.ChangeTracker.Entries<EntityOne<int>>().Count());
+            Assert.Equal(3, context.ChangeTracker.Entries<EntityThree<int>>().Count());
+            Assert.Equal(5, context.ChangeTracker.Entries<JoinOneToThreePayloadFull<int>>().Count());
 
             Assert.Equal(3, leftEntities[0].ThreeSkipPayloadFull.Count);
             Assert.Single(leftEntities[1].ThreeSkipPayloadFull);
@@ -3093,7 +3093,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
             Assert.Single(rightEntities[1].OneSkipPayloadFull);
             Assert.Single(rightEntities[2].OneSkipPayloadFull);
 
-            var joinEntities = context.ChangeTracker.Entries<JoinOneToThreePayloadFull>().Select(e => e.Entity).ToList();
+            var joinEntities = context.ChangeTracker.Entries<JoinOneToThreePayloadFull<int>>().Select(e => e.Entity).ToList();
             foreach (var joinEntity in joinEntities)
             {
                 Assert.Equal(joinEntity.One.Id, joinEntity.OneId);
@@ -3119,8 +3119,8 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
         return ExecuteWithStrategyInTransactionAsync(
             async context =>
             {
-                var leftEntities = await context.Set<EntityOne>().Include(e => e.ThreeSkipPayloadFull).OrderBy(e => e.Name).ToListAsync();
-                var rightEntities = await context.Set<EntityThree>().Include(e => e.OneSkipPayloadFull).OrderBy(e => e.Name).ToListAsync();
+                var leftEntities = await context.Set<EntityOne<int>>().Include(e => e.ThreeSkipPayloadFull).OrderBy(e => e.Name).ToListAsync();
+                var rightEntities = await context.Set<EntityThree<int>>().Include(e => e.OneSkipPayloadFull).OrderBy(e => e.Name).ToListAsync();
 
                 leftEntities[0].ThreeSkipPayloadFull.Add(
                     context.EntityThrees.CreateInstance(
@@ -3194,11 +3194,11 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                     context.ChangeTracker.DetectChanges();
                 }
 
-                (await context.FindAsync<JoinOneToThreePayloadFull>(
+                (await context.FindAsync<JoinOneToThreePayloadFull<int>>(
                     GetEntityOneId(context, "Z7712"),
                     GetEntityThreeId(context, "EntityThree 1")))!.Payload = "Set!";
 
-                (await context.FindAsync<JoinOneToThreePayloadFull>(
+                (await context.FindAsync<JoinOneToThreePayloadFull<int>>(
                     GetEntityOneId(context, "EntityOne 20"),
                     GetEntityThreeId(context, "EntityThree 20")))!.Payload = "Changed!";
 
@@ -3214,8 +3214,8 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 ValidateFixup(context, leftEntities, rightEntities, 24, 24, 123 - 4, postSave: true);
             }, async context =>
             {
-                var leftEntities = await context.Set<EntityOne>().Include(e => e.ThreeSkipPayloadFull).OrderBy(e => e.Name).ToListAsync();
-                var rightEntities = await context.Set<EntityThree>().Include(e => e.OneSkipPayloadFull).OrderBy(e => e.Name).ToListAsync();
+                var leftEntities = await context.Set<EntityOne<int>>().Include(e => e.ThreeSkipPayloadFull).OrderBy(e => e.Name).ToListAsync();
+                var rightEntities = await context.Set<EntityThree<int>>().Include(e => e.OneSkipPayloadFull).OrderBy(e => e.Name).ToListAsync();
 
                 ValidateFixup(context, leftEntities, rightEntities, 24, 24, 123 - 4, postSave: true);
             });
@@ -3228,16 +3228,16 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
 
         void ValidateFixup(
             ManyToManyContext context,
-            List<EntityOne> leftEntities,
-            List<EntityThree> rightEntities,
+            List<EntityOne<int>> leftEntities,
+            List<EntityThree<int>> rightEntities,
             int leftCount,
             int rightCount,
             int joinCount,
             bool postSave)
         {
-            Assert.Equal(leftCount, context.ChangeTracker.Entries<EntityOne>().Count());
-            Assert.Equal(rightCount, context.ChangeTracker.Entries<EntityThree>().Count());
-            Assert.Equal(joinCount, context.ChangeTracker.Entries<JoinOneToThreePayloadFull>().Count());
+            Assert.Equal(leftCount, context.ChangeTracker.Entries<EntityOne<int>>().Count());
+            Assert.Equal(rightCount, context.ChangeTracker.Entries<EntityThree<int>>().Count());
+            Assert.Equal(joinCount, context.ChangeTracker.Entries<JoinOneToThreePayloadFull<int>>().Count());
             Assert.Equal(leftCount + rightCount + joinCount, context.ChangeTracker.Entries().Count());
 
             Assert.Contains(leftEntities[0].ThreeSkipPayloadFull, e => e.Name == "Z7721");
@@ -3262,7 +3262,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
             var oneId2 = GetEntityOneId(context, "EntityOne 20");
             var threeId2 = GetEntityThreeId(context, "EntityThree 20");
 
-            var joinEntries = context.ChangeTracker.Entries<JoinOneToThreePayloadFull>().ToList();
+            var joinEntries = context.ChangeTracker.Entries<JoinOneToThreePayloadFull<int>>().ToList();
             foreach (var joinEntry in joinEntries)
             {
                 var joinEntity = joinEntry.Entity;
@@ -3286,8 +3286,8 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 }
             }
 
-            var allLeft = context.ChangeTracker.Entries<EntityOne>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
-            var allRight = context.ChangeTracker.Entries<EntityThree>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
+            var allLeft = context.ChangeTracker.Entries<EntityOne<int>>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
+            var allRight = context.ChangeTracker.Entries<EntityThree<int>>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
 
             VerifyRelationshipSnapshots(context, joinEntries.Select(e => e.Entity));
             VerifyRelationshipSnapshots(context, allLeft);
@@ -3312,7 +3312,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 }
             }
 
-            var deleted = context.ChangeTracker.Entries<JoinOneToThreePayloadFull>().Count(e => e.State == EntityState.Deleted);
+            var deleted = context.ChangeTracker.Entries<JoinOneToThreePayloadFull<int>>().Count(e => e.State == EntityState.Deleted);
             Assert.Equal(joinCount, (count / 2) + deleted);
         }
     }
@@ -3323,13 +3323,13 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
         return ExecuteWithStrategyInTransactionAsync(
             async context =>
             {
-                var ones = await context.Set<EntityOne>().Include(e => e.ThreeSkipPayloadFull).OrderBy(e => e.Name).ToListAsync();
-                var threes = await context.Set<EntityThree>().Include(e => e.OneSkipPayloadFull).OrderBy(e => e.Name).ToListAsync();
+                var ones = await context.Set<EntityOne<int>>().Include(e => e.ThreeSkipPayloadFull).OrderBy(e => e.Name).ToListAsync();
+                var threes = await context.Set<EntityThree<int>>().Include(e => e.OneSkipPayloadFull).OrderBy(e => e.Name).ToListAsync();
 
                 // Make sure other related entities are loaded for delete fixup
-                await context.Set<EntityTwo>().LoadAsync();
-                await context.Set<JoinOneSelfPayload>().LoadAsync();
-                await context.Set<JoinOneToTwo>().LoadAsync();
+                await context.Set<EntityTwo<int>>().LoadAsync();
+                await context.Set<JoinOneSelfPayload<int>>().LoadAsync();
+                await context.Set<JoinOneToTwo<int>>().LoadAsync();
 
                 var toRemoveOne = context.EntityOnes.Single(e => e.Name == "EntityOne 1");
                 var refCountOnes = threes.SelectMany(e => e.OneSkipPayloadFull).Count(e => e == toRemoveOne);
@@ -3337,7 +3337,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 var toRemoveThree = context.EntityThrees.Single(e => e.Name == "EntityThree 1");
                 var refCountThrees = ones.SelectMany(e => e.ThreeSkipPayloadFull).Count(e => e == toRemoveThree);
 
-                foreach (var joinEntity in context.ChangeTracker.Entries<JoinOneToThreePayloadFull>().Select(e => e.Entity).ToList())
+                foreach (var joinEntity in context.ChangeTracker.Entries<JoinOneToThreePayloadFull<int>>().Select(e => e.Entity).ToList())
                 {
                     Assert.Equal(joinEntity.One.Id, joinEntity.OneId);
                     Assert.Equal(joinEntity.Three.Id, joinEntity.ThreeId);
@@ -3364,7 +3364,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 ValidateJoinNavigations(context);
 
                 Assert.All(
-                    context.ChangeTracker.Entries<JoinOneToThreePayloadFull>(), e => Assert.Equal(
+                    context.ChangeTracker.Entries<JoinOneToThreePayloadFull<int>>(), e => Assert.Equal(
                         e.Entity.OneId == 1
                         || e.Entity.ThreeId == 1
                             ? EntityState.Deleted
@@ -3384,21 +3384,21 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 Assert.Equal(0, ones.SelectMany(e => e.ThreeSkipPayloadFull).Count(e => e == toRemoveThree));
 
                 Assert.DoesNotContain(
-                    context.ChangeTracker.Entries<JoinOneToThreePayloadFull>(),
+                    context.ChangeTracker.Entries<JoinOneToThreePayloadFull<int>>(),
                     e => e.Entity.OneId == 1 || e.Entity.ThreeId == 1);
             }, async context =>
             {
-                var ones = await context.Set<EntityOne>().Include(e => e.ThreeSkipPayloadFull).OrderBy(e => e.Name).ToListAsync();
-                var threes = await context.Set<EntityThree>().Include(e => e.OneSkipPayloadFull).OrderBy(e => e.Name).ToListAsync();
+                var ones = await context.Set<EntityOne<int>>().Include(e => e.ThreeSkipPayloadFull).OrderBy(e => e.Name).ToListAsync();
+                var threes = await context.Set<EntityThree<int>>().Include(e => e.OneSkipPayloadFull).OrderBy(e => e.Name).ToListAsync();
 
                 ValidateNavigations(ones, threes);
 
                 Assert.DoesNotContain(
-                    context.ChangeTracker.Entries<JoinOneToThreePayloadFull>(),
+                    context.ChangeTracker.Entries<JoinOneToThreePayloadFull<int>>(),
                     e => e.Entity.OneId == 1 || e.Entity.ThreeId == 1);
             });
 
-        static void ValidateNavigations(List<EntityOne> ones, List<EntityThree> threes)
+        static void ValidateNavigations(List<EntityOne<int>> ones, List<EntityThree<int>> threes)
         {
             foreach (var one in ones)
             {
@@ -3431,7 +3431,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
 
         static void ValidateJoinNavigations(DbContext context)
         {
-            foreach (var joinEntity in context.ChangeTracker.Entries<JoinOneToThreePayloadFull>().Select(e => e.Entity).ToList())
+            foreach (var joinEntity in context.ChangeTracker.Entries<JoinOneToThreePayloadFull<int>>().Select(e => e.Entity).ToList())
             {
                 Assert.Equal(joinEntity.One.Id, joinEntity.OneId);
                 Assert.Equal(joinEntity.Three.Id, joinEntity.ThreeId);
@@ -3464,13 +3464,13 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                     context.EntityTwos.CreateInstance((e, p) => e.Id = Fixture.UseGeneratedKeys ? 0 : 7723)
                 };
 
-                leftEntities[0].TwoSkip = CreateCollection<EntityTwo>();
+                leftEntities[0].TwoSkip = CreateCollection<EntityTwo<int>>();
 
                 leftEntities[0].TwoSkip.Add(rightEntities[0]); // 11 - 21
                 leftEntities[0].TwoSkip.Add(rightEntities[1]); // 11 - 22
                 leftEntities[0].TwoSkip.Add(rightEntities[2]); // 11 - 23
 
-                rightEntities[0].OneSkip = CreateCollection<EntityOne>();
+                rightEntities[0].OneSkip = CreateCollection<EntityOne<int>>();
 
                 rightEntities[0].OneSkip.Add(leftEntities[0]); // 21 - 11 (Dupe)
                 rightEntities[0].OneSkip.Add(leftEntities[1]); // 21 - 12
@@ -3504,22 +3504,22 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
             },
             async context =>
             {
-                var queryable = context.Set<EntityOne>().Where(e => keys.Contains(e.Id)).Include(e => e.TwoSkip);
+                var queryable = context.Set<EntityOne<int>>().Where(e => keys.Contains(e.Id)).Include(e => e.TwoSkip);
                 var results = async ? await queryable.ToListAsync() : queryable.ToList();
                 Assert.Equal(3, results.Count);
 
-                var leftEntities = context.ChangeTracker.Entries<EntityOne>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
-                var rightEntities = context.ChangeTracker.Entries<EntityTwo>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
+                var leftEntities = context.ChangeTracker.Entries<EntityOne<int>>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
+                var rightEntities = context.ChangeTracker.Entries<EntityTwo<int>>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
 
                 ValidateFixup(context, leftEntities, rightEntities);
             });
 
-        void ValidateFixup(DbContext context, IList<EntityOne> leftEntities, IList<EntityTwo> rightEntities)
+        void ValidateFixup(DbContext context, IList<EntityOne<int>> leftEntities, IList<EntityTwo<int>> rightEntities)
         {
             Assert.Equal(11, context.ChangeTracker.Entries().Count());
-            Assert.Equal(3, context.ChangeTracker.Entries<EntityOne>().Count());
-            Assert.Equal(3, context.ChangeTracker.Entries<EntityTwo>().Count());
-            Assert.Equal(5, context.ChangeTracker.Entries<JoinOneToTwo>().Count());
+            Assert.Equal(3, context.ChangeTracker.Entries<EntityOne<int>>().Count());
+            Assert.Equal(3, context.ChangeTracker.Entries<EntityTwo<int>>().Count());
+            Assert.Equal(5, context.ChangeTracker.Entries<JoinOneToTwo<int>>().Count());
 
             Assert.Equal(3, leftEntities[0].TwoSkip.Count);
             Assert.Single(leftEntities[1].TwoSkip);
@@ -3566,14 +3566,14 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                     context.EntityTwos.CreateInstance((e, p) => e.Id = Fixture.UseGeneratedKeys ? 0 : 7723)
                 };
 
-                leftEntities[0].TwoSkip = CreateCollection<EntityTwo>();
+                leftEntities[0].TwoSkip = CreateCollection<EntityTwo<int>>();
 
                 if (!useDetectChanges)
                 {
                     leftEntities[0].TwoSkip.Add(rightEntities[0]); // 11 - 21
                 }
 
-                rightEntities[0].OneSkip = CreateCollection<EntityOne>();
+                rightEntities[0].OneSkip = CreateCollection<EntityOne<int>>();
 
                 rightEntities[0].OneSkip.Add(leftEntities[0]); // 21 - 11 (Dupe)
                 rightEntities[0].OneSkip.Add(leftEntities[1]); // 21 - 12
@@ -3581,31 +3581,31 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
 
                 var joinEntities = new[]
                 {
-                    context.Set<JoinOneToTwo>().CreateInstance(
+                    context.Set<JoinOneToTwo<int>>().CreateInstance(
                         (e, p) =>
                         {
                             e.One = leftEntities[0];
                             e.Two = rightEntities[0];
                         }),
-                    context.Set<JoinOneToTwo>().CreateInstance(
+                    context.Set<JoinOneToTwo<int>>().CreateInstance(
                         (e, p) =>
                         {
                             e.One = leftEntities[0];
                             e.Two = rightEntities[1];
                         }),
-                    context.Set<JoinOneToTwo>().CreateInstance(
+                    context.Set<JoinOneToTwo<int>>().CreateInstance(
                         (e, p) =>
                         {
                             e.One = leftEntities[0];
                             e.Two = rightEntities[2];
                         }),
-                    context.Set<JoinOneToTwo>().CreateInstance(
+                    context.Set<JoinOneToTwo<int>>().CreateInstance(
                         (e, p) =>
                         {
                             e.One = leftEntities[1];
                             e.Two = rightEntities[0];
                         }),
-                    context.Set<JoinOneToTwo>().CreateInstance(
+                    context.Set<JoinOneToTwo<int>>().CreateInstance(
                         (e, p) =>
                         {
                             e.One = leftEntities[2];
@@ -3613,10 +3613,10 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                         }),
                 };
 
-                var extra = context.Set<JoinOneToTwoExtra>().CreateInstance(
+                var extra = context.Set<JoinOneToTwoExtra<int>>().CreateInstance(
                     (e, p) =>
                     {
-                        e.JoinEntities = new ObservableCollection<JoinOneToTwo>
+                        e.JoinEntities = new ObservableCollection<JoinOneToTwo<int>>
                         {
                             joinEntities[0],
                             joinEntities[1],
@@ -3676,7 +3676,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
             },
             async context =>
             {
-                var queryable = context.Set<EntityOne>()
+                var queryable = context.Set<EntityOne<int>>()
                     .Where(e => keys.Contains(e.Id))
                     .Include(e => e.TwoSkip)
                     .ThenInclude(e => e.Extra);
@@ -3684,19 +3684,19 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 var results = async ? await queryable.ToListAsync() : queryable.ToList();
                 Assert.Equal(3, results.Count);
 
-                var leftEntities = context.ChangeTracker.Entries<EntityOne>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
-                var rightEntities = context.ChangeTracker.Entries<EntityTwo>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
+                var leftEntities = context.ChangeTracker.Entries<EntityOne<int>>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
+                var rightEntities = context.ChangeTracker.Entries<EntityTwo<int>>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
 
                 ValidateFixup(context, leftEntities, rightEntities);
             });
 
-        void ValidateFixup(DbContext context, IList<EntityOne> leftEntities, IList<EntityTwo> rightEntities)
+        void ValidateFixup(DbContext context, IList<EntityOne<int>> leftEntities, IList<EntityTwo<int>> rightEntities)
         {
             Assert.Equal(12, context.ChangeTracker.Entries().Count());
-            Assert.Equal(3, context.ChangeTracker.Entries<EntityOne>().Count());
-            Assert.Equal(3, context.ChangeTracker.Entries<EntityTwo>().Count());
-            Assert.Equal(5, context.ChangeTracker.Entries<JoinOneToTwo>().Count());
-            Assert.Single(context.ChangeTracker.Entries<JoinOneToTwoExtra>());
+            Assert.Equal(3, context.ChangeTracker.Entries<EntityOne<int>>().Count());
+            Assert.Equal(3, context.ChangeTracker.Entries<EntityTwo<int>>().Count());
+            Assert.Equal(5, context.ChangeTracker.Entries<JoinOneToTwo<int>>().Count());
+            Assert.Single(context.ChangeTracker.Entries<JoinOneToTwoExtra<int>>());
 
             Assert.Equal(3, leftEntities[0].TwoSkip.Count);
             Assert.Single(leftEntities[1].TwoSkip);
@@ -3706,7 +3706,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
             Assert.Single(rightEntities[1].OneSkip);
             Assert.Single(rightEntities[2].OneSkip);
 
-            var extra = context.ChangeTracker.Entries<JoinOneToTwoExtra>().Select(e => e.Entity).Single();
+            var extra = context.ChangeTracker.Entries<JoinOneToTwoExtra<int>>().Select(e => e.Entity).Single();
             Assert.Equal(5, extra.JoinEntities.Count);
 
             foreach (var joinEntity in extra.JoinEntities)
@@ -3749,7 +3749,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                     context.EntityTwos.CreateInstance((e, p) => e.Id = Fixture.UseGeneratedKeys ? 0 : 7723)
                 };
 
-                leftEntities[0].TwoSkip = CreateCollection<EntityTwo>();
+                leftEntities[0].TwoSkip = CreateCollection<EntityTwo<int>>();
 
                 if (!useDetectChanges)
                 {
@@ -3758,7 +3758,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                     leftEntities[0].TwoSkip.Add(rightEntities[2]); // 11 - 23
                 }
 
-                rightEntities[0].OneSkip = CreateCollection<EntityOne>();
+                rightEntities[0].OneSkip = CreateCollection<EntityOne<int>>();
 
                 rightEntities[0].OneSkip.Add(leftEntities[0]); // 21 - 11 (Dupe)
                 rightEntities[0].OneSkip.Add(leftEntities[1]); // 21 - 12
@@ -3812,7 +3812,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
             },
             async context =>
             {
-                var queryable = context.Set<EntityOne>()
+                var queryable = context.Set<EntityOne<int>>()
                     .Where(e => keys.Contains(e.Id))
                     .Include(e => e.TwoSkip)
                     .ThenInclude(e => e.Extra);
@@ -3820,18 +3820,18 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 var results = async ? await queryable.ToListAsync() : queryable.ToList();
                 Assert.Equal(3, results.Count);
 
-                var leftEntities = context.ChangeTracker.Entries<EntityOne>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
-                var rightEntities = context.ChangeTracker.Entries<EntityTwo>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
+                var leftEntities = context.ChangeTracker.Entries<EntityOne<int>>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
+                var rightEntities = context.ChangeTracker.Entries<EntityTwo<int>>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
 
                 ValidateFixup(context, leftEntities, rightEntities);
             });
 
-        void ValidateFixup(DbContext context, IList<EntityOne> leftEntities, IList<EntityTwo> rightEntities)
+        void ValidateFixup(DbContext context, IList<EntityOne<int>> leftEntities, IList<EntityTwo<int>> rightEntities)
         {
             Assert.Equal(11, context.ChangeTracker.Entries().Count());
-            Assert.Equal(3, context.ChangeTracker.Entries<EntityOne>().Count());
-            Assert.Equal(3, context.ChangeTracker.Entries<EntityTwo>().Count());
-            Assert.Equal(5, context.ChangeTracker.Entries<JoinOneToTwo>().Count());
+            Assert.Equal(3, context.ChangeTracker.Entries<EntityOne<int>>().Count());
+            Assert.Equal(3, context.ChangeTracker.Entries<EntityTwo<int>>().Count());
+            Assert.Equal(5, context.ChangeTracker.Entries<JoinOneToTwo<int>>().Count());
 
             Assert.Equal(3, leftEntities[0].TwoSkip.Count);
             Assert.Single(leftEntities[1].TwoSkip);
@@ -3841,7 +3841,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
             Assert.Single(rightEntities[1].OneSkip);
             Assert.Single(rightEntities[2].OneSkip);
 
-            var joinEntities = context.ChangeTracker.Entries<JoinOneToTwo>().Select(e => e.Entity).ToList();
+            var joinEntities = context.ChangeTracker.Entries<JoinOneToTwo<int>>().Select(e => e.Entity).ToList();
             Assert.Equal(5, joinEntities.Count);
 
             foreach (var joinEntity in joinEntities)
@@ -3864,8 +3864,8 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
         return ExecuteWithStrategyInTransactionAsync(
             async context =>
             {
-                var leftEntities = await context.Set<EntityOne>().Include(e => e.TwoSkip).OrderBy(e => e.Name).ToListAsync();
-                var rightEntities = await context.Set<EntityTwo>().Include(e => e.OneSkip).OrderBy(e => e.Name).ToListAsync();
+                var leftEntities = await context.Set<EntityOne<int>>().Include(e => e.TwoSkip).OrderBy(e => e.Name).ToListAsync();
+                var rightEntities = await context.Set<EntityTwo<int>>().Include(e => e.OneSkip).OrderBy(e => e.Name).ToListAsync();
 
                 var twos = new[]
                 {
@@ -3958,23 +3958,23 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 ValidateFixup(context, leftEntities, rightEntities, 24, 24, 116);
             }, async context =>
             {
-                var leftEntities = await context.Set<EntityOne>().Include(e => e.TwoSkip).OrderBy(e => e.Name).ToListAsync();
-                var rightEntities = await context.Set<EntityTwo>().Include(e => e.OneSkip).OrderBy(e => e.Name).ToListAsync();
+                var leftEntities = await context.Set<EntityOne<int>>().Include(e => e.TwoSkip).OrderBy(e => e.Name).ToListAsync();
+                var rightEntities = await context.Set<EntityTwo<int>>().Include(e => e.OneSkip).OrderBy(e => e.Name).ToListAsync();
 
                 ValidateFixup(context, leftEntities, rightEntities, 24, 24, 116);
             });
 
         void ValidateFixup(
             DbContext context,
-            List<EntityOne> leftEntities,
-            List<EntityTwo> rightEntities,
+            List<EntityOne<int>> leftEntities,
+            List<EntityTwo<int>> rightEntities,
             int leftCount,
             int rightCount,
             int joinCount)
         {
-            Assert.Equal(leftCount, context.ChangeTracker.Entries<EntityOne>().Count());
-            Assert.Equal(rightCount, context.ChangeTracker.Entries<EntityTwo>().Count());
-            Assert.Equal(joinCount, context.ChangeTracker.Entries<JoinOneToTwo>().Count());
+            Assert.Equal(leftCount, context.ChangeTracker.Entries<EntityOne<int>>().Count());
+            Assert.Equal(rightCount, context.ChangeTracker.Entries<EntityTwo<int>>().Count());
+            Assert.Equal(joinCount, context.ChangeTracker.Entries<JoinOneToTwo<int>>().Count());
             Assert.Equal(leftCount + rightCount + joinCount, context.ChangeTracker.Entries().Count());
 
             Assert.Contains(leftEntities[0].TwoSkip, e => context.Entry(e).Property(e => e.Id).CurrentValue == twoIds[0]);
@@ -3994,8 +3994,8 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
             Assert.DoesNotContain(rightEntities[2].OneSkip, e => e.Name == "EntityOne 1");
             Assert.Contains(rightEntities[2].OneSkip, e => context.Entry(e).Property(e => e.Id).CurrentValue == oneIds[3]);
 
-            var allLeft = context.ChangeTracker.Entries<EntityOne>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
-            var allRight = context.ChangeTracker.Entries<EntityTwo>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
+            var allLeft = context.ChangeTracker.Entries<EntityOne<int>>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
+            var allRight = context.ChangeTracker.Entries<EntityTwo<int>>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
 
             VerifyRelationshipSnapshots(context, allLeft);
             VerifyRelationshipSnapshots(context, allRight);
@@ -4019,7 +4019,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 }
             }
 
-            var deleted = context.ChangeTracker.Entries<JoinOneToTwo>().Count(e => e.State == EntityState.Deleted);
+            var deleted = context.ChangeTracker.Entries<JoinOneToTwo<int>>().Count(e => e.State == EntityState.Deleted);
             Assert.Equal(joinCount, (count / 2) + deleted);
         }
     }
@@ -4033,13 +4033,13 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
         return ExecuteWithStrategyInTransactionAsync(
             async context =>
             {
-                var ones = await context.Set<EntityOne>().Include(e => e.TwoSkip).OrderBy(e => e.Name).ToListAsync();
-                var twos = await context.Set<EntityTwo>().Include(e => e.OneSkip).OrderBy(e => e.Name).ToListAsync();
+                var ones = await context.Set<EntityOne<int>>().Include(e => e.TwoSkip).OrderBy(e => e.Name).ToListAsync();
+                var twos = await context.Set<EntityTwo<int>>().Include(e => e.OneSkip).OrderBy(e => e.Name).ToListAsync();
 
                 // Make sure other related entities are loaded for delete fixup
-                context.Set<EntityThree>().Load();
-                context.Set<JoinOneToThreePayloadFull>().Load();
-                context.Set<JoinOneSelfPayload>().Load();
+                context.Set<EntityThree<int>>().Load();
+                context.Set<JoinOneToThreePayloadFull<int>>().Load();
+                context.Set<JoinOneSelfPayload<int>>().Load();
 
                 var toRemoveOne = await context.EntityOnes.SingleAsync(e => e.Name == "EntityOne 1");
                 oneId = toRemoveOne.Id;
@@ -4064,7 +4064,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 Assert.Equal(refCountTwos, ones.SelectMany(e => e.TwoSkip).Count(e => e == toRemoveTwo));
 
                 Assert.All(
-                    context.ChangeTracker.Entries<JoinOneToTwo>(), e => Assert.Equal(
+                    context.ChangeTracker.Entries<JoinOneToTwo<int>>(), e => Assert.Equal(
                         e.Entity.OneId == oneId
                         || e.Entity.TwoId == twoId
                             ? EntityState.Deleted
@@ -4084,18 +4084,18 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 ValidateNavigations(ones, twos);
 
                 Assert.DoesNotContain(
-                    context.ChangeTracker.Entries<JoinOneToTwo>(), e => e.Entity.OneId == oneId || e.Entity.TwoId == twoId);
+                    context.ChangeTracker.Entries<JoinOneToTwo<int>>(), e => e.Entity.OneId == oneId || e.Entity.TwoId == twoId);
             }, async context =>
             {
-                var ones = await context.Set<EntityOne>().Include(e => e.TwoSkip).OrderBy(e => e.Name).ToListAsync();
-                var twos = await context.Set<EntityTwo>().Include(e => e.OneSkip).OrderBy(e => e.Name).ToListAsync();
+                var ones = await context.Set<EntityOne<int>>().Include(e => e.TwoSkip).OrderBy(e => e.Name).ToListAsync();
+                var twos = await context.Set<EntityTwo<int>>().Include(e => e.OneSkip).OrderBy(e => e.Name).ToListAsync();
 
                 ValidateNavigations(ones, twos);
                 Assert.DoesNotContain(
-                    context.ChangeTracker.Entries<JoinOneToTwo>(), e => e.Entity.OneId == oneId || e.Entity.TwoId == twoId);
+                    context.ChangeTracker.Entries<JoinOneToTwo<int>>(), e => e.Entity.OneId == oneId || e.Entity.TwoId == twoId);
             });
 
-        void ValidateNavigations(List<EntityOne> ones, List<EntityTwo> twos)
+        void ValidateNavigations(List<EntityOne<int>> ones, List<EntityTwo<int>> twos)
         {
             foreach (var one in ones)
             {
@@ -4571,20 +4571,20 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
             (i switch
             {
                 // ReSharper disable once RedundantCast
-                1 => (IQueryable<object>)context.Set<EntityOne>(),
-                2 => context.Set<EntityTwo>(),
-                3 => context.Set<JoinOneToTwo>(),
+                1 => (IQueryable<object>)context.Set<EntityOne<int>>(),
+                2 => context.Set<EntityTwo<int>>(),
+                3 => context.Set<JoinOneToTwo<int>>(),
                 _ => throw new ArgumentException()
             }).Load();
         }
 
         Assert.Equal(152, context.ChangeTracker.Entries().Count());
-        Assert.Equal(20, context.ChangeTracker.Entries<EntityOne>().Count());
-        Assert.Equal(20, context.ChangeTracker.Entries<EntityTwo>().Count());
-        Assert.Equal(112, context.ChangeTracker.Entries<JoinOneToTwo>().Count());
+        Assert.Equal(20, context.ChangeTracker.Entries<EntityOne<int>>().Count());
+        Assert.Equal(20, context.ChangeTracker.Entries<EntityTwo<int>>().Count());
+        Assert.Equal(112, context.ChangeTracker.Entries<JoinOneToTwo<int>>().Count());
 
-        var leftEntities = context.ChangeTracker.Entries<EntityOne>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
-        var rightEntities = context.ChangeTracker.Entries<EntityTwo>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
+        var leftEntities = context.ChangeTracker.Entries<EntityOne<int>>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
+        var rightEntities = context.ChangeTracker.Entries<EntityTwo<int>>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
 
         var joinCount = 0;
         foreach (var left in leftEntities)
@@ -4605,7 +4605,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
             }
         }
 
-        var deleted = context.ChangeTracker.Entries<JoinOneToTwo>().Count(e => e.State == EntityState.Deleted);
+        var deleted = context.ChangeTracker.Entries<JoinOneToTwo<int>>().Count(e => e.State == EntityState.Deleted);
         Assert.Equal(112, (joinCount / 2) + deleted);
     }
 
@@ -4753,31 +4753,31 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
 
                 var joinEntities = new[]
                 {
-                    context.Set<JoinTwoToThree>().CreateInstance(
+                    context.Set<JoinTwoToThree<int>>().CreateInstance(
                         (e, p) =>
                         {
                             e.Two = leftEntities[0];
                             e.Three = rightEntities[0];
                         }),
-                    context.Set<JoinTwoToThree>().CreateInstance(
+                    context.Set<JoinTwoToThree<int>>().CreateInstance(
                         (e, p) =>
                         {
                             e.Two = leftEntities[0];
                             e.Three = rightEntities[1];
                         }),
-                    context.Set<JoinTwoToThree>().CreateInstance(
+                    context.Set<JoinTwoToThree<int>>().CreateInstance(
                         (e, p) =>
                         {
                             e.Two = leftEntities[0];
                             e.Three = rightEntities[2];
                         }),
-                    context.Set<JoinTwoToThree>().CreateInstance(
+                    context.Set<JoinTwoToThree<int>>().CreateInstance(
                         (e, p) =>
                         {
                             e.Two = leftEntities[1];
                             e.Three = rightEntities[0];
                         }),
-                    context.Set<JoinTwoToThree>().CreateInstance(
+                    context.Set<JoinTwoToThree<int>>().CreateInstance(
                         (e, p) =>
                         {
                             e.Two = leftEntities[2];
@@ -4809,7 +4809,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
             },
             async context =>
             {
-                var queryable = context.Set<EntityTwo>()
+                var queryable = context.Set<EntityTwo<int>>()
                     .Where(e => e.Name.StartsWith("Z"))
                     .OrderBy(e => e.Name)
                     .Include(e => e.ThreeSkipFull);
@@ -4817,18 +4817,18 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 var results = async ? await queryable.ToListAsync() : queryable.ToList();
                 Assert.Equal(3, results.Count);
 
-                var leftEntities = context.ChangeTracker.Entries<EntityTwo>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
-                var rightEntities = context.ChangeTracker.Entries<EntityThree>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
+                var leftEntities = context.ChangeTracker.Entries<EntityTwo<int>>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
+                var rightEntities = context.ChangeTracker.Entries<EntityThree<int>>().Select(e => e.Entity).OrderBy(e => e.Name).ToList();
 
                 ValidateFixup(context, leftEntities, rightEntities);
             });
 
-        static void ValidateFixup(DbContext context, IList<EntityTwo> leftEntities, IList<EntityThree> rightEntities)
+        static void ValidateFixup(DbContext context, IList<EntityTwo<int>> leftEntities, IList<EntityThree<int>> rightEntities)
         {
             Assert.Equal(11, context.ChangeTracker.Entries().Count());
-            Assert.Equal(3, context.ChangeTracker.Entries<EntityTwo>().Count());
-            Assert.Equal(3, context.ChangeTracker.Entries<EntityThree>().Count());
-            Assert.Equal(5, context.ChangeTracker.Entries<JoinTwoToThree>().Count());
+            Assert.Equal(3, context.ChangeTracker.Entries<EntityTwo<int>>().Count());
+            Assert.Equal(3, context.ChangeTracker.Entries<EntityThree<int>>().Count());
+            Assert.Equal(5, context.ChangeTracker.Entries<JoinTwoToThree<int>>().Count());
 
             Assert.Equal(3, leftEntities[0].ThreeSkipFull.Count);
             Assert.Single(leftEntities[1].ThreeSkipFull);
@@ -4838,7 +4838,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
             Assert.Single(rightEntities[1].TwoSkipFull);
             Assert.Single(rightEntities[2].TwoSkipFull);
 
-            foreach (var joinEntity in context.ChangeTracker.Entries<JoinTwoToThree>().Select(e => e.Entity).ToList())
+            foreach (var joinEntity in context.ChangeTracker.Entries<JoinTwoToThree<int>>().Select(e => e.Entity).ToList())
             {
                 Assert.Equal(joinEntity.Two.Id, joinEntity.TwoId);
                 Assert.Equal(joinEntity.Three.Id, joinEntity.ThreeId);
@@ -4869,8 +4869,8 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
         return ExecuteWithStrategyInTransactionAsync(
             async context =>
             {
-                var left = await context.Set<EntityOne>().Where(e => !e.TwoSkip.Any()).OrderBy(e => e.Id).FirstAsync();
-                var right = await context.Set<EntityTwo>().OrderBy(e => e.Id).FirstAsync();
+                var left = await context.Set<EntityOne<int>>().Where(e => !e.TwoSkip.Any()).OrderBy(e => e.Id).FirstAsync();
+                var right = await context.Set<EntityTwo<int>>().OrderBy(e => e.Id).FirstAsync();
 
                 if (modifyLeft)
                 {
@@ -4890,16 +4890,16 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                     context.Add(
                         RequiresDetectChanges
                             ? useNavs
-                                ? new JoinOneToTwo { One = left, Two = right }
-                                : new JoinOneToTwo { OneId = leftId, TwoId = rightId }
+                                ? new JoinOneToTwo<int> { One = left, Two = right }
+                                : new JoinOneToTwo<int> { OneId = leftId, TwoId = rightId }
                             : useNavs
-                                ? context.CreateProxy<JoinOneToTwo>(
+                                ? context.CreateProxy<JoinOneToTwo<int>>(
                                     e =>
                                     {
                                         e.One = left;
                                         e.Two = right;
                                     })
-                                : context.CreateProxy<JoinOneToTwo>(
+                                : context.CreateProxy<JoinOneToTwo<int>>(
                                     e =>
                                     {
                                         e.OneId = leftId;
@@ -4908,7 +4908,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 }
                 else
                 {
-                    left.TwoSkip ??= CreateCollection<EntityTwo>();
+                    left.TwoSkip ??= CreateCollection<EntityTwo<int>>();
                     left.TwoSkip.Add(right);
 
                     if (RequiresDetectChanges)
@@ -4920,7 +4920,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 Assert.Same(right, left.TwoSkip.Single());
                 Assert.Same(left, right.OneSkip.Single());
 
-                var joinEntry = context.ChangeTracker.Entries<JoinOneToTwo>().Single();
+                var joinEntry = context.ChangeTracker.Entries<JoinOneToTwo<int>>().Single();
                 Assert.Equal(EntityState.Added, joinEntry.State);
                 Assert.Equal(left.Id, joinEntry.Entity.OneId);
                 Assert.Equal(right.Id, joinEntry.Entity.TwoId);
@@ -4953,8 +4953,8 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 await context.SaveChangesAsync();
             }, async context =>
             {
-                var left = await context.Set<EntityOne>().Where(e => !e.TwoSkip.Any()).OrderBy(e => e.Id).FirstAsync();
-                var right = await context.Set<EntityTwo>().OrderBy(e => e.Id).FirstAsync();
+                var left = await context.Set<EntityOne<int>>().Where(e => !e.TwoSkip.Any()).OrderBy(e => e.Id).FirstAsync();
+                var right = await context.Set<EntityTwo<int>>().OrderBy(e => e.Id).FirstAsync();
 
                 Assert.Equal(leftId, left.Id);
                 Assert.Equal(rightId, right.Id);
@@ -4978,8 +4978,8 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
         return ExecuteWithStrategyInTransactionAsync(
             async context =>
             {
-                var left = await context.Set<EntityTwo>().Where(e => !e.SelfSkipSharedRight.Any()).OrderBy(e => e.Id).FirstAsync();
-                var right = await context.Set<EntityTwo>().Where(e => !e.SelfSkipSharedLeft.Any()).OrderBy(e => e.Id).FirstAsync();
+                var left = await context.Set<EntityTwo<int>>().Where(e => !e.SelfSkipSharedRight.Any()).OrderBy(e => e.Id).FirstAsync();
+                var right = await context.Set<EntityTwo<int>>().Where(e => !e.SelfSkipSharedLeft.Any()).OrderBy(e => e.Id).FirstAsync();
 
                 if (modifyLeft)
                 {
@@ -5001,7 +5001,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 }
                 else
                 {
-                    left.SelfSkipSharedRight ??= CreateCollection<EntityTwo>();
+                    left.SelfSkipSharedRight ??= CreateCollection<EntityTwo<int>>();
                     left.SelfSkipSharedRight.Add(right);
 
                     if (RequiresDetectChanges)
@@ -5042,8 +5042,8 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 await context.SaveChangesAsync();
             }, async context =>
             {
-                var left = await context.Set<EntityTwo>().Where(e => !e.SelfSkipSharedRight.Any()).OrderBy(e => e.Id).FirstAsync();
-                var right = await context.Set<EntityTwo>().Where(e => !e.SelfSkipSharedLeft.Any()).OrderBy(e => e.Id).FirstAsync();
+                var left = await context.Set<EntityTwo<int>>().Where(e => !e.SelfSkipSharedRight.Any()).OrderBy(e => e.Id).FirstAsync();
+                var right = await context.Set<EntityTwo<int>>().Where(e => !e.SelfSkipSharedLeft.Any()).OrderBy(e => e.Id).FirstAsync();
 
                 Assert.Equal(leftId, left.Id);
                 Assert.Equal(rightId, right.Id);
@@ -5077,14 +5077,14 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
         return ExecuteWithStrategyInTransactionAsync(
             async context =>
             {
-                var left = await context.Set<EntityCompositeKey>()
+                var left = await context.Set<EntityCompositeKey<int>>()
                     .Where(e => !e.LeafSkipFull.Any())
                     .OrderBy(e => e.Key1)
                     .ThenBy(e => e.Key2)
                     .ThenBy(e => e.Key3)
                     .FirstAsync();
 
-                var right = await context.Set<EntityLeaf>().OrderBy(e => e.Id).FirstAsync();
+                var right = await context.Set<EntityLeaf<int>>().OrderBy(e => e.Id).FirstAsync();
 
                 if (modifyLeft)
                 {
@@ -5106,8 +5106,8 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                     context.Add(
                         RequiresDetectChanges
                             ? useNavs
-                                ? new JoinCompositeKeyToLeaf { Composite = left, Leaf = right }
-                                : new JoinCompositeKeyToLeaf
+                                ? new JoinCompositeKeyToLeaf<int> { Composite = left, Leaf = right }
+                                : new JoinCompositeKeyToLeaf<int>
                                 {
                                     CompositeId1 = leftKey1,
                                     CompositeId2 = leftKey2,
@@ -5115,13 +5115,13 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                                     LeafId = rightId
                                 }
                             : useNavs
-                                ? context.CreateProxy<JoinCompositeKeyToLeaf>(
+                                ? context.CreateProxy<JoinCompositeKeyToLeaf<int>>(
                                     e =>
                                     {
                                         e.Composite = left;
                                         e.Leaf = right;
                                     })
-                                : context.CreateProxy<JoinCompositeKeyToLeaf>(
+                                : context.CreateProxy<JoinCompositeKeyToLeaf<int>>(
                                     e =>
                                     {
                                         e.CompositeId1 = leftKey1;
@@ -5132,7 +5132,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 }
                 else
                 {
-                    left.LeafSkipFull ??= CreateCollection<EntityLeaf>();
+                    left.LeafSkipFull ??= CreateCollection<EntityLeaf<int>>();
                     left.LeafSkipFull.Add(right);
 
                     if (RequiresDetectChanges)
@@ -5144,7 +5144,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 Assert.Same(right, left.LeafSkipFull.Single());
                 Assert.Same(left, right.CompositeKeySkipFull.Single());
 
-                var joinEntry = context.ChangeTracker.Entries<JoinCompositeKeyToLeaf>().Single();
+                var joinEntry = context.ChangeTracker.Entries<JoinCompositeKeyToLeaf<int>>().Single();
                 Assert.Equal(EntityState.Added, joinEntry.State);
                 Assert.Equal(left.Key1, joinEntry.Entity.CompositeId1);
                 Assert.Equal(left.Key2, joinEntry.Entity.CompositeId2);
@@ -5185,14 +5185,14 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 await context.SaveChangesAsync();
             }, async context =>
             {
-                var left = await context.Set<EntityCompositeKey>()
+                var left = await context.Set<EntityCompositeKey<int>>()
                     .Where(e => !e.LeafSkipFull.Any())
                     .OrderBy(e => e.Key1)
                     .ThenBy(e => e.Key2)
                     .ThenBy(e => e.Key3)
                     .FirstAsync();
 
-                var right = await context.Set<EntityLeaf>().OrderBy(e => e.Id).FirstAsync();
+                var right = await context.Set<EntityLeaf<int>>().OrderBy(e => e.Id).FirstAsync();
 
                 Assert.Equal(leftKey1, left.Key1);
                 Assert.Equal(leftKey2, left.Key2);
@@ -5228,14 +5228,14 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
         return ExecuteWithStrategyInTransactionAsync(
             async context =>
             {
-                var left = await context.Set<EntityCompositeKey>()
+                var left = await context.Set<EntityCompositeKey<int>>()
                     .Where(e => !e.ThreeSkipFull.Any())
                     .OrderBy(e => e.Key1)
                     .ThenBy(e => e.Key2)
                     .ThenBy(e => e.Key3)
                     .FirstAsync();
 
-                var right = await context.Set<EntityThree>().OrderBy(e => e.Id).FirstAsync();
+                var right = await context.Set<EntityThree<int>>().OrderBy(e => e.Id).FirstAsync();
 
                 if (modifyLeft)
                 {
@@ -5257,8 +5257,8 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                     context.Add(
                         RequiresDetectChanges
                             ? useNavs
-                                ? new JoinThreeToCompositeKeyFull { Composite = left, Three = right }
-                                : new JoinThreeToCompositeKeyFull
+                                ? new JoinThreeToCompositeKeyFull<int> { Composite = left, Three = right }
+                                : new JoinThreeToCompositeKeyFull<int>
                                 {
                                     CompositeId1 = leftKey1,
                                     CompositeId2 = leftKey2,
@@ -5266,13 +5266,13 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                                     ThreeId = rightId
                                 }
                             : useNavs
-                                ? context.CreateProxy<JoinThreeToCompositeKeyFull>(
+                                ? context.CreateProxy<JoinThreeToCompositeKeyFull<int>>(
                                     e =>
                                     {
                                         e.Composite = left;
                                         e.Three = right;
                                     })
-                                : context.CreateProxy<JoinThreeToCompositeKeyFull>(
+                                : context.CreateProxy<JoinThreeToCompositeKeyFull<int>>(
                                     e =>
                                     {
                                         e.CompositeId1 = leftKey1;
@@ -5283,7 +5283,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 }
                 else
                 {
-                    left.ThreeSkipFull ??= CreateCollection<EntityThree>();
+                    left.ThreeSkipFull ??= CreateCollection<EntityThree<int>>();
                     left.ThreeSkipFull.Add(right);
 
                     if (RequiresDetectChanges)
@@ -5295,7 +5295,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 Assert.Same(right, left.ThreeSkipFull.Single());
                 Assert.Same(left, right.CompositeKeySkipFull.Single());
 
-                var joinEntry = context.ChangeTracker.Entries<JoinThreeToCompositeKeyFull>().Single();
+                var joinEntry = context.ChangeTracker.Entries<JoinThreeToCompositeKeyFull<int>>().Single();
                 Assert.Equal(EntityState.Added, joinEntry.State);
                 Assert.Equal(left.Key1, joinEntry.Entity.CompositeId1);
                 Assert.Equal(left.Key2, joinEntry.Entity.CompositeId2);
@@ -5336,14 +5336,14 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 await context.SaveChangesAsync();
             }, async context =>
             {
-                var left = await context.Set<EntityCompositeKey>()
+                var left = await context.Set<EntityCompositeKey<int>>()
                     .Where(e => !e.ThreeSkipFull.Any())
                     .OrderBy(e => e.Key1)
                     .ThenBy(e => e.Key2)
                     .ThenBy(e => e.Key3)
                     .FirstAsync();
 
-                var right = await context.Set<EntityThree>().OrderBy(e => e.Id).FirstAsync();
+                var right = await context.Set<EntityThree<int>>().OrderBy(e => e.Id).FirstAsync();
 
                 Assert.Equal(leftKey1, left.Key1);
                 Assert.Equal(leftKey2, left.Key2);
@@ -5369,8 +5369,8 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
         return ExecuteWithStrategyInTransactionAsync(
             async context =>
             {
-                var left = await context.Set<EntityOne>().Where(e => !e.BranchSkip.Any()).OrderBy(e => e.Id).FirstAsync();
-                var right = await context.Set<EntityBranch>().OrderBy(e => e.Id).FirstAsync();
+                var left = await context.Set<EntityOne<int>>().Where(e => !e.BranchSkip.Any()).OrderBy(e => e.Id).FirstAsync();
+                var right = await context.Set<EntityBranch<int>>().OrderBy(e => e.Id).FirstAsync();
 
                 if (modifyLeft)
                 {
@@ -5399,7 +5399,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 }
                 else
                 {
-                    left.BranchSkip ??= CreateCollection<EntityBranch>();
+                    left.BranchSkip ??= CreateCollection<EntityBranch<int>>();
                     left.BranchSkip.Add(right);
 
                     if (RequiresDetectChanges)
@@ -5440,8 +5440,8 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 await context.SaveChangesAsync();
             }, async context =>
             {
-                var left = await context.Set<EntityOne>().Where(e => !e.BranchSkip.Any()).OrderBy(e => e.Id).FirstAsync();
-                var right = await context.Set<EntityBranch>().OrderBy(e => e.Id).FirstAsync();
+                var left = await context.Set<EntityOne<int>>().Where(e => !e.BranchSkip.Any()).OrderBy(e => e.Id).FirstAsync();
+                var right = await context.Set<EntityBranch<int>>().OrderBy(e => e.Id).FirstAsync();
 
                 Assert.Equal(leftId, left.Id);
                 Assert.Equal(rightId, right.Id);
@@ -5465,8 +5465,8 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
         return ExecuteWithStrategyInTransactionAsync(
             async context =>
             {
-                var left = await context.Set<EntityOne>().Where(e => !e.ThreeSkipPayloadFullShared.Any()).OrderBy(e => e.Id).FirstAsync();
-                var right = await context.Set<EntityThree>().OrderBy(e => e.Id).FirstAsync();
+                var left = await context.Set<EntityOne<int>>().Where(e => !e.ThreeSkipPayloadFullShared.Any()).OrderBy(e => e.Id).FirstAsync();
+                var right = await context.Set<EntityThree<int>>().OrderBy(e => e.Id).FirstAsync();
 
                 if (modifyLeft)
                 {
@@ -5488,7 +5488,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 }
                 else
                 {
-                    left.ThreeSkipPayloadFullShared ??= CreateCollection<EntityThree>();
+                    left.ThreeSkipPayloadFullShared ??= CreateCollection<EntityThree<int>>();
                     left.ThreeSkipPayloadFullShared.Add(right);
 
                     if (RequiresDetectChanges)
@@ -5533,8 +5533,8 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 await context.SaveChangesAsync();
             }, async context =>
             {
-                var left = await context.Set<EntityOne>().Where(e => !e.ThreeSkipPayloadFullShared.Any()).OrderBy(e => e.Id).FirstAsync();
-                var right = await context.Set<EntityThree>().OrderBy(e => e.Id).FirstAsync();
+                var left = await context.Set<EntityOne<int>>().Where(e => !e.ThreeSkipPayloadFullShared.Any()).OrderBy(e => e.Id).FirstAsync();
+                var right = await context.Set<EntityThree<int>>().OrderBy(e => e.Id).FirstAsync();
 
                 Assert.Equal(leftId, left.Id);
                 Assert.Equal(rightId, right.Id);
@@ -5558,8 +5558,8 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
         return ExecuteWithStrategyInTransactionAsync(
             async context =>
             {
-                var left = await context.Set<EntityOne>().Where(e => !e.TwoSkipShared.Any()).OrderBy(e => e.Id).FirstAsync();
-                var right = await context.Set<EntityTwo>().OrderBy(e => e.Id).FirstAsync();
+                var left = await context.Set<EntityOne<int>>().Where(e => !e.TwoSkipShared.Any()).OrderBy(e => e.Id).FirstAsync();
+                var right = await context.Set<EntityTwo<int>>().OrderBy(e => e.Id).FirstAsync();
 
                 if (modifyLeft)
                 {
@@ -5581,7 +5581,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 }
                 else
                 {
-                    left.TwoSkipShared ??= CreateCollection<EntityTwo>();
+                    left.TwoSkipShared ??= CreateCollection<EntityTwo<int>>();
                     left.TwoSkipShared.Add(right);
 
                     if (RequiresDetectChanges)
@@ -5622,8 +5622,8 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 await context.SaveChangesAsync();
             }, async context =>
             {
-                var left = await context.Set<EntityOne>().Where(e => !e.TwoSkipShared.Any()).OrderBy(e => e.Id).FirstAsync();
-                var right = await context.Set<EntityTwo>().OrderBy(e => e.Id).FirstAsync();
+                var left = await context.Set<EntityOne<int>>().Where(e => !e.TwoSkipShared.Any()).OrderBy(e => e.Id).FirstAsync();
+                var right = await context.Set<EntityTwo<int>>().OrderBy(e => e.Id).FirstAsync();
 
                 Assert.Equal(leftId, left.Id);
                 Assert.Equal(rightId, right.Id);
@@ -5655,8 +5655,8 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
         return ExecuteWithStrategyInTransactionAsync(
             async context =>
             {
-                var left = await context.Set<EntityOne>().Where(e => !e.ThreeSkipPayloadFull.Any()).OrderBy(e => e.Id).FirstAsync();
-                var right = await context.Set<EntityThree>().OrderBy(e => e.Id).FirstAsync();
+                var left = await context.Set<EntityOne<int>>().Where(e => !e.ThreeSkipPayloadFull.Any()).OrderBy(e => e.Id).FirstAsync();
+                var right = await context.Set<EntityThree<int>>().OrderBy(e => e.Id).FirstAsync();
 
                 if (modifyLeft)
                 {
@@ -5676,16 +5676,16 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                     context.Add(
                         RequiresDetectChanges
                             ? useNavs
-                                ? new JoinOneToThreePayloadFull { One = left, Three = right }
-                                : new JoinOneToThreePayloadFull { OneId = leftId, ThreeId = rightId }
+                                ? new JoinOneToThreePayloadFull<int> { One = left, Three = right }
+                                : new JoinOneToThreePayloadFull<int> { OneId = leftId, ThreeId = rightId }
                             : useNavs
-                                ? context.CreateProxy<JoinOneToThreePayloadFull>(
+                                ? context.CreateProxy<JoinOneToThreePayloadFull<int>>(
                                     e =>
                                     {
                                         e.One = left;
                                         e.Three = right;
                                     })
-                                : context.CreateProxy<JoinOneToThreePayloadFull>(
+                                : context.CreateProxy<JoinOneToThreePayloadFull<int>>(
                                     e =>
                                     {
                                         e.OneId = leftId;
@@ -5694,7 +5694,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 }
                 else
                 {
-                    left.ThreeSkipPayloadFull ??= CreateCollection<EntityThree>();
+                    left.ThreeSkipPayloadFull ??= CreateCollection<EntityThree<int>>();
                     left.ThreeSkipPayloadFull.Add(right);
 
                     if (RequiresDetectChanges)
@@ -5706,7 +5706,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 Assert.Same(right, left.ThreeSkipPayloadFull.Single());
                 Assert.Same(left, right.OneSkipPayloadFull.Single());
 
-                var joinEntry = context.ChangeTracker.Entries<JoinOneToThreePayloadFull>().Single();
+                var joinEntry = context.ChangeTracker.Entries<JoinOneToThreePayloadFull<int>>().Single();
                 Assert.Equal(EntityState.Added, joinEntry.State);
                 Assert.Equal(left.Id, joinEntry.Entity.OneId);
                 Assert.Equal(right.Id, joinEntry.Entity.ThreeId);
@@ -5743,8 +5743,8 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
                 await context.SaveChangesAsync();
             }, async context =>
             {
-                var left = await context.Set<EntityOne>().Where(e => !e.ThreeSkipPayloadFull.Any()).OrderBy(e => e.Id).FirstAsync();
-                var right = await context.Set<EntityThree>().OrderBy(e => e.Id).FirstAsync();
+                var left = await context.Set<EntityOne<int>>().Where(e => !e.ThreeSkipPayloadFull.Any()).OrderBy(e => e.Id).FirstAsync();
+                var right = await context.Set<EntityThree<int>>().OrderBy(e => e.Id).FirstAsync();
 
                 Assert.Equal(leftId, left.Id);
                 Assert.Equal(rightId, right.Id);
@@ -5772,7 +5772,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
 
                 if (leftEntity.ThreeSkipFull == null || createNewCollection)
                 {
-                    leftEntity.ThreeSkipFull = CreateCollection<EntityThree>();
+                    leftEntity.ThreeSkipFull = CreateCollection<EntityThree<int>>();
                 }
 
                 leftEntity.ThreeSkipFull.Add(rightEntity);
@@ -5793,11 +5793,11 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
             },
             async context =>
             {
-                var queryable = context.Set<EntityOne>().Where(e => principalKey == e.Id).Include(e => e.Reference.ThreeSkipFull);
+                var queryable = context.Set<EntityOne<int>>().Where(e => principalKey == e.Id).Include(e => e.Reference.ThreeSkipFull);
                 var principal = async ? await queryable.FirstAsync() : queryable.First();
 
-                var leftEntity = context.ChangeTracker.Entries<EntityTwo>().Select(e => e.Entity).Single();
-                var rightEntity = context.ChangeTracker.Entries<EntityThree>().Select(e => e.Entity).Single();
+                var leftEntity = context.ChangeTracker.Entries<EntityTwo<int>>().Select(e => e.Entity).Single();
+                var rightEntity = context.ChangeTracker.Entries<EntityThree<int>>().Select(e => e.Entity).Single();
 
                 ValidateFixup(context, principal, leftEntity, rightEntity);
 
@@ -5808,7 +5808,7 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
 
                 if (newLeftEntity.ThreeSkipFull == null || createNewCollection)
                 {
-                    newLeftEntity.ThreeSkipFull = CreateCollection<EntityThree>();
+                    newLeftEntity.ThreeSkipFull = CreateCollection<EntityThree<int>>();
                 }
 
                 newLeftEntity.ThreeSkipFull.Add(newRightEntity);
@@ -5830,24 +5830,24 @@ public abstract partial class ManyToManyTrackingTestBase<TFixture>(TFixture fixt
             },
             async context =>
             {
-                var queryable = context.Set<EntityOne>().Where(e => principalKey == e.Id).Include(e => e.Reference.ThreeSkipFull);
+                var queryable = context.Set<EntityOne<int>>().Where(e => principalKey == e.Id).Include(e => e.Reference.ThreeSkipFull);
                 var principal = async ? await queryable.FirstAsync() : queryable.First();
 
-                var leftEntity = context.ChangeTracker.Entries<EntityTwo>().Select(e => e.Entity).Single();
-                var rightEntity = context.ChangeTracker.Entries<EntityThree>().Select(e => e.Entity).Single();
+                var leftEntity = context.ChangeTracker.Entries<EntityTwo<int>>().Select(e => e.Entity).Single();
+                var rightEntity = context.ChangeTracker.Entries<EntityThree<int>>().Select(e => e.Entity).Single();
 
                 ValidateFixup(context, principal, leftEntity, rightEntity);
 
                 Assert.Equal(newRightKey, principal.Reference.ThreeSkipFull.Single().Id);
             });
 
-        static void ValidateFixup(DbContext context, EntityOne principal, EntityTwo leftEntity, EntityThree rightEntity)
+        static void ValidateFixup(DbContext context, EntityOne<int> principal, EntityTwo<int> leftEntity, EntityThree<int> rightEntity)
         {
             Assert.Equal(4, context.ChangeTracker.Entries().Count());
-            Assert.Single(context.ChangeTracker.Entries<EntityOne>());
-            Assert.Single(context.ChangeTracker.Entries<EntityTwo>());
-            Assert.Single(context.ChangeTracker.Entries<EntityThree>());
-            Assert.Single(context.ChangeTracker.Entries<JoinTwoToThree>());
+            Assert.Single(context.ChangeTracker.Entries<EntityOne<int>>());
+            Assert.Single(context.ChangeTracker.Entries<EntityTwo<int>>());
+            Assert.Single(context.ChangeTracker.Entries<EntityThree<int>>());
+            Assert.Single(context.ChangeTracker.Entries<JoinTwoToThree<int>>());
 
             Assert.Same(leftEntity, principal.Reference);
             Assert.Same(principal, leftEntity.ReferenceInverse);

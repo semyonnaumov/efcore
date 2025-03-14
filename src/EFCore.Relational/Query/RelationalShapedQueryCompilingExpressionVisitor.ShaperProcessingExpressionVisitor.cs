@@ -680,7 +680,7 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                                 {
                                     _singleEntityTypeDiscriminatorValues[
                                             projectionBindingExpression]
-                                        = concreteTypes[0].ShortName();
+                                        = concreteTypes[0].DisplayName();
                                 }
                             }
 
@@ -716,7 +716,7 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                         {
                             _singleEntityTypeDiscriminatorValues[
                                     (ProjectionBindingExpression)shaper.ValueBufferExpression]
-                                = concreteTypes[0].ShortName();
+                                = concreteTypes[0].DisplayName();
                         }
                     }
 

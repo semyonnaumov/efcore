@@ -23,12 +23,12 @@ public class TpcManyToManyTrackingSqlServerTest(TpcManyToManyTrackingSqlServerTe
         {
             base.OnModelCreating(modelBuilder, context);
 
-            modelBuilder.Entity<EntityRoot>().UseTpcMappingStrategy();
-            modelBuilder.Entity<EntityRoot>().ToTable("Roots");
-            modelBuilder.Entity<EntityBranch>().ToTable("Branches");
-            modelBuilder.Entity<EntityLeaf>().ToTable("Leaves");
-            modelBuilder.Entity<EntityBranch2>().ToTable("Branch2s");
-            modelBuilder.Entity<EntityLeaf2>().ToTable("Leaf2s");
+            modelBuilder.Entity<EntityRoot<int>>().UseTpcMappingStrategy();
+            modelBuilder.Entity<EntityRoot<int>>().ToTable("Roots");
+            modelBuilder.Entity<EntityBranch<int>>().ToTable("Branches");
+            modelBuilder.Entity<EntityLeaf<int>>().ToTable("Leaves");
+            modelBuilder.Entity<EntityBranch2<int>>().ToTable("Branch2s");
+            modelBuilder.Entity<EntityLeaf2<int>>().ToTable("Leaf2s");
 
             modelBuilder.Entity<UnidirectionalEntityRoot>().UseTpcMappingStrategy();
             modelBuilder.Entity<UnidirectionalEntityRoot>().ToTable("UnidirectionalRoots");

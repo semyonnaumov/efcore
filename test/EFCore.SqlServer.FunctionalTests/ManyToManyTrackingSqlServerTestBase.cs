@@ -37,7 +37,7 @@ public abstract class ManyToManyTrackingSqlServerTestBase<TFixture>(TFixture fix
             base.OnModelCreating(modelBuilder, context);
 
             modelBuilder
-                .Entity<JoinOneSelfPayload>()
+                .Entity<JoinOneSelfPayload<int>>()
                 .Property(e => e.Payload)
                 .HasDefaultValueSql("GETUTCDATE()");
 
@@ -47,7 +47,7 @@ public abstract class ManyToManyTrackingSqlServerTestBase<TFixture>(TFixture fix
                 .HasDefaultValue("Generated");
 
             modelBuilder
-                .Entity<JoinOneToThreePayloadFull>()
+                .Entity<JoinOneToThreePayloadFull<int>>()
                 .Property(e => e.Payload)
                 .HasDefaultValue("Generated");
 

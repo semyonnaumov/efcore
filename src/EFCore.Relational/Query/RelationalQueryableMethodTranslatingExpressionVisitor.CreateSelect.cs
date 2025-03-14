@@ -87,7 +87,7 @@ public partial class RelationalQueryableMethodTranslatingExpressionVisitor
                             caseWhenClauses.Add(
                                 new CaseWhenClause(
                                     _sqlExpressionFactory.IsNotNull(keyColumns[0]),
-                                    _sqlExpressionFactory.Constant(derivedType.ShortName())));
+                                    _sqlExpressionFactory.Constant(derivedType.DisplayName())));
                         }
 
                         var joinPredicate = joinColumns

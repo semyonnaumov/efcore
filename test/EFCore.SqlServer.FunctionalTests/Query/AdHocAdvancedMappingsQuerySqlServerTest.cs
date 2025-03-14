@@ -343,4 +343,41 @@ FROM [Books] AS [b]
 GROUP BY [b].[Id]
 """);
     }
+
+    public override async Task Basic_select_for_generic_entity_with_TPC()
+    {
+        await base.Basic_select_for_generic_entity_with_TPC();
+
+        AssertSql(
+"""
+SELECT [r].[Id], [r].[Value], NULL AS [Value0], N'ReproEntityTpc<int>' AS [Discriminator]
+FROM [ReproEntityTpc<int>] AS [r]
+UNION ALL
+SELECT [r0].[Id], NULL AS [Value], [r0].[Value] AS [Value0], N'ReproEntityTpc<string>' AS [Discriminator]
+FROM [ReproEntityTpc<string>] AS [r0]
+""");
+    }
+
+    public override async Task Basic_select_for_generic_entity_with_TPH()
+    {
+        await base.Basic_select_for_generic_entity_with_TPH();
+
+        AssertSql(
+"""
+SELECT [b].[Id], [b].[Discriminator], [b].[Value], [b].[ReproEntityTph_Value]
+FROM [BaseEntityTph] AS [b]
+""");
+    }
+
+    public override async Task Select_generic_entity_with_TPH_OfType()
+    {
+        await base.Select_generic_entity_with_TPH_OfType();
+
+        AssertSql(
+"""
+SELECT [b].[Id], [b].[Discriminator], [b].[Value]
+FROM [BaseEntityTph] AS [b]
+WHERE [b].[Discriminator] = N'ReproEntityTph<int>'
+""");
+    }
 }

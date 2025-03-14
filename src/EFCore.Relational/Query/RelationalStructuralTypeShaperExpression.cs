@@ -76,7 +76,7 @@ public class RelationalStructuralTypeShaperExpression : StructuralTypeShaperExpr
             var switchCases = new SwitchCase[derivedConcreteEntityTypes.Length];
             for (var i = 0; i < derivedConcreteEntityTypes.Length; i++)
             {
-                var discriminatorValue = Constant(derivedConcreteEntityTypes[i].ShortName(), typeof(string));
+                var discriminatorValue = Constant(derivedConcreteEntityTypes[i].DisplayName(), typeof(string));
                 switchCases[i] = SwitchCase(Constant(derivedConcreteEntityTypes[i], typeof(IEntityType)), discriminatorValue);
             }
 

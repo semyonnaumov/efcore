@@ -211,9 +211,9 @@ public partial class RelationalQueryableMethodTranslatingExpressionVisitor
                             projections.Add(
                                 new ProjectionExpression(
                                     _sqlExpressionFactory.ApplyDefaultTypeMapping(
-                                        _sqlExpressionFactory.Constant(concreteEntityType.ShortName())),
+                                        _sqlExpressionFactory.Constant(concreteEntityType.DisplayName())),
                                     discriminatorColumnName));
-                            discriminatorValues.Add(concreteEntityType.ShortName());
+                            discriminatorValues.Add(concreteEntityType.DisplayName());
 
                             subSelectExpressions.Add(
                                 SelectExpression.CreateImmutable(alias: null!, [tableExpression], projections, _sqlAliasManager));

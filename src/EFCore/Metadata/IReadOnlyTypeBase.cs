@@ -117,7 +117,7 @@ public interface IReadOnlyTypeBase : IReadOnlyAnnotatable
     ///     Gets a short name for the given <see cref="IReadOnlyTypeBase" /> that can be used in other identifiers.
     /// </summary>
     /// <returns>The short name.</returns>
-    [DebuggerStepThrough]
+    //[DebuggerStepThrough]
     string ShortName()
     {
         if (!HasSharedClrType)
@@ -128,13 +128,7 @@ public interface IReadOnlyTypeBase : IReadOnlyAnnotatable
                 name = name[2..];
             }
 
-            var lessIndex = name.IndexOf("<", StringComparison.Ordinal);
-            if (lessIndex == -1)
-            {
-                return name;
-            }
-
-            return name[..lessIndex];
+            return name;
         }
 
         var hashIndex = Name.LastIndexOf("#", StringComparison.Ordinal);

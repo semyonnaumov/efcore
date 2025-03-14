@@ -343,4 +343,123 @@ FROM [Books] AS [b]
 GROUP BY [b].[Id]
 """);
     }
+
+    public override async Task Basic_select_for_generic_entity_with_TPC()
+    {
+        await base.Basic_select_for_generic_entity_with_TPC();
+
+        AssertSql(
+"""
+SELECT [r].[Id], [r].[Value], NULL AS [Value0], N'ReproEntityTpc<int>' AS [Discriminator]
+FROM [ReproEntityTpc<int>] AS [r]
+UNION ALL
+SELECT [r0].[Id], NULL AS [Value], [r0].[Value] AS [Value0], N'ReproEntityTpc<string>' AS [Discriminator]
+FROM [ReproEntityTpc<string>] AS [r0]
+""");
+    }
+
+    public override async Task Select_generic_entity_with_TPC_OfType()
+    {
+        await base.Select_generic_entity_with_TPC_OfType();
+
+        AssertSql(
+"""
+SELECT [r].[Id], [r].[Value], N'ReproEntityTpc<int>' AS [Discriminator]
+FROM [ReproEntityTpc<int>] AS [r]
+""");
+    }
+
+    public override async Task Select_generic_entity_with_TPC_GetType()
+    {
+        await base.Select_generic_entity_with_TPC_GetType();
+
+        AssertSql(
+"""
+SELECT [r].[Id], [r].[Value], NULL AS [Value0], N'ReproEntityTpc<int>' AS [Discriminator]
+FROM [ReproEntityTpc<int>] AS [r]
+""");
+    }
+
+    public override async Task Basic_select_for_generic_entity_with_TPH()
+    {
+        await base.Basic_select_for_generic_entity_with_TPH();
+
+        AssertSql(
+"""
+SELECT [b].[Id], [b].[Discriminator], [b].[Value], [b].[ReproEntityTph<string>_Value]
+FROM [BaseEntityTph] AS [b]
+""");
+    }
+
+    public override async Task Select_generic_entity_with_TPH_OfType()
+    {
+        await base.Select_generic_entity_with_TPH_OfType();
+
+        AssertSql(
+"""
+SELECT [b].[Id], [b].[Discriminator], [b].[Value]
+FROM [BaseEntityTph] AS [b]
+WHERE [b].[Discriminator] = N'ReproEntityTph<int>'
+""");
+    }
+
+    public override async Task Select_generic_entity_with_TPH_GetType()
+    {
+        await base.Select_generic_entity_with_TPH_GetType();
+
+        AssertSql(
+"""
+SELECT [b].[Id], [b].[Discriminator], [b].[Value], [b].[ReproEntityTph<string>_Value]
+FROM [BaseEntityTph] AS [b]
+WHERE [b].[Discriminator] = N'ReproEntityTph<int>'
+""");
+    }
+
+    public override async Task Basic_select_for_generic_entity_with_TPT()
+    {
+        await base.Basic_select_for_generic_entity_with_TPT();
+
+        AssertSql(
+"""
+SELECT [b].[Id], [r].[Value], [r0].[Value], CASE
+    WHEN [r0].[Id] IS NOT NULL THEN N'ReproEntityTpt<string>'
+    WHEN [r].[Id] IS NOT NULL THEN N'ReproEntityTpt<int>'
+END AS [Discriminator]
+FROM [BaseEntityTpt] AS [b]
+LEFT JOIN [ReproEntityTpt<int>] AS [r] ON [b].[Id] = [r].[Id]
+LEFT JOIN [ReproEntityTpt<string>] AS [r0] ON [b].[Id] = [r0].[Id]
+""");
+    }
+
+    public override async Task Select_generic_entity_with_TPT_OfType()
+    {
+        await base.Select_generic_entity_with_TPT_OfType();
+
+        AssertSql(
+"""
+SELECT [b].[Id], [r].[Value], CASE
+    WHEN [r].[Id] IS NOT NULL THEN N'ReproEntityTpt<int>'
+END AS [Discriminator]
+FROM [BaseEntityTpt] AS [b]
+LEFT JOIN [ReproEntityTpt<int>] AS [r] ON [b].[Id] = [r].[Id]
+WHERE [r].[Id] IS NOT NULL
+""");
+    }
+
+    public override async Task Select_generic_entity_with_TPT_GetType()
+    {
+        await base.Select_generic_entity_with_TPT_GetType();
+
+        AssertSql(
+"""
+SELECT [b].[Id], [r].[Value], [r0].[Value], CASE
+    WHEN [r0].[Id] IS NOT NULL THEN N'ReproEntityTpt<string>'
+    WHEN [r].[Id] IS NOT NULL THEN N'ReproEntityTpt<int>'
+END AS [Discriminator]
+FROM [BaseEntityTpt] AS [b]
+LEFT JOIN [ReproEntityTpt<int>] AS [r] ON [b].[Id] = [r].[Id]
+LEFT JOIN [ReproEntityTpt<string>] AS [r0] ON [b].[Id] = [r0].[Id]
+WHERE [r].[Id] IS NOT NULL
+""");
+    }
 }

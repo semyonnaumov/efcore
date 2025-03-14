@@ -230,6 +230,204 @@ public abstract class AdHocAdvancedMappingsQueryRelationalTestBase : AdHocAdvanc
 
     #endregion
 
+    #region 35727
+
+    [ConditionalFact]
+    public virtual async Task Basic_select_for_generic_entity_with_TPC()
+    {
+        var contextFactory = await InitializeAsync<Context35727>(seed: c => c.SeedAsync());
+
+        using var context = contextFactory.CreateContext();
+        var query = context.Set<Context35727.BaseEntityTpc>().ToList();
+
+        Assert.Equal(4, query.Count);
+    }
+
+    [ConditionalFact]
+    public virtual async Task Select_generic_entity_with_TPC_OfType()
+    {
+        var contextFactory = await InitializeAsync<Context35727>(seed: c => c.SeedAsync());
+
+        using var context = contextFactory.CreateContext();
+        var query = context.Set<Context35727.BaseEntityTpc>().OfType<Context35727.ReproEntityTpc<int>>().ToList();
+
+        Assert.Equal(2, query.Count);
+    }
+
+    [ConditionalFact]
+    public virtual async Task Select_generic_entity_with_TPC_GetType()
+    {
+        var contextFactory = await InitializeAsync<Context35727>(seed: c => c.SeedAsync());
+
+        using var context = contextFactory.CreateContext();
+        var query = context.Set<Context35727.BaseEntityTpc>().Where(x => x.GetType() == typeof(Context35727.ReproEntityTpc<int>)).ToList();
+
+        Assert.Equal(2, query.Count);
+    }
+
+    [ConditionalFact]
+    public virtual async Task Basic_select_for_generic_entity_with_TPH()
+    {
+        var contextFactory = await InitializeAsync<Context35727>(seed: c => c.SeedAsync());
+
+        using var context = contextFactory.CreateContext();
+        var query = context.Set<Context35727.BaseEntityTph>().ToList();
+
+        Assert.Equal(4, query.Count);
+    }
+
+    [ConditionalFact]
+    public virtual async Task Select_generic_entity_with_TPH_OfType()
+    {
+        var contextFactory = await InitializeAsync<Context35727>(seed: c => c.SeedAsync());
+
+        using var context = contextFactory.CreateContext();
+        var query = context.Set<Context35727.BaseEntityTph>().OfType<Context35727.ReproEntityTph<int>>().ToList();
+
+        Assert.Equal(2, query.Count);
+    }
+
+    [ConditionalFact]
+    public virtual async Task Select_generic_entity_with_TPH_GetType()
+    {
+        var contextFactory = await InitializeAsync<Context35727>(seed: c => c.SeedAsync());
+
+        using var context = contextFactory.CreateContext();
+        var query = context.Set<Context35727.BaseEntityTph>().Where(x => x.GetType() == typeof(Context35727.ReproEntityTph<int>)).ToList();
+
+        Assert.Equal(2, query.Count);
+    }
+
+    [ConditionalFact]
+    public virtual async Task Basic_select_for_generic_entity_with_TPT()
+    {
+        var contextFactory = await InitializeAsync<Context35727>(seed: c => c.SeedAsync());
+
+        using var context = contextFactory.CreateContext();
+        var query = context.Set<Context35727.BaseEntityTpt>().ToList();
+
+        Assert.Equal(4, query.Count);
+    }
+
+    [ConditionalFact]
+    public virtual async Task Select_generic_entity_with_TPT_OfType()
+    {
+        var contextFactory = await InitializeAsync<Context35727>(seed: c => c.SeedAsync());
+
+        using var context = contextFactory.CreateContext();
+        var query = context.Set<Context35727.BaseEntityTpt>().OfType<Context35727.ReproEntityTpt<int>>().ToList();
+
+        Assert.Equal(2, query.Count);
+    }
+
+    [ConditionalFact]
+    public virtual async Task Select_generic_entity_with_TPT_GetType()
+    {
+        var contextFactory = await InitializeAsync<Context35727>(seed: c => c.SeedAsync());
+
+        using var context = contextFactory.CreateContext();
+        var query = context.Set<Context35727.BaseEntityTpt>().Where(x => x.GetType() == typeof(Context35727.ReproEntityTpt<int>)).ToList();
+
+        Assert.Equal(2, query.Count);
+    }
+
+    protected class Context35727(DbContextOptions options) : DbContext(options)
+    {
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<BaseEntityTpc>()
+                .UseTpcMappingStrategy()
+                .HasKey(x => x.Id);
+
+            modelBuilder.Entity<ReproEntityTpc<int>>();
+            modelBuilder.Entity<ReproEntityTpc<string>>();
+
+            modelBuilder.Entity<BaseEntityTph>(b =>
+            {
+                b.UseTphMappingStrategy().HasKey(x => x.Id);
+                b.Property(x => x.Id).ValueGeneratedNever();
+            });
+
+            modelBuilder.Entity<ReproEntityTph<int>>();
+            modelBuilder.Entity<ReproEntityTph<string>>();
+            modelBuilder.Entity<ReproEntityTph<long>>();
+
+            modelBuilder.Entity<BaseEntityTpt>(b =>
+            {
+                b.UseTptMappingStrategy().HasKey(x => x.Id);
+                b.Property(x => x.Id).ValueGeneratedNever();
+            });
+
+            modelBuilder.Entity<ReproEntityTpt<int>>();
+            modelBuilder.Entity<ReproEntityTpt<string>>();
+        }
+
+        public Task SeedAsync()
+        {
+            AddRange(
+                new ReproEntityTpc<int>() { Id = 1, Value = 1 },
+                new ReproEntityTpc<int>() { Id = 2, Value = 2 },
+                new ReproEntityTpc<string>() { Id = 3, Value = "3" },
+                new ReproEntityTpc<string>() { Id = 4, Value = "4" });
+
+            AddRange(
+                new ReproEntityTph<int>() { Id = 1, Value = 1 },
+                new ReproEntityTph<int>() { Id = 2, Value = 2 },
+                new ReproEntityTph<string>() { Id = 3, Value = "3" },
+                new ReproEntityTph<string>() { Id = 4, Value = "4" },
+
+                new ReproEntityTph<long>() { Id = 5, Value = 5L },
+                new ReproEntityTph<long>() { Id = 6, Value = 6L }
+
+                )
+
+
+
+
+                ;
+
+            AddRange(
+                new ReproEntityTpt<int>() { Id = 1, Value = 1 },
+                new ReproEntityTpt<int>() { Id = 2, Value = 2 },
+                new ReproEntityTpt<string>() { Id = 3, Value = "3" },
+                new ReproEntityTpt<string>() { Id = 4, Value = "4" });
+
+            return SaveChangesAsync();
+        }
+
+        public abstract class BaseEntityTpc
+        {
+            public int Id { get; set; }
+        }
+
+        public class ReproEntityTpc<T> : BaseEntityTpc
+        {
+            public T Value { get; set; }
+        }
+
+        public abstract class BaseEntityTph
+        {
+            public int Id { get; set; }
+        }
+
+        public class ReproEntityTph<T> : BaseEntityTph
+        {
+            public T Value { get; set; }
+        }
+
+        public abstract class BaseEntityTpt
+        {
+            public int Id { get; set; }
+        }
+
+        public class ReproEntityTpt<T> : BaseEntityTpt
+        {
+            public T Value { get; set; }
+        }
+    }
+
+    #endregion
+
     [ConditionalTheory]
     [MemberData(nameof(IsAsyncData))]
     public virtual Task Hierarchy_query_with_abstract_type_sibling_TPC(bool async)

@@ -1,0 +1,84 @@
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+namespace Microsoft.EntityFrameworkCore;
+
+#pragma warning disable EF9104
+
+public class FullTextSearchCosmosTest : IClassFixture<FullTextSearchCosmosTest.FullTextSearchFixture>
+{
+    public FullTextSearchCosmosTest(FullTextSearchFixture fixture, ITestOutputHelper testOutputHelper)
+    {
+        Fixture = fixture;
+        _testOutputHelper = testOutputHelper;
+        fixture.TestSqlLoggerFactory.Clear();
+    }
+
+    protected FullTextSearchFixture Fixture { get; }
+
+    private readonly ITestOutputHelper _testOutputHelper;
+
+    [ConditionalFact]
+    public virtual async Task Test1()
+    {
+        await using var context = CreateContext();
+
+        AssertSql(
+            """
+@inputVector='[2,1,4,3,5,2,5,7,3,1]'
+
+SELECT VALUE VectorDistance(c["Bytes"], @inputVector, false, {'distanceFunction':'cosine', 'dataType':'uint8'})
+FROM root c
+""");
+    }
+
+
+    private class FtsEntity
+    {
+        public int Id { get; set; }
+
+        public string Name { get; set; } = null!;
+        //public Owned1 OwnedReference { get; set; } = null!;
+        //public List<Owned1> OwnedCollection { get; set; } = null!;
+    }
+
+    //[Owned]
+    //protected class Owned1
+    //{
+    //    public int Prop { get; set; }
+    //    public Owned2 NestedOwned { get; set; } = null!;
+    //    public List<Owned2> NestedOwnedCollection { get; set; } = null!;
+    //}
+
+    //[Owned]
+    //protected class Owned2
+    //{
+    //    public string Prop { get; set; } = null!;
+    //}
+
+    protected DbContext CreateContext()
+        => Fixture.CreateContext();
+
+    private void AssertSql(params string[] expected)
+        => Fixture.TestSqlLoggerFactory.AssertBaseline(expected);
+
+    public class FullTextSearchFixture : SharedStoreFixtureBase<PoolableDbContext>
+    {
+        protected override string StoreName
+            => "FullTextSearchTest";
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder, DbContext context)
+            => modelBuilder.Entity<FtsEntity>().ToContainer("FtsEntities");
+        protected override Task SeedAsync(PoolableDbContext context)
+        {
+            return context.SaveChangesAsync();
+        }
+
+        public TestSqlLoggerFactory TestSqlLoggerFactory
+            => (TestSqlLoggerFactory)ListLoggerFactory;
+
+        protected override ITestStoreFactory TestStoreFactory
+            => CosmosTestStoreFactory.Instance;
+    }
+}
+#pragma warning restore EF9104

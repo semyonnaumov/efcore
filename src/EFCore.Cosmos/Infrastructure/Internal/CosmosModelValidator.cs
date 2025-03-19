@@ -570,6 +570,25 @@ public class CosmosModelValidator : ModelValidator
                                 index.Properties[0].Name));
                     }
                 }
+                else if (index.FindAnnotation(CosmosAnnotationNames.FullTextIndex) != null)
+                {
+                    if (index.Properties.Count > 1)
+                    {
+                        throw new InvalidOperationException(
+                            CosmosStrings.CompositeFullTextIndex(
+                                entityType.DisplayName(),
+                                string.Join(",", index.Properties.Select(e => e.Name))));
+                    }
+
+                    if (index.Properties[0].FindAnnotation(CosmosAnnotationNames.FullTextSearchLanguage) == null)
+                    {
+                        throw new InvalidOperationException(
+                            CosmosStrings.FullTextIndexOnNonFullTextProperty(
+                                entityType.DisplayName(),
+                                index.Properties[0].Name,
+                                nameof(CosmosPropertyBuilderExtensions.IsFullText)));
+                    }
+                }
                 else
                 {
                     throw new InvalidOperationException(
@@ -603,6 +622,27 @@ public class CosmosModelValidator : ModelValidator
                 {
                     // Will throw if the data type is not set and cannot be inferred.
                     CosmosVectorType.CreateDefaultVectorDataType(property.ClrType);
+                }
+
+                var fullTextLanguage = property.GetFullTextSearchLanguage();
+                if (fullTextLanguage is not null)
+                {
+                    if (property.ClrType != typeof(string))
+                    {
+                        throw new InvalidOperationException(
+                            CosmosStrings.FullTextSearchConfiguredForUnsupportedPropertyType(
+                                entityType.DisplayName(),
+                                property.Name));
+                    }
+
+                    if (!property.IsIndex() || property.GetContainingIndexes().All(x => x.IsFullTextIndex() != true))
+                    {
+                        throw new InvalidOperationException(
+                            CosmosStrings.FullTextPropertyWithoutFullTextIndex(
+                                entityType.DisplayName(),
+                                property.Name,
+                                nameof(CosmosIndexBuilderExtensions.ForFullText)));
+                    }
                 }
             }
         }

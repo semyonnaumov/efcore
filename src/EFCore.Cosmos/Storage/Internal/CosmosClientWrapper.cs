@@ -238,6 +238,7 @@ public class CosmosClientWrapper : ICosmosClientWrapper
         var partitionKeyPaths = parameters.PartitionKeyStoreNames.Select(e => "/" + e).ToList();
 
         var vectorIndexes = new Collection<VectorIndexPath>();
+        var fullTextIndexes = new Collection<FullTextIndexPath>();
         foreach (var index in parameters.Indexes)
         {
             var vectorIndexType = (VectorIndexType?)index.FindAnnotation(CosmosAnnotationNames.VectorIndexType)?.Value;
@@ -247,8 +248,29 @@ public class CosmosClientWrapper : ICosmosClientWrapper
                 Check.DebugAssert(index.Properties.Count == 1, "Vector index must have one property.");
 
                 vectorIndexes.Add(
-                    new VectorIndexPath { Path = "/" + index.Properties[0].GetJsonPropertyName(), Type = vectorIndexType.Value });
+                    new VectorIndexPath { Path = GetJsonPropertyPathFromRoot(index.Properties[0]), Type = vectorIndexType.Value });
             }
+
+            var fullTextIndex = (bool?)index.FindAnnotation(CosmosAnnotationNames.FullTextIndex)?.Value;
+            if (fullTextIndex == true)
+            {
+                // Model validation will ensure there is only one property.
+                Check.DebugAssert(index.Properties.Count == 1, "Full-text index must have one property.");
+
+                fullTextIndexes.Add(
+                    new FullTextIndexPath { Path = GetJsonPropertyPathFromRoot(index.Properties[0]) });
+            }
+        }
+
+        var fullTextPaths = new Collection<FullTextPath>();
+        foreach (var fullTextProperty in parameters.FullTextProperties)
+        {
+            fullTextPaths.Add(
+                new FullTextPath
+                {
+                    Path = GetJsonPropertyPathFromRoot(fullTextProperty.Property),
+                    Language = fullTextProperty.Language
+                });
         }
 
         var embeddings = new Collection<Embedding>();
@@ -257,7 +279,7 @@ public class CosmosClientWrapper : ICosmosClientWrapper
             embeddings.Add(
                 new Embedding
                 {
-                    Path = "/" + tuple.Property.GetJsonPropertyName(),
+                    Path = GetJsonPropertyPathFromRoot(tuple.Property),
                     DataType = CosmosVectorType.CreateDefaultVectorDataType(tuple.Property.ClrType),
                     Dimensions = tuple.VectorType.Dimensions,
                     DistanceFunction = tuple.VectorType.DistanceFunction
@@ -271,14 +293,24 @@ public class CosmosClientWrapper : ICosmosClientWrapper
             AnalyticalStoreTimeToLiveInSeconds = parameters.AnalyticalStoreTimeToLiveInSeconds,
         };
 
-        if (embeddings.Any())
+        if (embeddings.Count != 0)
         {
             containerProperties.VectorEmbeddingPolicy = new VectorEmbeddingPolicy(embeddings);
         }
 
-        if (vectorIndexes.Any())
+        if (vectorIndexes.Count != 0 || fullTextIndexes.Count != 0)
         {
-            containerProperties.IndexingPolicy = new IndexingPolicy { VectorIndexes = vectorIndexes };
+            containerProperties.IndexingPolicy = new IndexingPolicy
+            {
+                VectorIndexes = vectorIndexes,
+                FullTextIndexes = fullTextIndexes
+            };
+        }
+
+        if (fullTextPaths.Count != 0)
+        {
+            // TODO: see issue #35851
+            containerProperties.FullTextPolicy = new FullTextPolicy { DefaultLanguage = "en-US", FullTextPaths = fullTextPaths };
         }
 
         var response = await wrapper.Client.GetDatabase(wrapper._databaseId).CreateContainerIfNotExistsAsync(
@@ -288,6 +320,23 @@ public class CosmosClientWrapper : ICosmosClientWrapper
             .ConfigureAwait(false);
 
         return response.StatusCode == HttpStatusCode.Created;
+    }
+
+    private static string GetJsonPropertyPathFromRoot(IReadOnlyProperty property)
+        => GetPathFromRoot((IReadOnlyEntityType)property.DeclaringType) + "/" + property.GetJsonPropertyName();
+
+    private static string GetPathFromRoot(IReadOnlyEntityType entityType)
+    {
+        if (entityType.IsOwned())
+        {
+            var ownership = entityType.FindOwnership()!;
+
+            return GetPathFromRoot(ownership.PrincipalEntityType) + "/" + ownership.GetNavigation(pointsToPrincipal: false)!.Name;
+        }
+        else
+        {
+            return "";
+        }
     }
 
     /// <summary>

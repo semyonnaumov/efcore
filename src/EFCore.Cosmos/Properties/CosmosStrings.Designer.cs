@@ -54,6 +54,14 @@ namespace Microsoft.EntityFrameworkCore.Cosmos.Internal
             => GetString("CanConnectNotSupported");
 
         /// <summary>
+        ///     A full-text index on '{entityType}' is defined over properties `{properties}`. A full-text index can only target a single property.
+        /// </summary>
+        public static string CompositeFullTextIndex(object? entityType, object? properties)
+            => string.Format(
+                GetString("CompositeFullTextIndex", nameof(entityType), nameof(properties)),
+                entityType, properties);
+
+        /// <summary>
         ///     A vector index on '{entityType}' is defined over properties `{properties}`. A vector index can only target a single property.
         /// </summary>
         public static string CompositeVectorIndex(object? entityType, object? properties)
@@ -146,6 +154,30 @@ namespace Microsoft.EntityFrameworkCore.Cosmos.Internal
         /// </summary>
         public static string ExceptNotSupported
             => GetString("ExceptNotSupported");
+
+        /// <summary>
+        ///     A full-text index is defined for `{entityType}.{property}`, but this property has not been configured for full-text search. Use '{isFullText}' method in 'OnModelCreating' to configure the property for full-text search.
+        /// </summary>
+        public static string FullTextIndexOnNonFullTextProperty(object? entityType, object? property, object? isFullText)
+            => string.Format(
+                GetString("FullTextIndexOnNonFullTextProperty", nameof(entityType), nameof(property), nameof(isFullText)),
+                entityType, property, isFullText);
+
+        /// <summary>
+        ///     A property {entityType}.{property} was configured for full-text search, but associated full-text index was not defined. In 'OnModelCreating' create an index for the property and configure it as a full-text index using '{isFullText}' method.
+        /// </summary>
+        public static string FullTextPropertyWithoutFullTextIndex(object? entityType, object? property, object? isFullText)
+            => string.Format(
+                GetString("FullTextPropertyWithoutFullTextIndex", nameof(entityType), nameof(property), nameof(isFullText)),
+                entityType, property, isFullText);
+
+        /// <summary>
+        ///     Property {entityType}.{property} was configured for full-text search. Full-text search is only supported for string properties.
+        /// </summary>
+        public static string FullTextSearchConfiguredForUnsupportedPropertyType(object? entityType, object? property)
+            => string.Format(
+                GetString("FullTextSearchConfiguredForUnsupportedPropertyType", nameof(entityType), nameof(property)),
+                entityType, property);
 
         /// <summary>
         ///     'HasShadowId' was called on a non-root entity type '{entityType}'. JSON 'id' configuration can only be made on the document root.

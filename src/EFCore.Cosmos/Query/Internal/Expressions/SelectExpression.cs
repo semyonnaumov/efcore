@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Microsoft.EntityFrameworkCore.Cosmos.Extensions;
 using Microsoft.EntityFrameworkCore.Cosmos.Internal;
 using Microsoft.EntityFrameworkCore.Internal;
 
@@ -381,6 +382,11 @@ public sealed class SelectExpression : Expression, IPrintableExpression
     /// </summary>
     public void ApplyOrdering(OrderingExpression orderingExpression)
     {
+        if (orderingExpression is { Expression: SqlFunctionExpression { IsScoringFunction: true }, IsAscending: false })
+        {
+            throw new InvalidOperationException($"Ordering based on scoring function is not supported inside '{nameof(Queryable.OrderByDescending)}' operation. Use '{nameof(Queryable.OrderBy)}' instead.");
+        }
+
         _orderings.Clear();
         _orderings.Add(orderingExpression);
     }
@@ -393,6 +399,22 @@ public sealed class SelectExpression : Expression, IPrintableExpression
     /// </summary>
     public void AppendOrdering(OrderingExpression orderingExpression)
     {
+        var existingScoringFunctionOrdering = _orderings.Any(x => x.Expression is SqlFunctionExpression { IsScoringFunction: true });
+
+        if (orderingExpression.Expression is SqlFunctionExpression { IsScoringFunction: true }
+            || existingScoringFunctionOrdering)
+        {
+            if (existingScoringFunctionOrdering)
+            {
+                throw new InvalidOperationException("Only one ordering using scoring function is allowed. Use 'EF.Functions.Rrf' method to combine multiple scoring functions.");
+            }
+            else
+            {
+                // Cosmos throws bad exception: Syntax error, incorrect syntax near 'ORDER'.
+                throw new InvalidOperationException("Ordering using scoring function is mutually exclusive with other forms of ordering.");
+            }
+        }
+
         if (_orderings.FirstOrDefault(o => o.Expression.Equals(orderingExpression.Expression)) == null)
         {
             _orderings.Add(orderingExpression);
@@ -752,6 +774,11 @@ public sealed class SelectExpression : Expression, IPrintableExpression
         if (Orderings.Any())
         {
             expressionPrinter.AppendLine().Append("ORDER BY ");
+            if (Orderings is [{ Expression: SqlFunctionExpression { IsScoringFunction: true } }])
+            {
+                expressionPrinter.Append("RANK ");
+            }
+
             expressionPrinter.VisitCollection(Orderings);
         }
 

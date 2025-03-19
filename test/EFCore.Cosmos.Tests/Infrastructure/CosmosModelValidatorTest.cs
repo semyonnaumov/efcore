@@ -559,6 +559,84 @@ public class CosmosModelValidatorTest : ModelValidatorTestBase
         public T ForgetMeNot { get; set; }
     }
 
+#pragma warning disable EF9104
+    [ConditionalFact]
+    public virtual void Detects_multi_property_full_text_index()
+    {
+        var modelBuilder = CreateConventionModelBuilder();
+        modelBuilder.Entity<Customer>(
+            b =>
+            {
+                b.HasIndex(x => new { x.Name, x.OtherName }).ForFullText();
+            });
+
+        VerifyError(CosmosStrings.CompositeFullTextIndex(nameof(Customer), "Name,OtherName"), modelBuilder);
+    }
+
+    [ConditionalFact]
+    public virtual void Detects_full_text_index_on_non_full_text_property()
+    {
+        var modelBuilder = CreateConventionModelBuilder();
+        modelBuilder.Entity<Customer>(
+            b =>
+            {
+                b.HasIndex(x => x.Name).ForFullText();
+            });
+
+        VerifyError(
+            CosmosStrings.FullTextIndexOnNonFullTextProperty(nameof(Customer), "Name", nameof(CosmosPropertyBuilderExtensions.IsFullText)),
+            modelBuilder);
+    }
+
+    [ConditionalFact]
+    public virtual void Detects_full_text_property_without_matching_full_text_index()
+    {
+        var modelBuilder = CreateConventionModelBuilder();
+        modelBuilder.Entity<Customer>(
+            b =>
+            {
+                b.Property(x => x.Name).IsFullText();
+            });
+
+        VerifyError(
+            CosmosStrings.FullTextPropertyWithoutFullTextIndex(nameof(Customer), "Name", nameof(CosmosIndexBuilderExtensions.ForFullText)),
+            modelBuilder);
+    }
+
+    [ConditionalFact]
+    public virtual void Detects_full_text_property_with_matching_non_full_text_index()
+    {
+        var modelBuilder = CreateConventionModelBuilder();
+        modelBuilder.Entity<Customer>(
+            b =>
+            {
+                b.Property(x => x.Name).IsFullText();
+                b.HasIndex(x => x.Name);
+            });
+
+        VerifyError(
+            CosmosStrings.FullTextPropertyWithoutFullTextIndex(nameof(Customer), "Name", nameof(CosmosIndexBuilderExtensions.ForFullText)),
+            modelBuilder);
+    }
+
+    [ConditionalFact]
+    public virtual void Detects_full_text_on_non_string_property()
+    {
+        var modelBuilder = CreateConventionModelBuilder();
+        modelBuilder.Entity<Customer>(
+            b =>
+            {
+                b.Property(x => x.Id).IsFullText();
+                b.HasIndex(x => x.Id).ForFullText();
+            });
+
+        VerifyError(
+            CosmosStrings.FullTextSearchConfiguredForUnsupportedPropertyType(nameof(Customer), "Id"),
+            modelBuilder);
+    }
+
+#pragma warning restore EF9104
+
     protected override TestHelpers TestHelpers
         => CosmosTestHelpers.Instance;
 }

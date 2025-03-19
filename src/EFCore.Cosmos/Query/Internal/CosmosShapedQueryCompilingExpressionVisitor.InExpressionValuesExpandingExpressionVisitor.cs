@@ -9,7 +9,7 @@ namespace Microsoft.EntityFrameworkCore.Cosmos.Query.Internal;
 
 public partial class CosmosShapedQueryCompilingExpressionVisitor
 {
-    private sealed class InExpressionValuesExpandingExpressionVisitor(
+    private sealed class ParameterInliner(
         ISqlExpressionFactory sqlExpressionFactory,
         IReadOnlyDictionary<string, object> parametersValues)
         : ExpressionVisitor
@@ -48,6 +48,26 @@ public partial class CosmosShapedQueryCompilingExpressionVisitor
                 return values.Count == 0
                     ? sqlExpressionFactory.ApplyDefaultTypeMapping(sqlExpressionFactory.Constant(false))
                     : sqlExpressionFactory.In((SqlExpression)Visit(inExpression.Item), values);
+            }
+            else if (expression is SelectExpression { Orderings: [{ Expression: SqlFunctionExpression { IsScoringFunction: true } }] } hybridSearchSelect
+                && (hybridSearchSelect.Limit is SqlParameterExpression
+                    || hybridSearchSelect.Offset is SqlParameterExpression))
+            {
+                if (hybridSearchSelect.Limit is SqlParameterExpression limitPrm)
+                {
+                    hybridSearchSelect.ApplyLimit(
+                        sqlExpressionFactory.Constant(
+                            parametersValues[limitPrm.Name],
+                            limitPrm.TypeMapping));
+                }
+
+                if (hybridSearchSelect.Offset is SqlParameterExpression offsetPrm)
+                {
+                    hybridSearchSelect.ApplyOffset(
+                        sqlExpressionFactory.Constant(
+                            parametersValues[offsetPrm.Name],
+                            offsetPrm.TypeMapping));
+                }
             }
 
             return base.VisitExtension(expression);

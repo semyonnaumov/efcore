@@ -341,6 +341,11 @@ public class CosmosQuerySqlGenerator(ITypeMappingSource typeMappingSource) : Sql
         {
             _sqlBuilder.AppendLine().Append("ORDER BY ");
 
+            if (selectExpression.Orderings is [{ Expression: SqlFunctionExpression { IsScoringFunction: true } }])
+            {
+                _sqlBuilder.Append("RANK ");
+            }
+
             GenerateList(selectExpression.Orderings, e => Visit(e));
         }
 

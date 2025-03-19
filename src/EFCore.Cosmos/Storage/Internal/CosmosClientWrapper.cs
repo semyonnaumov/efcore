@@ -252,14 +252,6 @@ public class CosmosClientWrapper : ICosmosClientWrapper
                     new VectorIndexPath { Path = "/" + index.Properties[0].GetJsonPropertyName(), Type = vectorIndexType.Value });
             }
 
-
-
-
-
-
-
-
-
 #pragma warning disable EF9104 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
             var fullTextIndex = (bool?)index.FindAnnotation(CosmosAnnotationNames.FullTextIndex)?.Value;
 #pragma warning restore EF9104 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
@@ -269,16 +261,17 @@ public class CosmosClientWrapper : ICosmosClientWrapper
                 // Model validation will ensure there is only one property.
                 Check.DebugAssert(index.Properties.Count == 1, "Full-text index must have one property.");
 
-                vectorIndexes.Add(
+                fullTextIndexes.Add(
                     new FullTextIndexPath { Path = "/" + index.Properties[0].GetJsonPropertyName() });
             }
         }
 
-
-
-
-
-
+        var fullTextPaths = new Collection<FullTextPath>();
+        foreach (var fullTextProperty in parameters.FullTextProperties)
+        {
+            fullTextPaths.Add(
+                new FullTextPath { Path = "/" + fullTextProperty.Property.GetJsonPropertyName() });
+        }
 
         var embeddings = new Collection<Embedding>();
         foreach (var tuple in parameters.Vectors)
@@ -305,9 +298,18 @@ public class CosmosClientWrapper : ICosmosClientWrapper
             containerProperties.VectorEmbeddingPolicy = new VectorEmbeddingPolicy(embeddings);
         }
 
-        if (vectorIndexes.Any())
+        if (vectorIndexes.Any() || fullTextIndexes.Any())
         {
-            containerProperties.IndexingPolicy = new IndexingPolicy { VectorIndexes = vectorIndexes };
+            containerProperties.IndexingPolicy = new IndexingPolicy
+            {
+                VectorIndexes = vectorIndexes,
+                FullTextIndexes = fullTextIndexes
+            };
+        }
+
+        if (fullTextPaths.Any())
+        {
+            containerProperties.FullTextPolicy = new FullTextPolicy { FullTextPaths = fullTextPaths };
         }
 
         var response = await wrapper.Client.GetDatabase(wrapper._databaseId).CreateContainerIfNotExistsAsync(

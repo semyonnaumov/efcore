@@ -146,7 +146,7 @@ public static class CosmosIndexBuilderExtensions
     /// <param name="value">The value indicating whether the index is configured for Full-text search.</param>
     /// <returns>A builder to further configure the index.</returns>
     public static IndexBuilder<TEntity> ForFullText<TEntity>(
-        this IndexBuilder<TEntity> indexBuilder
+        this IndexBuilder<TEntity> indexBuilder,
         bool? value = true)
         => (IndexBuilder<TEntity>)ForFullText((IndexBuilder)indexBuilder, value);
 

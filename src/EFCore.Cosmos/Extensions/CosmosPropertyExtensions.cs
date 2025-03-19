@@ -128,4 +128,67 @@ public static class CosmosPropertyExtensions
     [Experimental(EFDiagnostics.CosmosVectorSearchExperimental)]
     public static ConfigurationSource? GetVectorTypeConfigurationSource(this IConventionProperty property)
         => property.FindAnnotation(CosmosAnnotationNames.VectorType)?.GetConfigurationSource();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    /// <summary>
+    ///     Returns the definition of the vector stored in this property.
+    /// </summary>
+    /// <param name="property">The property.</param>
+    /// <returns>Returns the definition of the vector stored in this property.</returns>
+    [Experimental(EFDiagnostics.CosmosVectorSearchExperimental)]
+    public static CosmosVectorType? GetVectorType(this IReadOnlyProperty property)
+        => (CosmosVectorType?)property[CosmosAnnotationNames.VectorType];
+
+    /// <summary>
+    ///     Sets the definition of the vector stored in this property.
+    /// </summary>
+    /// <param name="property">The property.</param>
+    /// <param name="vectorType">The type of vector stored in the property.</param>
+    [Experimental(EFDiagnostics.CosmosVectorSearchExperimental)]
+    public static void SetVectorType(this IMutableProperty property, CosmosVectorType? vectorType)
+        => property.SetOrRemoveAnnotation(CosmosAnnotationNames.VectorType, vectorType);
+
+    /// <summary>
+    ///     Sets the definition of the vector stored in this property.
+    /// </summary>
+    /// <param name="property">The property.</param>
+    /// <param name="vectorType">The type of vector stored in the property.</param>
+    /// <param name="fromDataAnnotation">Indicates whether the configuration was specified using a data annotation.</param>
+    /// <returns>The configured value.</returns>
+    [Experimental(EFDiagnostics.CosmosVectorSearchExperimental)]
+    public static CosmosVectorType? SetVectorType(
+        this IConventionProperty property,
+        CosmosVectorType? vectorType,
+        bool fromDataAnnotation = false)
+        => (CosmosVectorType?)property.SetOrRemoveAnnotation(
+            CosmosAnnotationNames.VectorType,
+            vectorType,
+            fromDataAnnotation)?.Value;
+
+    /// <summary>
+    ///     Gets the <see cref="ConfigurationSource" /> for the definition of the vector stored in this property.
+    /// </summary>
+    /// <param name="property">The property.</param>
+    /// <returns>
+    ///     The <see cref="ConfigurationSource" /> for the definition of the vector stored in this property.
+    /// </returns>
+    [Experimental(EFDiagnostics.CosmosVectorSearchExperimental)]
+    public static ConfigurationSource? GetVectorTypeConfigurationSource(this IConventionProperty property)
+        => property.FindAnnotation(CosmosAnnotationNames.VectorType)?.GetConfigurationSource();
 }

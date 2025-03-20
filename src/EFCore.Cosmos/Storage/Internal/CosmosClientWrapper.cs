@@ -270,7 +270,11 @@ public class CosmosClientWrapper : ICosmosClientWrapper
         foreach (var fullTextProperty in parameters.FullTextProperties)
         {
             fullTextPaths.Add(
-                new FullTextPath { Path = "/" + fullTextProperty.Property.GetJsonPropertyName() });
+                new FullTextPath
+                {
+                    Path = "/" + fullTextProperty.Property.GetJsonPropertyName(),
+                    Language = fullTextProperty.Language
+                });
         }
 
         var embeddings = new Collection<Embedding>();
@@ -298,18 +302,27 @@ public class CosmosClientWrapper : ICosmosClientWrapper
             containerProperties.VectorEmbeddingPolicy = new VectorEmbeddingPolicy(embeddings);
         }
 
-        if (vectorIndexes.Any() || fullTextIndexes.Any())
+        if (vectorIndexes.Any()/* || fullTextIndexes.Any()*/)
         {
             containerProperties.IndexingPolicy = new IndexingPolicy
             {
                 VectorIndexes = vectorIndexes,
+               // FullTextIndexes = fullTextIndexes
+            };
+        }
+
+        if (fullTextIndexes.Any())
+        {
+            containerProperties.IndexingPolicy = new IndexingPolicy
+            {
                 FullTextIndexes = fullTextIndexes
             };
         }
 
+
         if (fullTextPaths.Any())
         {
-            containerProperties.FullTextPolicy = new FullTextPolicy { FullTextPaths = fullTextPaths };
+            containerProperties.FullTextPolicy = new FullTextPolicy { DefaultLanguage = "en-US", FullTextPaths = fullTextPaths };
         }
 
         var response = await wrapper.Client.GetDatabase(wrapper._databaseId).CreateContainerIfNotExistsAsync(

@@ -146,7 +146,7 @@ public class CosmosDatabaseCreator : IDatabaseCreator
                         vectors.Add((property, vectorTypeMapping.VectorType));
                     }
 
-                    var ftsLanguage = (string?)property.FindRuntimeAnnotationValue(CosmosAnnotationNames.FullTextSearchLanguage);
+                    var ftsLanguage = (string?)property.FindAnnotation(CosmosAnnotationNames.FullTextSearchLanguage)?.Value;
                     if (ftsLanguage != null)
                     {
                         fullTextProperties.Add((property, ftsLanguage));

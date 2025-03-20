@@ -22,9 +22,7 @@ public static class TestEnvironment
         .Build()
         .GetSection("Test:Cosmos");
 
-    public static string DefaultConnection { get; } = //TODO this
-
-        string.IsNullOrEmpty(Config["DefaultConnection"])
+    public static string DefaultConnection { get; } = string.IsNullOrEmpty(Config["DefaultConnection"])
         ? "https://localhost:8081"
         : Config["DefaultConnection"];
 
@@ -34,13 +32,13 @@ public static class TestEnvironment
 
     public static string ConnectionString { get; } = $"AccountEndpoint={DefaultConnection};AccountKey={AuthToken}";
 
-    public static bool UseTokenCredential { get; } = true;// Config["UseTokenCredential"] == "true";
+    public static bool UseTokenCredential { get; } = Config["UseTokenCredential"] == "true";
 
     public static TokenCredential TokenCredential { get; } = new DefaultAzureCredential();
 
-    public static string SubscriptionId { get; } = Config["SubscriptionId"];  //TODO this
+    public static string SubscriptionId { get; } = Config["SubscriptionId"];
 
-    public static string ResourceGroup { get; } = Config["ResourceGroup"];// TODO this
+    public static string ResourceGroup { get; } = Config["ResourceGroup"];
 
     public static AzureLocation AzureLocation { get; } = string.IsNullOrEmpty(Config["AzureLocation"])
         ? AzureLocation.WestUS

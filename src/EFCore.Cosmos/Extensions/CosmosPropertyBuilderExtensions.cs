@@ -277,23 +277,21 @@ public static class CosmosPropertyBuilderExtensions
 
 
     /// <summary>
-    ///     Configures the property as a vector for Azure Cosmos DB.
+    ///     Configures the property to be used with a full-text search.
     /// </summary>
     /// <remarks>
     ///     See <see href="https://aka.ms/efcore-docs-modeling">Modeling entity types and relationships</see>, and
     ///     <see href="https://aka.ms/efcore-docs-cosmos">Accessing Azure Cosmos DB with EF Core</see> for more information and examples.
     /// </remarks>
     /// <param name="propertyBuilder">The builder for the property being configured.</param>
-    /// <param name="distanceFunction">The distance function for a vector comparisons.</param>
-    /// <param name="dimensions">The number of dimensions in the vector.</param>
+    /// <param name="language">The language for the full-text search.</param>
     /// <returns>The same builder instance so that multiple calls can be chained.</returns>
-    [Experimental(EFDiagnostics.CosmosVectorSearchExperimental)]
+    [Experimental(EFDiagnostics.CosmosFullTextSearchExperimental)]
     public static PropertyBuilder IsFullText(
         this PropertyBuilder propertyBuilder,
-        DistanceFunction distanceFunction,
-        int dimensions)
+        string language = "en-US")
     {
-        propertyBuilder.Metadata.SetVectorType(CreateVectorType(distanceFunction, dimensions));
+        propertyBuilder.Metadata.SetFullTextSearchLanguage(language);
         return propertyBuilder;
     }
 
@@ -310,15 +308,13 @@ public static class CosmosPropertyBuilderExtensions
     /// </remarks>
     /// <typeparam name="TProperty">The type of the property being configured.</typeparam>
     /// <param name="propertyBuilder">The builder for the property being configured.</param>
-    /// <param name="distanceFunction">The distance function for a vector comparisons.</param>
-    /// <param name="dimensions">The number of dimensions in the vector.</param>
+    /// <param name="language">The language for the full-text search.</param>
     /// <returns>The same builder instance so that multiple calls can be chained.</returns>
-    [Experimental(EFDiagnostics.CosmosVectorSearchExperimental)]
-    public static PropertyBuilder<TProperty> IsVector<TProperty>(
+    [Experimental(EFDiagnostics.CosmosFullTextSearchExperimental)]
+    public static PropertyBuilder<TProperty> IsFullText<TProperty>(
         this PropertyBuilder<TProperty> propertyBuilder,
-        DistanceFunction distanceFunction,
-        int dimensions)
-        => (PropertyBuilder<TProperty>)IsVector((PropertyBuilder)propertyBuilder, distanceFunction, dimensions);
+        string language = "en-US")
+        => (PropertyBuilder<TProperty>)IsFullText((PropertyBuilder)propertyBuilder, language);
 
     /// <summary>
     ///     Configures the property as a vector for Azure Cosmos DB.
@@ -328,26 +324,24 @@ public static class CosmosPropertyBuilderExtensions
     ///     <see href="https://aka.ms/efcore-docs-cosmos">Accessing Azure Cosmos DB with EF Core</see> for more information and examples.
     /// </remarks>
     /// <param name="propertyBuilder">The builder for the property being configured.</param>
-    /// <param name="distanceFunction">The distance function for a vector comparisons.</param>
-    /// <param name="dimensions">The number of dimensions in the vector.</param>
+    /// <param name="language">The language for the full-text search.</param>
     /// <param name="fromDataAnnotation">Indicates whether the configuration was specified using a data annotation.</param>
     /// <returns>
     ///     The same builder instance if the configuration was applied,
     ///     <see langword="null" /> otherwise.
     /// </returns>
-    [Experimental(EFDiagnostics.CosmosVectorSearchExperimental)]
-    public static IConventionPropertyBuilder? IsVector(
+    [Experimental(EFDiagnostics.CosmosFullTextSearchExperimental)]
+    public static IConventionPropertyBuilder? IsFullText(
         this IConventionPropertyBuilder propertyBuilder,
-        DistanceFunction distanceFunction,
-        int dimensions,
+        string language,
         bool fromDataAnnotation = false)
     {
-        if (!propertyBuilder.CanSetIsVector(distanceFunction, dimensions, fromDataAnnotation))
+        if (!propertyBuilder.CanSetIsFullText(language, fromDataAnnotation))
         {
             return null;
         }
 
-        propertyBuilder.Metadata.SetVectorType(CreateVectorType(distanceFunction, dimensions), fromDataAnnotation);
+        propertyBuilder.Metadata.SetFullTextSearchLanguage(language, fromDataAnnotation);
 
         return propertyBuilder;
     }
@@ -360,22 +354,16 @@ public static class CosmosPropertyBuilderExtensions
     ///     <see href="https://aka.ms/efcore-docs-cosmos">Accessing Azure Cosmos DB with EF Core</see> for more information and examples.
     /// </remarks>
     /// <param name="propertyBuilder">The builder for the property being configured.</param>
-    /// <param name="distanceFunction">The distance function for a vector comparisons.</param>
-    /// <param name="dimensions">The number of dimensions in the vector.</param>
+    /// <param name="language">The language for the full-text search.</param>
     /// <param name="fromDataAnnotation">Indicates whether the configuration was specified using a data annotation.</param>
     /// <returns><see langword="true" /> if the vector type can be set.</returns>
-    [Experimental(EFDiagnostics.CosmosVectorSearchExperimental)]
-    public static bool CanSetIsVector(
+    [Experimental(EFDiagnostics.CosmosFullTextSearchExperimental)]
+    public static bool CanSetIsFullText(
         this IConventionPropertyBuilder propertyBuilder,
-        DistanceFunction distanceFunction,
-        int dimensions,
+        string language,
         bool fromDataAnnotation = false)
         => propertyBuilder.CanSetAnnotation(
-            CosmosAnnotationNames.VectorType,
-            CreateVectorType(distanceFunction, dimensions),
+            CosmosAnnotationNames.FullTextSearchLanguage,
+            language,
             fromDataAnnotation);
-
-
-
-
 }

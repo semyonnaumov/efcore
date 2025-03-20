@@ -23,19 +23,19 @@ public class FullTextSearchCosmosTest : IClassFixture<FullTextSearchCosmosTest.F
     {
         await using var context = CreateContext();
 
+        var query = await context.Set<FtsEntity>().ToListAsync();
+
         AssertSql(
             """
-@inputVector='[2,1,4,3,5,2,5,7,3,1]'
-
-SELECT VALUE VectorDistance(c["Bytes"], @inputVector, false, {'distanceFunction':'cosine', 'dataType':'uint8'})
 FROM root c
 """);
     }
 
-
     private class FtsEntity
     {
         public int Id { get; set; }
+
+        public string PartitionKey { get; set; } = null!;
 
         public string Name { get; set; } = null!;
         //public Owned1 OwnedReference { get; set; } = null!;
@@ -68,7 +68,16 @@ FROM root c
             => "FullTextSearchTest";
 
         protected override void OnModelCreating(ModelBuilder modelBuilder, DbContext context)
-            => modelBuilder.Entity<FtsEntity>().ToContainer("FtsEntities");
+        {
+            modelBuilder.Entity<FtsEntity>(b =>
+            {
+                b.ToContainer("FtsEntities");
+                b.HasPartitionKey(x => x.PartitionKey);
+                b.Property(x => x.Name).IsFullText();
+                b.HasIndex(x => x.Name).ForFullText();
+            });
+        }
+
         protected override Task SeedAsync(PoolableDbContext context)
         {
             return context.SaveChangesAsync();

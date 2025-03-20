@@ -31,8 +31,12 @@ public class SingletonCosmosClientWrapper : ISingletonCosmosClientWrapper
     /// </summary>
     public SingletonCosmosClientWrapper(ICosmosSingletonOptions options)
     {
-        _endpoint = options.AccountEndpoint;
-        _key = options.AccountKey;
+        //_endpoint = options.AccountEndpoint;
+        //_key = options.AccountKey;
+
+        _endpoint = TODO this
+        _key = null;
+
         _connectionString = options.ConnectionString;
         _tokenCredential = options.TokenCredential;
         var configuration = new CosmosClientOptions { ApplicationName = UserAgent, Serializer = new JsonCosmosSerializer() };

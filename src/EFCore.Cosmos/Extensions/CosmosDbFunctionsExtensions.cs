@@ -53,6 +53,34 @@ public static class CosmosDbFunctionsExtensions
         => throw new InvalidOperationException(CoreStrings.FunctionOnClient(nameof(CoalesceUndefined)));
 
     /// <summary>
+    /// TODO
+    /// </summary>
+    [Experimental(EFDiagnostics.CosmosFullTextSearchExperimental)]
+    public static bool FullTextContains<T>(this DbFunctions _, T property, string keyword)
+        => throw new InvalidOperationException(CoreStrings.FunctionOnClient(nameof(FullTextContains)));
+
+    /// <summary>
+    /// TODO
+    /// </summary>
+    [Experimental(EFDiagnostics.CosmosFullTextSearchExperimental)]
+    public static bool FullTextContainsAll<T>(this DbFunctions _, T property, params string[] keywords)
+        => throw new InvalidOperationException(CoreStrings.FunctionOnClient(nameof(FullTextContainsAll)));
+
+    /// <summary>
+    /// TODO
+    /// </summary>
+    [Experimental(EFDiagnostics.CosmosFullTextSearchExperimental)]
+    public static bool FullTextContainsAny<T>(this DbFunctions _, T property, params string[] keywords)
+        => throw new InvalidOperationException(CoreStrings.FunctionOnClient(nameof(FullTextContainsAny)));
+
+    ///// <summary>
+    ///// TODO
+    ///// </summary>
+    //[Experimental(EFDiagnostics.CosmosFullTextSearchExperimental)]
+    //public static double FullTextScore<T>(this DbFunctions _, T property, params string[] keywords)
+    //    => throw new InvalidOperationException(CoreStrings.FunctionOnClient(nameof(FullTextScore)));
+
+    /// <summary>
     ///     Returns the distance between two vectors, using the distance function and data type defined using
     ///     <see
     ///         cref="CosmosPropertyBuilderExtensions.IsVector(Microsoft.EntityFrameworkCore.Metadata.Builders.PropertyBuilder,Microsoft.Azure.Cosmos.DistanceFunction,int)" />

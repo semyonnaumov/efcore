@@ -570,6 +570,26 @@ public class CosmosModelValidator : ModelValidator
                                 index.Properties[0].Name));
                     }
                 }
+#pragma warning disable EF9104 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+                else if (index.FindAnnotation(CosmosAnnotationNames.FullTextIndex) != null)
+#pragma warning restore EF9104 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+                {
+                    if (index.Properties.Count > 1)
+                    {
+                        throw new InvalidOperationException(
+                            CosmosStrings.CompositeFullTextIndex(
+                                entityType.DisplayName(),
+                                string.Join(",", index.Properties.Select(e => e.Name))));
+                    }
+
+                    if (index.Properties[0].FindAnnotation(CosmosAnnotationNames.FullTextSearchLanguage) == null)
+                    {
+                        throw new InvalidOperationException(
+                            CosmosStrings.FullTextIndexOnNonFullTextProperty(
+                                entityType.DisplayName(),
+                                index.Properties[0].Name));
+                    }
+                }
                 else
                 {
                     throw new InvalidOperationException(

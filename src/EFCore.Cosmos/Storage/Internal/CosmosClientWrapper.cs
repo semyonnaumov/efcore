@@ -319,7 +319,6 @@ public class CosmosClientWrapper : ICosmosClientWrapper
             };
         }
 
-
         if (fullTextPaths.Any())
         {
             containerProperties.FullTextPolicy = new FullTextPolicy { DefaultLanguage = "en-US", FullTextPaths = fullTextPaths };

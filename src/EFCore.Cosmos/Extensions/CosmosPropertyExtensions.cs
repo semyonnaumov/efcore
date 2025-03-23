@@ -17,6 +17,31 @@ namespace Microsoft.EntityFrameworkCore;
 public static class CosmosPropertyExtensions
 {
     /// <summary>
+    /// TODO
+    /// </summary>
+    public static string GetPathToRoot(this IReadOnlyProperty property)
+    {
+        return GetPathToRoot((IEntityType)property.DeclaringType) + "/" + property.GetJsonPropertyName();
+    }
+
+    private static string GetPathToRoot(IEntityType entityType)
+    {
+        if (entityType.IsDocumentRoot())
+        {
+            return "";
+        }
+
+        if (!entityType.IsOwned())
+        {
+            throw new InvalidOperationException("Should be owned");
+        }
+
+        var ownership = entityType.FindOwnership()!;
+
+        return GetPathToRoot(ownership.PrincipalEntityType) + "/" + ownership.GetNavigation(pointsToPrincipal: false)!.Name;
+    }
+
+    /// <summary>
     ///     Returns the property name that the property is mapped to when targeting Cosmos.
     /// </summary>
     /// <param name="property">The property.</param>

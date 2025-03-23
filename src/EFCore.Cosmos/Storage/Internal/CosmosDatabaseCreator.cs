@@ -3,6 +3,7 @@
 
 using Microsoft.EntityFrameworkCore.Cosmos.Internal;
 using Microsoft.EntityFrameworkCore.Cosmos.Metadata.Internal;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
 namespace Microsoft.EntityFrameworkCore.Cosmos.Storage.Internal;
 
@@ -137,21 +138,32 @@ public class CosmosDatabaseCreator : IDatabaseCreator
                 analyticalTtl ??= entityType.GetAnalyticalStoreTimeToLive();
                 defaultTtl ??= entityType.GetDefaultTimeToLive();
                 throughput ??= entityType.GetThroughput();
-                indexes.AddRange(entityType.GetIndexes());
 
-                foreach (var property in entityType.GetProperties())
-                {
-                    if (property.FindTypeMapping() is CosmosVectorTypeMapping vectorTypeMapping)
-                    {
-                        vectors.Add((property, vectorTypeMapping.VectorType));
-                    }
+                ProcessEntityTypeProperties(entityType, indexes, vectors, fullTextProperties);
 
-                    var ftsLanguage = (string?)property.FindAnnotation(CosmosAnnotationNames.FullTextSearchLanguage)?.Value;
-                    if (ftsLanguage != null)
-                    {
-                        fullTextProperties.Add((property, ftsLanguage));
-                    }
-                }
+
+
+                //indexes.AddRange(entityType.GetIndexes());
+
+                //foreach (var property in entityType.GetProperties())
+                //{
+                //    if (property.FindTypeMapping() is CosmosVectorTypeMapping vectorTypeMapping)
+                //    {
+                //        vectors.Add((property, vectorTypeMapping.VectorType));
+                //    }
+
+                //    var ftsLanguage = (string?)property.FindAnnotation(CosmosAnnotationNames.FullTextSearchLanguage)?.Value;
+                //    if (ftsLanguage != null)
+                //    {
+                //        fullTextProperties.Add((property, ftsLanguage));
+                //    }
+                //}
+
+
+                //foreach (var owned in entityType.GetNavigations().Where(x => x.ForeignKey.IsOwnership).Select(x => x.TargetEntityType))
+                //{
+
+                //}
             }
 
             yield return new ContainerProperties(
@@ -163,6 +175,35 @@ public class CosmosDatabaseCreator : IDatabaseCreator
                 indexes,
                 vectors,
                 fullTextProperties);
+        }
+
+        static void ProcessEntityTypeProperties(
+            IEntityType entityType,
+            List<IIndex> indexes,
+            List<(IProperty Property, CosmosVectorType VectorType)> vectors,
+            List<(IProperty Property, string Language)> fullTextProperties)
+        {
+
+            indexes.AddRange(entityType.GetIndexes());
+
+            foreach (var property in entityType.GetProperties())
+            {
+                if (property.FindTypeMapping() is CosmosVectorTypeMapping vectorTypeMapping)
+                {
+                    vectors.Add((property, vectorTypeMapping.VectorType));
+                }
+
+                var ftsLanguage = (string?)property.FindAnnotation(CosmosAnnotationNames.FullTextSearchLanguage)?.Value;
+                if (ftsLanguage != null)
+                {
+                    fullTextProperties.Add((property, ftsLanguage));
+                }
+            }
+
+            foreach (var owned in entityType.GetNavigations().Where(x => x.ForeignKey.IsOwnership).Select(x => x.TargetEntityType))
+            {
+                ProcessEntityTypeProperties(owned, indexes, vectors, fullTextProperties);
+            }
         }
     }
 

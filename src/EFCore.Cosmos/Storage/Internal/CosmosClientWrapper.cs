@@ -272,7 +272,8 @@ public class CosmosClientWrapper : ICosmosClientWrapper
             fullTextPaths.Add(
                 new FullTextPath
                 {
-                    Path = "/" + fullTextProperty.Property.GetJsonPropertyName(),
+                    //Path = "/" + fullTextProperty.Property.GetJsonPropertyName(),
+                    Path = fullTextProperty.Property.GetPathToRoot(),
                     Language = fullTextProperty.Language
                 });
         }

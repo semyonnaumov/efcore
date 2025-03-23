@@ -74,25 +74,24 @@ FROM root c
         public string PartitionKey { get; set; } = null!;
 
         public string Name { get; set; } = null!;
-
+        public string Description { get; set; } = null!;
         public int Number { get; set; }
-        //public Owned1 OwnedReference { get; set; } = null!;
-        //public List<Owned1> OwnedCollection { get; set; } = null!;
+
+        public FtsOwned OwnedReference { get; set; } = null!;
+        public List<FtsOwned> OwnedCollection { get; set; } = null!;
     }
 
-    //[Owned]
-    //protected class Owned1
-    //{
-    //    public int Prop { get; set; }
-    //    public Owned2 NestedOwned { get; set; } = null!;
-    //    public List<Owned2> NestedOwnedCollection { get; set; } = null!;
-    //}
+    protected class FtsOwned
+    {
+        public string Details { get; set; } = null!;
+        public FtsOwnedNested NestedRegerence { get; set; } = null!;
+        public List<FtsOwnedNested> NestedCollection { get; set; } = null!;
+    }
 
-    //[Owned]
-    //protected class Owned2
-    //{
-    //    public string Prop { get; set; } = null!;
-    //}
+    protected class FtsOwnedNested
+    {
+        public string Prop { get; set; } = null!;
+    }
 
     protected DbContext CreateContext()
         => Fixture.CreateContext();
@@ -113,6 +112,40 @@ FROM root c
                 b.HasPartitionKey(x => x.PartitionKey);
                 b.Property(x => x.Name).IsFullText();
                 b.HasIndex(x => x.Name).ForFullText();
+
+                b.OwnsOne(x => x.OwnedReference, bb =>
+                {
+                    bb.Property(x => x.Details).IsFullText();
+                    bb.HasIndex(x => x.Details).ForFullText();
+                    bb.OwnsOne(x => x.NestedRegerence, bbb =>
+                    {
+                        bbb.Property(x => x.Prop).IsFullText();
+                        bbb.HasIndex(x => x.Prop).ForFullText();
+                    });
+
+                    bb.OwnsMany(x => x.NestedCollection, bbb =>
+                    {
+                        bbb.Property(x => x.Prop).IsFullText();
+                        bbb.HasIndex(x => x.Prop).ForFullText();
+                    });
+                });
+
+                b.OwnsMany(x => x.OwnedCollection, bb =>
+                {
+                    bb.Property(x => x.Details).IsFullText();
+                    bb.HasIndex(x => x.Details).ForFullText();
+                    bb.OwnsOne(x => x.NestedRegerence, bbb =>
+                    {
+                        bbb.Property(x => x.Prop).IsFullText();
+                        bbb.HasIndex(x => x.Prop).ForFullText();
+                    });
+
+                    bb.OwnsMany(x => x.NestedCollection, bbb =>
+                    {
+                        bbb.Property(x => x.Prop).IsFullText();
+                        bbb.HasIndex(x => x.Prop).ForFullText();
+                    });
+                });
 
                 //b.Property(x => x.Number).IsFullText();
                 //b.HasIndex(x => x.Number).ForFullText();

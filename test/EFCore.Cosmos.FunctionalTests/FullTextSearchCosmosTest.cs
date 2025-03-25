@@ -25,8 +25,10 @@ public class FullTextSearchCosmosTest : IClassFixture<FullTextSearchCosmosTest.F
     {
         await using var context = CreateContext();
 
+        //var query = await context.Set<FtsEntity>().ToListAsync();
+
         var query = await context.Set<FtsEntity>()
-            .Where(x => EF.Functions.FullTextContains(x.Name, "Foo"))
+            .Select(x => EF.Functions.FullTextContains(x.Description, "second"))
             .ToListAsync();
 
         AssertSql(
@@ -76,6 +78,8 @@ FROM root c
         public string Name { get; set; } = null!;
 
         public int Number { get; set; }
+
+        public string Description { get; set; } = null!;
         //public Owned1 OwnedReference { get; set; } = null!;
         //public List<Owned1> OwnedCollection { get; set; } = null!;
     }
@@ -114,13 +118,42 @@ FROM root c
                 b.Property(x => x.Name).IsFullText();
                 b.HasIndex(x => x.Name).ForFullText();
 
-                //b.Property(x => x.Number).IsFullText();
-                //b.HasIndex(x => x.Number).ForFullText();
+                b.Property(x => x.Description).IsFullText();
+                b.HasIndex(x => x.Description).ForFullText();
             });
         }
 
         protected override Task SeedAsync(PoolableDbContext context)
         {
+            var e1 = new FtsEntity
+            {
+                Id = 1,
+                PartitionKey = "p1",
+                Name = "entity one",
+                Description = "details about entity one which is the first entity out of many",
+                Number = 1
+            };
+
+            var e2 = new FtsEntity
+            {
+                Id = 2,
+                PartitionKey = "p1",
+                Name = "entity two",
+                Description = "details about entity two which is the second entity out of many",
+                Number = 2
+            };
+
+            var e3 = new FtsEntity
+            {
+                Id = 3,
+                PartitionKey = "p2",
+                Name = "entity three",
+                Description = "details about entity three which is the third entity out of many",
+                Number = 3
+            };
+
+            context.AddRange(e1, e2, e3);
+
             return context.SaveChangesAsync();
         }
 

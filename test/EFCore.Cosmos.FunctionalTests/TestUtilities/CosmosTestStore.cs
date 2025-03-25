@@ -11,6 +11,7 @@ using Azure.ResourceManager.CosmosDB.Models;
 using Microsoft.Azure.Cosmos;
 using Microsoft.EntityFrameworkCore.Cosmos.Metadata.Internal;
 using Microsoft.EntityFrameworkCore.Cosmos.Storage.Internal;
+using Microsoft.VisualBasic;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using ContainerProperties = Microsoft.Azure.Cosmos.ContainerProperties;
@@ -360,6 +361,20 @@ public class CosmosTestStore : TestStore
         }
     }
 
+    private static CosmosDBVectorDataType CreateDefaultVectorDataType(Type clrType)
+    {
+        var elementType = clrType.TryGetElementType(typeof(ReadOnlyMemory<>))?.UnwrapNullableType()
+            ?? clrType.TryGetElementType(typeof(IEnumerable<>))?.UnwrapNullableType();
+
+        return elementType == typeof(sbyte)
+            ? CosmosDBVectorDataType.Int8
+            : elementType == typeof(byte)
+                ? CosmosDBVectorDataType.Uint8
+                : elementType == typeof(float)
+                    ? CosmosDBVectorDataType.Float32
+                    : throw new InvalidOperationException(Cosmos.Internal.CosmosStrings.BadVectorDataType(clrType.ShortDisplayName()));
+    }
+
     private async Task CreateContainersAsync(DbContext context)
     {
         var databaseAccount = await GetDBAccount().ConfigureAwait(false);
@@ -369,12 +384,34 @@ public class CosmosTestStore : TestStore
 
         foreach (var container in GetContainersToCreate(model))
         {
+            var vectorEmbeddings = new List<CosmosDBVectorEmbedding>();
+
             var resource = new CosmosDBSqlContainerResourceInfo(container.Id)
             {
                 AnalyticalStorageTtl = container.AnalyticalStoreTimeToLiveInSeconds,
                 DefaultTtl = container.DefaultTimeToLive,
-                PartitionKey = new CosmosDBContainerPartitionKey { Version = 2 }
+                PartitionKey = new CosmosDBContainerPartitionKey { Version = 2 },
             };
+
+            foreach (var vector in container.Vectors)
+            {
+                VectorDistanceFunction distanceFunction =
+                    vector.VectorType.DistanceFunction switch
+                    {
+                        DistanceFunction.Cosine => VectorDistanceFunction.Cosine,
+                        DistanceFunction.DotProduct => VectorDistanceFunction.Dotproduct,
+                        DistanceFunction.Euclidean => VectorDistanceFunction.Euclidean,
+                        _ => throw new UnreachableException()
+                    };
+
+                var vectorEmbedding = new CosmosDBVectorEmbedding(
+                    path: "/" + vector.Property.GetJsonPropertyName(),
+                    dataType: CreateDefaultVectorDataType(vector.Property.ClrType),
+                    distanceFunction,
+                    vector.VectorType.Dimensions);
+
+                resource.VectorEmbeddings.Add(vectorEmbedding);
+            }
 
             if (container.PartitionKeyStoreNames.Count > 1)
             {
@@ -451,7 +488,7 @@ public class CosmosTestStore : TestStore
                         vectors.Add((property, vectorTypeMapping.VectorType));
                     }
 
-                    var ftsLanguage = (string?)property.FindRuntimeAnnotationValue(CosmosAnnotationNames.FullTextSearchLanguage);
+                    var ftsLanguage = (string?)property.FindAnnotation(CosmosAnnotationNames.FullTextSearchLanguage)?.Value;
                     if (ftsLanguage != null)
                     {
                         fullTextProperties.Add((property, ftsLanguage));
@@ -559,6 +596,8 @@ public class CosmosTestStore : TestStore
             {
                 GetTestStoreIndex(ServiceProvider).RemoveShared(GetType().Name + Name);
             }
+
+            //await Task.CompletedTask;
 
             await EnsureDeletedAsync(_storeContext).ConfigureAwait(false);
         }

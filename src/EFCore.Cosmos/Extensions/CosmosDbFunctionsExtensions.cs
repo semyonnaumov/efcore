@@ -73,12 +73,12 @@ public static class CosmosDbFunctionsExtensions
     public static bool FullTextContainsAny<T>(this DbFunctions _, T property, params string[] keywords)
         => throw new InvalidOperationException(CoreStrings.FunctionOnClient(nameof(FullTextContainsAny)));
 
-    ///// <summary>
-    ///// TODO
-    ///// </summary>
-    //[Experimental(EFDiagnostics.CosmosFullTextSearchExperimental)]
-    //public static double FullTextScore<T>(this DbFunctions _, T property, params string[] keywords)
-    //    => throw new InvalidOperationException(CoreStrings.FunctionOnClient(nameof(FullTextScore)));
+    /// <summary>
+    /// TODO
+    /// </summary>
+    [Experimental(EFDiagnostics.CosmosFullTextSearchExperimental)]
+    public static double FullTextScore<T>(this DbFunctions _, T property, params string[] keywords)
+        => throw new InvalidOperationException(CoreStrings.FunctionOnClient(nameof(FullTextScore)));
 
     /// <summary>
     ///     Returns the distance between two vectors, using the distance function and data type defined using

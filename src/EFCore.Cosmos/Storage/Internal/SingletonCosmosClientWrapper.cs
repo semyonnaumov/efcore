@@ -31,7 +31,7 @@ public class SingletonCosmosClientWrapper : ISingletonCosmosClientWrapper
     /// </summary>
     public SingletonCosmosClientWrapper(ICosmosSingletonOptions options)
     {
-        _endpoint = options.AccountEndpoint;
+        _endpoint = add here;//options.AccountEndpoint;
         _key = options.AccountKey;
 
         //_endpoint = TODO this

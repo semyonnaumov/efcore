@@ -62,69 +62,16 @@ public class CosmosFullTextSearchTranslator(ISqlExpressionFactory sqlExpressionF
             arguments[1]
         };
 
-        var paramsArgument = (SqlConstantExpression)arguments[2];
-        foreach (var paramsValue in (IEnumerable)paramsArgument.Value!)
+        var paramsArgument = (ArrayConstantExpression)arguments[2];
+        foreach (var item in paramsArgument.Items)
         {
-            resultAguments.Add(sqlExpressionFactory.Constant(paramsValue, typeMapping));
+            resultAguments.Add(item);
         }
-
-        var wrong = arguments[2].Print();
 
         return sqlExpressionFactory.Function(
             method.Name,
             resultAguments,
             typeof(bool),
             typeMappingSource.FindMapping(typeof(bool)));
-
-
-
-
-        //var vectorMapping = arguments[1].TypeMapping as CosmosVectorTypeMapping
-        //    ?? arguments[2].TypeMapping as CosmosVectorTypeMapping
-        //    ?? throw new InvalidOperationException(CosmosStrings.VectorSearchRequiresVector);
-
-        //Check.DebugAssert(arguments.Count is 3 or 4 or 5, "Did you add a parameter?");
-
-        //SqlConstantExpression bruteForce;
-        //if (arguments.Count >= 4)
-        //{
-        //    if (arguments[3] is not SqlConstantExpression { Value: bool })
-        //    {
-        //        throw new InvalidOperationException(
-        //            CoreStrings.ArgumentNotConstant("useBruteForce", nameof(CosmosDbFunctionsExtensions.VectorDistance)));
-        //    }
-
-        //    bruteForce = (SqlConstantExpression)arguments[3];
-        //}
-        //else
-        //{
-        //    bruteForce = (SqlConstantExpression)sqlExpressionFactory.Constant(false);
-        //}
-
-        //var vectorType = vectorMapping.VectorType;
-        //if (arguments.Count == 5)
-        //{
-        //    if (arguments[4] is not SqlConstantExpression { Value: DistanceFunction distanceFunction })
-        //    {
-        //        throw new InvalidOperationException(
-        //            CoreStrings.ArgumentNotConstant("distanceFunction", nameof(CosmosDbFunctionsExtensions.VectorDistance)));
-        //    }
-
-        //    vectorType = vectorType with { DistanceFunction = distanceFunction };
-        //}
-
-        //var dataType = CosmosVectorType.CreateDefaultVectorDataType(vectorMapping.ClrType);
-
-        //return sqlExpressionFactory.Function(
-        //    "VectorDistance",
-        //    [
-        //        sqlExpressionFactory.ApplyTypeMapping(arguments[1], vectorMapping),
-        //        sqlExpressionFactory.ApplyTypeMapping(arguments[2], vectorMapping),
-        //        bruteForce,
-        //        new FragmentExpression(
-        //            $"{{'distanceFunction':'{vectorType.DistanceFunction.ToString().ToLower()}', 'dataType':'{dataType.ToString().ToLower()}'}}")
-        //    ],
-        //    typeof(double),
-        //    typeMappingSource.FindMapping(typeof(double))!);
     }
 }

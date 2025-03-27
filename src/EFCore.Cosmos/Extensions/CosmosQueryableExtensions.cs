@@ -33,6 +33,11 @@ public static class CosmosQueryableExtensions
             .GetDeclaredMethods(nameof(WithPartitionKey))
             .Single(mi => mi.GetParameters().Length == 4);
 
+    internal static readonly MethodInfo OrderByRankMethodInfo
+        = typeof(CosmosQueryableExtensions).GetTypeInfo()
+            .GetDeclaredMethods(nameof(OrderByRank))
+            .Single(mi => mi.GetParameters().Length == 2);
+
     /// <summary>
     ///     Specify the partition key for partition used for the query.
     ///     Required when using a resource token that provides permission based on a partition key for authentication,
@@ -283,4 +288,16 @@ public static class CosmosQueryableExtensions
                 ]),
             cancellationToken);
     }
+
+    /// <summary>
+    /// TODO
+    /// </summary>
+    public static IQueryable<TSource> OrderByRank<TSource>(IQueryable<TSource> source, Expression<Func<TSource, double>> scoringFunction)
+        => source.Provider is EntityQueryProvider
+            ? source.Provider.CreateQuery<TSource>(
+                Expression.Call(
+                    instance: null,
+                    method: OrderByRankMethodInfo.MakeGenericMethod(typeof(TSource)),
+                    arguments: [source.Expression, Expression.Quote(scoringFunction)]))
+            : source;
 }

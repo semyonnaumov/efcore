@@ -590,17 +590,17 @@ ORDER BY RANK FullTextScore(c["Owned"]["Nested"]["AnotherDescription"], ["beaver
             b.ToContainer("FullTextSearchAnimals");
             b.HasPartitionKey(x => x.PartitionKey);
             b.Property(x => x.Name).IsFullText();
-            b.HasIndex(x => x.Name).ForFullText();
+            b.HasIndex(x => x.Name).IsFullTextIndex();
 
             b.Property(x => x.Description).IsFullText();
-            b.HasIndex(x => x.Description).ForFullText();
+            b.HasIndex(x => x.Description).IsFullTextIndex();
 
             b.OwnsOne(x => x.Owned, bb =>
             {
                 bb.OwnsOne(x => x.Nested, bbb =>
                 {
                     bbb.Property(x => x.AnotherDescription).IsFullText();
-                    bbb.HasIndex(x => x.AnotherDescription).ForFullText();
+                    bbb.HasIndex(x => x.AnotherDescription).IsFullTextIndex();
                 });
             });
         });

@@ -641,7 +641,7 @@ public class CosmosModelValidator : ModelValidator
                             CosmosStrings.FullTextPropertyWithoutFullTextIndex(
                                 entityType.DisplayName(),
                                 property.Name,
-                                nameof(CosmosIndexBuilderExtensions.ForFullText)));
+                                nameof(CosmosIndexBuilderExtensions.IsFullTextIndex)));
                     }
                 }
             }

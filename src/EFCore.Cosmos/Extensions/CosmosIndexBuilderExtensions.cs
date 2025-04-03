@@ -112,9 +112,9 @@ public static class CosmosIndexBuilderExtensions
     /// <param name="value">The value indicating whether the index is configured for Full-text search.</param>
     /// <returns>A builder to further configure the index.</returns>
     [Experimental(EFDiagnostics.CosmosFullTextSearchExperimental)]
-    public static IndexBuilder ForFullText(this IndexBuilder indexBuilder, bool? value = true)
+    public static IndexBuilder IsFullTextIndex(this IndexBuilder indexBuilder, bool? value = true)
     {
-        indexBuilder.Metadata.SetFullTextIndex(value);
+        indexBuilder.Metadata.SetIsFullTextIndex(value);
 
         return indexBuilder;
     }
@@ -131,10 +131,10 @@ public static class CosmosIndexBuilderExtensions
     /// <param name="value">The value indicating whether the index is configured for Full-text search.</param>
     /// <returns>A builder to further configure the index.</returns>
     [Experimental(EFDiagnostics.CosmosFullTextSearchExperimental)]
-    public static IndexBuilder<TEntity> ForFullText<TEntity>(
+    public static IndexBuilder<TEntity> IsFullTextIndex<TEntity>(
         this IndexBuilder<TEntity> indexBuilder,
         bool? value = true)
-        => (IndexBuilder<TEntity>)ForFullText((IndexBuilder)indexBuilder, value);
+        => (IndexBuilder<TEntity>)IsFullTextIndex((IndexBuilder)indexBuilder, value);
 
     /// <summary>
     ///     Configures the index as a full-text index.
@@ -152,14 +152,14 @@ public static class CosmosIndexBuilderExtensions
     ///     <see langword="null" /> otherwise.
     /// </returns>
     [Experimental(EFDiagnostics.CosmosFullTextSearchExperimental)]
-    public static IConventionIndexBuilder? ForFullText(
+    public static IConventionIndexBuilder? IsFullTextIndex(
         this IConventionIndexBuilder indexBuilder,
         bool? value,
         bool fromDataAnnotation = false)
     {
-        if (indexBuilder.CanSetFullTextIndex(fromDataAnnotation))
+        if (indexBuilder.CanSetIsFullTextIndex(fromDataAnnotation))
         {
-            indexBuilder.Metadata.SetFullTextIndex(value, fromDataAnnotation);
+            indexBuilder.Metadata.SetIsFullTextIndex(value, fromDataAnnotation);
             return indexBuilder;
         }
 
@@ -167,7 +167,7 @@ public static class CosmosIndexBuilderExtensions
     }
 
     /// <summary>
-    ///     Returns a value indicating whether the index can be configured as a Full-text index.
+    ///     Returns a value indicating whether the index can be configured as a full-text index.
     /// </summary>
     /// <remarks>
     ///     See <see href="https://aka.ms/efcore-docs-modeling">Modeling entity types and relationships</see>, and
@@ -178,7 +178,7 @@ public static class CosmosIndexBuilderExtensions
     /// <param name="fromDataAnnotation">Indicates whether the configuration was specified using a data annotation.</param>
     /// <returns><see langword="true" /> if the index can be configured as a Full-text index.</returns>
     [Experimental(EFDiagnostics.CosmosFullTextSearchExperimental)]
-    public static bool CanSetFullTextIndex(
+    public static bool CanSetIsFullTextIndex(
         this IConventionIndexBuilder indexBuilder,
         bool? value,
         bool fromDataAnnotation = false)

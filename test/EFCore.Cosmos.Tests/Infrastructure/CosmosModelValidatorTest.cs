@@ -567,7 +567,7 @@ public class CosmosModelValidatorTest : ModelValidatorTestBase
         modelBuilder.Entity<Customer>(
             b =>
             {
-                b.HasIndex(x => new { x.Name, x.OtherName }).ForFullText();
+                b.HasIndex(x => new { x.Name, x.OtherName }).IsFullTextIndex();
             });
 
         VerifyError(CosmosStrings.CompositeFullTextIndex(nameof(Customer), "Name,OtherName"), modelBuilder);
@@ -580,7 +580,7 @@ public class CosmosModelValidatorTest : ModelValidatorTestBase
         modelBuilder.Entity<Customer>(
             b =>
             {
-                b.HasIndex(x => x.Name).ForFullText();
+                b.HasIndex(x => x.Name).IsFullTextIndex();
             });
 
         VerifyError(
@@ -599,7 +599,7 @@ public class CosmosModelValidatorTest : ModelValidatorTestBase
             });
 
         VerifyError(
-            CosmosStrings.FullTextPropertyWithoutFullTextIndex(nameof(Customer), "Name", nameof(CosmosIndexBuilderExtensions.ForFullText)),
+            CosmosStrings.FullTextPropertyWithoutFullTextIndex(nameof(Customer), "Name", nameof(CosmosIndexBuilderExtensions.IsFullTextIndex)),
             modelBuilder);
     }
 
@@ -615,7 +615,7 @@ public class CosmosModelValidatorTest : ModelValidatorTestBase
             });
 
         VerifyError(
-            CosmosStrings.FullTextPropertyWithoutFullTextIndex(nameof(Customer), "Name", nameof(CosmosIndexBuilderExtensions.ForFullText)),
+            CosmosStrings.FullTextPropertyWithoutFullTextIndex(nameof(Customer), "Name", nameof(CosmosIndexBuilderExtensions.IsFullTextIndex)),
             modelBuilder);
     }
 
@@ -627,7 +627,7 @@ public class CosmosModelValidatorTest : ModelValidatorTestBase
             b =>
             {
                 b.Property(x => x.Id).IsFullText();
-                b.HasIndex(x => x.Id).ForFullText();
+                b.HasIndex(x => x.Id).IsFullTextIndex();
             });
 
         VerifyError(

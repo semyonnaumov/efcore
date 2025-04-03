@@ -112,10 +112,10 @@ ORDER BY RANK RRF(FullTextScore(c["Owned"]["AnotherDescription"], ["beaver"]), V
                 b.ToContainer("HybridSearchAnimals");
                 b.HasPartitionKey(x => x.PartitionKey);
                 b.Property(x => x.Name).IsFullText();
-                b.HasIndex(x => x.Name).ForFullText();
+                b.HasIndex(x => x.Name).IsFullTextIndex();
 
                 b.Property(x => x.Description).IsFullText();
-                b.HasIndex(x => x.Description).ForFullText();
+                b.HasIndex(x => x.Description).IsFullTextIndex();
 
                 b.HasIndex(e => e.Bytes).ForVectors(VectorIndexType.Flat);
                 b.HasIndex(e => e.SBytes).ForVectors(VectorIndexType.Flat);
@@ -133,7 +133,7 @@ ORDER BY RANK RRF(FullTextScore(c["Owned"]["AnotherDescription"], ["beaver"]), V
                     bb.Property(e => e.Singles).IsVector(DistanceFunction.Cosine, 10);
 
                     bb.Property(x => x.AnotherDescription).IsFullText();
-                    bb.HasIndex(x => x.AnotherDescription).ForFullText();
+                    bb.HasIndex(x => x.AnotherDescription).IsFullTextIndex();
                 });
             });
         }

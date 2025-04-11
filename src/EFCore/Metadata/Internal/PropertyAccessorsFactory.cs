@@ -53,6 +53,7 @@ public class PropertyAccessorsFactory
             out var relationshipSnapshotGetter);
 
         return new PropertyAccessors(
+            propertyBase,
             currentValueGetter.Compile(),
             preStoreGeneratedCurrentValueGetter.Compile(),
             originalValueGetter?.Compile(),
@@ -110,7 +111,7 @@ public class PropertyAccessorsFactory
         IPropertyBase propertyBase,
         bool useStoreGeneratedValues)
     {
-        var entityClrType = propertyBase.DeclaringType.GetPropertyAccessRoot().ClrType;
+        var entityClrType = propertyBase.DeclaringType.ContainingType.ClrType;
         var entryParameter = Expression.Parameter(typeof(IInternalEntry), "entry");
         var propertyIndex = propertyBase.GetIndex();
         var shadowIndex = propertyBase.GetShadowIndex();
@@ -122,7 +123,7 @@ public class PropertyAccessorsFactory
         {
             currentValueExpression = Expression.Call(
                 entryParameter,
-                InternalEntityEntry.MakeReadShadowValueMethod(typeof(TProperty)),
+                InternalEntryBase.MakeReadShadowValueMethod(typeof(TProperty)),
                 Expression.Constant(shadowIndex));
 
             hasSentinelValueExpression = currentValueExpression.MakeHasSentinel(propertyBase);
@@ -178,22 +179,22 @@ public class PropertyAccessorsFactory
             currentValueExpression = Expression.Condition(
                 Expression.Call(
                     entryParameter,
-                    InternalEntityEntry.FlaggedAsStoreGeneratedMethod,
+                    InternalEntryBase.FlaggedAsStoreGeneratedMethod,
                     Expression.Constant(propertyIndex)),
                 Expression.Call(
                     entryParameter,
-                    InternalEntityEntry.MakeReadStoreGeneratedValueMethod(typeof(TProperty)),
+                    InternalEntryBase.MakeReadStoreGeneratedValueMethod(typeof(TProperty)),
                     Expression.Constant(storeGeneratedIndex)),
                 Expression.Condition(
                     Expression.AndAlso(
                         Expression.Call(
                             entryParameter,
-                            InternalEntityEntry.FlaggedAsTemporaryMethod,
+                            InternalEntryBase.FlaggedAsTemporaryMethod,
                             Expression.Constant(propertyIndex)),
                         hasSentinelValueExpression),
                     Expression.Call(
                         entryParameter,
-                        InternalEntityEntry.MakeReadTemporaryValueMethod(typeof(TProperty)),
+                        InternalEntryBase.MakeReadTemporaryValueMethod(typeof(TProperty)),
                         Expression.Constant(storeGeneratedIndex)),
                     currentValueExpression));
         }
@@ -232,13 +233,13 @@ public class PropertyAccessorsFactory
         return Expression.Lambda<Func<IInternalEntry, TProperty>>(
             relationshipIndex >= 0
                 ? Expression.Call(
-                    entryParameter,
+                    Expression.Convert(entryParameter, typeof(InternalEntityEntry)),
                     InternalEntityEntry.MakeReadRelationshipSnapshotValueMethod(typeof(TProperty)),
                     Expression.Constant(propertyBase),
                     Expression.Constant(relationshipIndex))
                 : Expression.Call(
                     entryParameter,
-                    InternalEntityEntry.MakeGetCurrentValueMethod(typeof(TProperty)),
+                    InternalEntryBase.MakeGetCurrentValueMethod(typeof(TProperty)),
                     Expression.Constant(propertyBase)),
             entryParameter);
     }

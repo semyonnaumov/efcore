@@ -79,7 +79,7 @@ public class ClrPropertyGetterFactory : ClrAccessorFactory<IClrPropertyGetter>
         out Expression hasStructuralSentinelExpression)
     {
         var boundMethod = GenericCreateExpressions.MakeGenericMethod(
-            propertyBase.DeclaringType.GetPropertyAccessRoot().ClrType,
+            propertyBase.DeclaringType.ContainingType.ClrType,
             propertyBase.DeclaringType.ClrType,
             propertyBase.ClrType);
 
@@ -110,7 +110,7 @@ public class ClrPropertyGetterFactory : ClrAccessorFactory<IClrPropertyGetter>
         out Expression<Func<TDeclaringType, TValue>> structuralGetterExpression,
         out Expression<Func<TDeclaringType, bool>> hasStructuralSentinelExpression)
     {
-        var entityClrType = propertyBase?.DeclaringType.GetPropertyAccessRoot().ClrType ?? typeof(TRoot);
+        var entityClrType = propertyBase?.DeclaringType.ContainingType.ClrType ?? typeof(TRoot);
         var propertyDeclaringType = propertyBase?.DeclaringType.ClrType ?? typeof(TRoot);
         var entityParameter = Expression.Parameter(entityClrType, "entity");
         var structuralParameter = Expression.Parameter(propertyDeclaringType, "instance");

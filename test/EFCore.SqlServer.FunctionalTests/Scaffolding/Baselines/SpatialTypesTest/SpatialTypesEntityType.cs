@@ -95,6 +95,7 @@ namespace TestNamespace
             point.TypeMapping = null;
             point.AddAnnotation("Relational:ColumnType", "geometry");
             point.AddAnnotation("Relational:DefaultValue", (NetTopologySuite.Geometries.Point)new NetTopologySuite.IO.WKTReader().Read("SRID=0;POINT Z(0 0 0)"));
+            point.AddAnnotation("SqlServer:DefaultConstraintName", "DF_SpatialTypes_Point");
             point.AddAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.None);
 
             var key = runtimeEntityType.AddKey(

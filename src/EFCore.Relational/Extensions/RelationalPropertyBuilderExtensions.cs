@@ -829,6 +829,56 @@ public static class RelationalPropertyBuilderExtensions
             value,
             fromDataAnnotation);
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     /// <summary>
     ///     Configures a comment to be applied to the column
     /// </summary>

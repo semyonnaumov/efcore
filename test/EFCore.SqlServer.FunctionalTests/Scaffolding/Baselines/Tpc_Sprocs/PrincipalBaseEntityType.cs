@@ -151,6 +151,7 @@ namespace TestNamespace
             enum1.AddAnnotation("Relational:RelationalOverrides", overrides0);
 
             enum1.AddAnnotation("Relational:DefaultValue", CompiledModelTestBase.AnEnum.A);
+            enum1.AddAnnotation("SqlServer:DefaultConstraintName", "DF_PrincipalBase_Enum1");
             enum1.AddAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.None);
 
             var enum2 = runtimeEntityType.AddProperty(

@@ -1063,6 +1063,12 @@ public class CSharpHelper : ICSharpHelper
             return "null";
         }
 
+        if (value is DBNull)
+        {
+            // ???
+            return "null";
+        }
+
         var literalType = value.GetType();
 
         if (LiteralFuncs.TryGetValue(literalType.UnwrapNullableType(), out var literalFunc))

@@ -651,4 +651,75 @@ public static class SqlServerModelBuilderExtensions
         string? performanceLevel,
         bool fromDataAnnotation = false)
         => modelBuilder.CanSetAnnotation(SqlServerAnnotationNames.PerformanceLevelSql, performanceLevel, fromDataAnnotation);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    /// <summary>
+    ///     TODO
+    /// </summary>
+    public static ModelBuilder UseNamedDefaultConstraints(this ModelBuilder modelBuilder, bool value = true)
+    {
+        Check.NotNull(value, nameof(value));
+
+        modelBuilder.Model.UseNamedDefaultConstraints(value);
+
+        return modelBuilder;
+    }
+
+    /// <summary>
+    ///     TODO
+    /// </summary>
+    public static IConventionModelBuilder? UseNamedDefaultConstraints(
+        this IConventionModelBuilder modelBuilder,
+        bool value,
+        bool fromDataAnnotation = false)
+    {
+        if (modelBuilder.CanSetUseNamedDefaultConstraints(value, fromDataAnnotation))
+        {
+            modelBuilder.Metadata.UseNamedDefaultConstraints(value, fromDataAnnotation);
+            return modelBuilder;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    ///     TODO
+    /// </summary>
+    public static bool CanSetUseNamedDefaultConstraints(
+        this IConventionModelBuilder modelBuilder,
+        bool value,
+        bool fromDataAnnotation = false)
+        => modelBuilder.CanSetAnnotation(SqlServerAnnotationNames.UseNamedDefaultConstraints, value, fromDataAnnotation);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }

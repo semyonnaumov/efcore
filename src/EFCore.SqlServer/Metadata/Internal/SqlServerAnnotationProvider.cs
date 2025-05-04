@@ -257,6 +257,12 @@ public class SqlServerAnnotationProvider : RelationalAnnotationProvider
             yield return new Annotation(SqlServerAnnotationNames.Sparse, isSparse);
         }
 
+        if (column.PropertyMappings.FirstOrDefault()?.Property.DefaultConstraintName() is string defaultConstraintName
+            && defaultConstraintName != string.Empty)
+        {
+            yield return new Annotation(SqlServerAnnotationNames.DefaultConstraintName, defaultConstraintName);
+        }
+
         var entityType = (IEntityType)column.Table.EntityTypeMappings.First().TypeBase;
         if (entityType.IsTemporal())
         {
